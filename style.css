@@ -1,0 +1,208 @@
+/* Reset CSS */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f5f5f7;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Container */
+.container {
+    width: 90%;
+    max-width: 1200px;
+    height: 99vh;
+    margin: 0 auto;
+    padding: 20px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Back Button */
+.back-button {
+    position: fixed;
+    top: 2rem;
+    left: 2rem;
+    color: #333;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+.back-button:hover {
+    transform: scale(1.1);
+}
+
+.back-button i {
+    font-size: 1.5rem;
+}
+
+/* Header */
+header {
+    background: #fff;
+    padding: 1rem 0;
+    border-bottom: 1px solid #e0e0e0;
+    position: relative;
+    height: 99vh;
+}
+
+header h1 {
+    padding-top: 20vh;
+    font-size: 4rem;
+    color: #333;
+}
+
+/* Navigation */
+nav {
+    position: relative;
+}
+
+.menu-toggle {
+    cursor: pointer;
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    color: #333;
+    padding: 0.5rem;
+    border-radius: 50%;
+}
+
+.menu-toggle i {
+    font-size: 1.5rem;
+}
+
+.nav-list {
+    list-style: none;
+    display: flex;
+    gap: 1.5rem;
+    position: fixed;
+    top: 3.5rem;
+    right: 1rem;
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 1rem;
+    flex-direction: column;
+    display: none;
+    z-index: 1000;
+    /* Ensure it appears on top of other content */
+}
+
+.nav-list.active {
+    display: flex;
+}
+
+.nav-list li a {
+    color: #333;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.nav-list li a:hover {
+    color: #0071e3;
+}
+
+/* Responsive Navigation */
+@media (max-width: 768px) {
+    .menu-toggle {
+        display: block;
+    }
+
+    .nav-list {
+        position: fixed;
+        top: 3.5rem;
+        right: 1rem;
+        width: auto;
+    }
+
+    .nav-list li {
+        text-align: right;
+    }
+}
+
+/* Sections */
+section {
+    padding: 4rem 0;
+    text-align: center;
+}
+
+section h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+section p {
+    font-size: 1.1rem;
+    color: #666;
+}
+
+/* Projects */
+.project-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Links */
+.link-icon {
+    font-size: 2rem;
+    margin: 1rem 0;
+    display: inline-block;
+    color: #0071e3;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+#links a {
+    font-size: 7em;
+    text-decoration: none;
+    text-align: center;
+    border-color: black;
+}
+
+.link-icon:hover {
+    color: #005bb5;
+}
+
+#links p {
+    margin-top: 0.5rem;
+    font-size: 1.1rem;
+    color: #666;
+}
+
+/* Footer */
+footer .container {
+    height: 5rem;
+    background: #fff;
+    padding: 1rem 0;
+    border-top: 1px solid #e0e0e0;
+    text-align: center;
+}
+
+/* Social Icons */
+.social-icons {
+    display: flex;
+    justify-content: center;
+    /* Center horizontally */
+    align-items: center;
+    /* Center vertically */
+    margin-bottom: 3rem;
+
+}
+
+.social-icons a {
+    margin: 0 1rem;
+    color: #333;
+    font-size: 1.5rem;
+    transition: color 0.3s;
+}
+
+.social-icons a:hover {
+    color: #0071e3;
+}
