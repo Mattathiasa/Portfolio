@@ -154,3 +154,50 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 });
+
+
+
+
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    const navLinks = document.querySelectorAll(".nav-list a");
+
+    navLinks.forEach(link => {
+        link.addEventListener("click", (event) => {
+            event.preventDefault();
+            const targetId = link.getAttribute("href");
+            const targetElement = document.querySelector(targetId);
+            if (targetElement) {
+                targetElement.scrollIntoView({ behavior: "smooth" });
+            }
+        });
+    });
+});
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    var video = document.getElementById("myVideo");
+    var homeButton = document.getElementById("homeButton");
+    var iphoneMockup = document.getElementById("iphoneMockup");
+    var iphoneIcon = document.getElementById("iphoneIcon");
+    var videoVisible = false;
+
+    iphoneIcon.addEventListener("click", function () {
+        if (!videoVisible) {
+            iphoneMockup.classList.remove("hidden");
+            video.play();
+        } else {
+            iphoneMockup.classList.add("hidden");
+            video.pause();
+        }
+        videoVisible = !videoVisible;
+    });
+
+    iphoneMockup.addEventListener("click", function () {
+        iphoneMockup.classList.add("hidden");
+        video.pause();
+        videoVisible = false;
+    });
+});
