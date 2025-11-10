@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFutbol } from '@fortawesome/free-solid-svg-icons';
 
 const FootballSkills = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -73,7 +75,7 @@ const FootballSkills = () => {
         <div className="relative group">
           <div className="absolute inset-0 bg-accent/20 rounded-full blur-xl group-hover:blur-2xl transition-all duration-300" />
           <div className="relative w-16 h-16 bg-gradient-to-br from-accent/90 to-accent rounded-full flex items-center justify-center shadow-lg border-2 border-accent/50 group-hover:scale-110 group-hover:border-accent transition-all duration-300">
-            <span className="text-3xl">⚽</span>
+            <FontAwesomeIcon icon={faFutbol} className="text-3xl" />
           </div>
         </div>
       </div>
