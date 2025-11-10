@@ -1,0 +1,165 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { useScrollAnimation } from '@/hooks/useScrollAnimation';
+import { ExternalLink, Github } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import footballAnalyticsImage from '@/assets/project-football-analytics.jpg';
+import gamesImage from '@/assets/project-games.jpg';
+import portfolioImage from '@/assets/project-portfolio.jpg';
+
+const projects = [
+  {
+    title: 'Football Analytics Dashboard',
+    description: 'Interactive dashboard for analyzing football matches, player statistics, and team performance with real-time data visualization.',
+    image: footballAnalyticsImage,
+    tags: ['React', 'TypeScript', 'D3.js', 'Node.js', 'MongoDB'],
+    category: 'web',
+    github: '#',
+    demo: '#',
+  },
+  {
+    title: 'Football Mini-Games Collection',
+    description: 'Collection of fun football-themed mobile games including penalty shootouts, skills challenges, and tactical quizzes.',
+    image: gamesImage,
+    tags: ['React Native', 'TypeScript', 'Firebase', 'Redux'],
+    category: 'mobile',
+    github: '#',
+    demo: '#',
+  },
+  {
+    title: 'Content Creator Portfolio',
+    description: 'Modern portfolio website for showcasing video content, with integrated video player and content management system.',
+    image: portfolioImage,
+    tags: ['Next.js', 'Tailwind', 'Framer Motion', 'Supabase'],
+    category: 'web',
+    github: '#',
+    demo: '#',
+  },
+];
+
+const categories = ['All', 'Web Apps', 'Mobile', 'Games', 'Content'];
+
+export const Projects = () => {
+  const { ref, isVisible } = useScrollAnimation();
+  const [activeCategory, setActiveCategory] = useState('All');
+
+  return (
+    <section id="projects" ref={ref} className="py-24 relative">
+      <div className="container mx-auto px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={isVisible ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-6xl font-bold gradient-text mb-4">Featured Projects</h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            A showcase of my recent work and side projects
+          </p>
+        </motion.div>
+
+        {/* Filter Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isVisible ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="flex flex-wrap justify-center gap-4 mb-12"
+        >
+          {categories.map((category) => (
+            <Button
+              key={category}
+              variant={activeCategory === category ? 'default' : 'outline'}
+              onClick={() => setActiveCategory(category)}
+              className={
+                activeCategory === category
+                  ? 'bg-accent text-accent-foreground hover:bg-accent/90'
+                  : 'border-accent text-accent hover:bg-accent hover:text-accent-foreground'
+              }
+            >
+              {category}
+            </Button>
+          ))}
+        </motion.div>
+
+        {/* Projects Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+          {projects.map((project, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 30 }}
+              animate={isVisible ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.6, delay: index * 0.1 }}
+              className="glass-card rounded-xl overflow-hidden group transition-smooth hover:scale-105 hover:glow-accent"
+            >
+              <div className="relative overflow-hidden aspect-video">
+                <img
+                  src={project.image}
+                  alt={project.title}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60" />
+                <div className="absolute bottom-4 left-4 right-4 flex gap-2">
+                  <Button
+                    size="sm"
+                    className="bg-accent text-accent-foreground hover:bg-accent/90"
+                    asChild
+                  >
+                    <a href={project.github} target="_blank" rel="noopener noreferrer">
+                      <Github className="w-4 h-4 mr-1" />
+                      Code
+                    </a>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+                    asChild
+                  >
+                    <a href={project.demo} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      Demo
+                    </a>
+                  </Button>
+                </div>
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-foreground mb-2">{project.title}</h3>
+                <p className="text-sm text-muted-foreground mb-4">{project.description}</p>
+                <div className="flex flex-wrap gap-2">
+                  {project.tags.map((tag, tagIndex) => (
+                    <span
+                      key={tagIndex}
+                      className="text-xs px-3 py-1 bg-accent/10 text-accent rounded-full border border-accent/20"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* View More */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isVisible ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="text-center"
+        >
+          <Button
+            size="lg"
+            variant="outline"
+            className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+            asChild
+          >
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+              <Github className="mr-2 h-5 w-5" />
+              View All Projects on GitHub
+            </a>
+          </Button>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
