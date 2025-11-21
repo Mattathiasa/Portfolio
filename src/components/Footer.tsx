@@ -109,14 +109,6 @@ export const Footer = () => {
             <p className="text-sm text-muted-foreground text-center md:text-left">
               © {new Date().getFullYear()} Mattathias Abraham. All rights reserved.
             </p>
-            <a
-              href="https://lovable.dev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-muted-foreground hover:text-accent transition-colors"
-            >
-              Powered by <span className="font-semibold">Readdy</span>
-            </a>
           </div>
         </div>
       </div>

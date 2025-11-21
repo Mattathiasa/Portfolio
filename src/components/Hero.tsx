@@ -31,14 +31,14 @@ export const Hero = () => {
         ))}
       </div>
 
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className="text-6xl md:text-8xl font-bold mb-4">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold mb-4">
               <span className="gradient-text">Mattathias</span>
               <br />
               <span className="gradient-text">Abraham</span>
@@ -49,12 +49,12 @@ export const Hero = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="space-y-4"
+            className="space-y-3 sm:space-y-4"
           >
-            <h2 className="text-2xl md:text-4xl font-semibold text-foreground/90">
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground/90">
               Software Engineer 
             </h2>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
               Recent software engineering graduate passionate about building innovative applications
               and creating engaging football content. Combining technical expertise with creative storytelling.
             </p>

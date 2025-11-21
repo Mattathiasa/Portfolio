@@ -10,12 +10,9 @@ import { Projects } from '@/components/Projects';
 import { Blog } from '@/components/Blog';
 import { Contact } from '@/components/Contact';
 import { Footer } from '@/components/Footer';
-import { useSmoothScroll } from '@/hooks/useSmoothScroll';
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
-  
-  useSmoothScroll();
 
   useEffect(() => {
     // Preload fonts

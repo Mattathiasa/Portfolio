@@ -44,16 +44,16 @@ export const Projects = () => {
   const [activeCategory, setActiveCategory] = useState('All');
 
   return (
-    <section id="projects" ref={ref} className="py-24 relative">
-      <div className="container mx-auto px-4">
+    <section id="projects" ref={ref} className="min-h-screen flex items-center justify-center relative py-24">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={isVisible ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="text-center mb-12 sm:mb-16"
         >
-          <h2 className="text-4xl md:text-6xl font-bold gradient-text mb-4">Featured Projects</h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4">Featured Projects</h2>
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             A showcase of my recent work and side projects
           </p>
         </motion.div>
@@ -63,7 +63,7 @@ export const Projects = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={isVisible ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="flex flex-wrap justify-center gap-4 mb-12"
+          className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-8 sm:mb-12"
         >
           {categories.map((category) => (
             <Button
@@ -82,7 +82,7 @@ export const Projects = () => {
         </motion.div>
 
         {/* Projects Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
           {projects.map((project, index) => (
             <motion.div
               key={index}
@@ -98,7 +98,7 @@ export const Projects = () => {
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60" />
-                <div className="absolute bottom-4 left-4 right-4 flex gap-2">
+                <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 right-2 sm:right-4 flex gap-2">
                   <Button
                     size="sm"
                     className="bg-accent text-accent-foreground hover:bg-accent/90"
@@ -122,9 +122,9 @@ export const Projects = () => {
                   </Button>
                 </div>
               </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-foreground mb-2">{project.title}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{project.description}</p>
+              <div className="p-4 sm:p-6">
+                <h3 className="text-lg sm:text-xl font-bold text-foreground mb-2">{project.title}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-4">{project.description}</p>
                 <div className="flex flex-wrap gap-2">
                   {project.tags.map((tag, tagIndex) => (
                     <span

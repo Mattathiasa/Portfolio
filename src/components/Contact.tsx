@@ -12,8 +12,8 @@ const contactInfo = [
   {
     icon: Mail,
     label: 'Email',
-    value: 'mattathias.abraham@email.com',
-    link: 'mailto:mattathias.abraham@email.com',
+    value: 'mattathiasabraham@gmail.com',
+    link: 'mailto:mattathiasabraham@gmail.com',
   },
   {
     icon: Phone,
@@ -89,21 +89,21 @@ export const Contact = () => {
   };
 
   return (
-    <section id="contact" ref={ref} className="py-24 relative">
-      <div className="container mx-auto px-4">
+    <section id="contact" ref={ref} className="min-h-screen flex items-center justify-center relative py-24">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={isVisible ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="text-center mb-12 sm:mb-16"
         >
-          <h2 className="text-4xl md:text-6xl font-bold gradient-text mb-4">Get In Touch</h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4">Get In Touch</h2>
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             Available for new projects and collaborations
           </p>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
+        <div className="grid lg:grid-cols-2 gap-8 sm:gap-12">
           {/* Contact Form */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -201,12 +201,12 @@ export const Contact = () => {
             transition={{ duration: 0.8 }}
             className="space-y-8"
           >
-            <div className="glass-card p-8 rounded-xl">
-              <div className="flex items-center gap-3 mb-6">
+            <div className="glass-card p-6 sm:p-8 rounded-xl">
+              <div className="flex items-center gap-3 mb-4 sm:mb-6">
                 <div className="w-3 h-3 bg-accent rounded-full animate-pulse" />
-                <span className="text-sm font-medium text-accent">Available for new projects</span>
+                <span className="text-xs sm:text-sm font-medium text-accent">Available for new projects</span>
               </div>
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {contactInfo.map((info, index) => (
                   <a
                     key={index}
@@ -225,8 +225,8 @@ export const Contact = () => {
               </div>
             </div>
 
-            <div className="glass-card p-8 rounded-xl">
-              <h3 className="text-xl font-bold text-foreground mb-6">Connect With Me</h3>
+            <div className="glass-card p-6 sm:p-8 rounded-xl">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6">Connect With Me</h3>
               <div className="flex gap-4">
                 {socialLinks.map((social, index) => (
                   <a
