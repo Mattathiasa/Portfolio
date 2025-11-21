@@ -1,73 +1,142 @@
-# Welcome to your Lovable project
+# Mattathias Abraham - Portfolio
 
-## Project info
+A modern, interactive portfolio website showcasing my work as a Software Engineer and Football Content Creator.
 
-**URL**: https://lovable.dev/projects/f0c368b9-d0dc-4eac-b3ec-f2d3a59175a1
+![Portfolio Preview](https://img.shields.io/badge/React-18.3.1-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-blue) ![Vite](https://img.shields.io/badge/Vite-5.4.19-purple)
 
-## How can I edit this code?
+## 🚀 Live Demo
 
-There are several ways of editing your application.
+Visit my portfolio: **[mattathiasportfolio.vercel.app](https://mattathiasportfolio.vercel.app/)**
 
-**Use Lovable**
+## 👨‍💻 About Me
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f0c368b9-d0dc-4eac-b3ec-f2d3a59175a1) and start prompting.
+I'm a recent Software Engineering graduate from Addis Ababa, passionate about building innovative applications and creating engaging football content. This portfolio showcases my technical skills, projects, and creative work.
 
-Changes made via Lovable will be committed automatically to this repo.
+## ✨ Features
 
-**Use your preferred IDE**
+- **Modern Design**: Clean, professional interface with smooth animations
+- **Fully Responsive**: Optimized for all devices - mobile, tablet, and desktop
+- **Interactive Sections**:
+  - Hero section with animated background
+  - About me with stats and highlights
+  - Skills showcase with progress bars
+  - Featured projects gallery
+  - Blog/insights section
+  - Contact form with EmailJS integration
+  - Football skills video showcase
+- **Smooth Scrolling**: Enhanced navigation experience
+- **Dark Theme**: Eye-friendly design
+- **Performance Optimized**: Fast loading with Vite
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🛠️ Technologies Used
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- **Frontend Framework**: React 18.3
+- **Language**: TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui, Radix UI
+- **Animations**: Framer Motion
+- **3D Graphics**: Three.js
+- **Form Handling**: React Hook Form, Zod
+- **Email Service**: EmailJS
+- **Icons**: Lucide React, Font Awesome
 
-Follow these steps:
+## 📦 Installation & Setup
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Prerequisites
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- Node.js (v16 or higher)
+- npm or yarn
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Local Development
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+# Clone the repository
+git clone https://github.com/Mattathiasa/Portfolio.git
+
+# Navigate to project directory
+cd Portfolio
+
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will open at `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Build for Production
 
-**Use GitHub Codespaces**
+```bash
+# Create production build
+npm run build
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Preview production build
+npm run preview
+```
 
-## What technologies are used for this project?
+## 📧 Contact Form Setup
 
-This project is built with:
+To enable the contact form, you need to set up EmailJS:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Create an account at [EmailJS](https://www.emailjs.com/)
+2. Create an email service and template
+3. Create a `.env` file in the root directory:
 
-## How can I deploy this project?
+```env
+VITE_EMAILJS_SERVICE_ID=your_service_id
+VITE_EMAILJS_TEMPLATE_ID=your_template_id
+VITE_EMAILJS_PUBLIC_KEY=your_public_key
+```
 
-Simply open [Lovable](https://lovable.dev/projects/f0c368b9-d0dc-4eac-b3ec-f2d3a59175a1) and click on Share -> Publish.
+## 🚀 Deployment
 
-## Can I connect a custom domain to my Lovable project?
+This project can be easily deployed to:
 
-Yes, you can!
+- **Vercel** (Recommended): Connect your GitHub repo and deploy automatically
+- **Netlify**: Import project and deploy with one click
+- **GitHub Pages**: Use `gh-pages` for static hosting
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📂 Project Structure
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```
+Portfolio/
+├── public/              # Static assets
+├── src/
+│   ├── components/      # React components
+│   ├── hooks/          # Custom React hooks
+│   ├── lib/            # Utility functions
+│   ├── pages/          # Page components
+│   ├── assets/         # Images and media
+│   └── main.tsx        # Application entry point
+├── .env                # Environment variables
+└── package.json        # Dependencies
+```
+
+## 🎨 Customization
+
+Feel free to fork this project and customize it for your own portfolio:
+
+1. Update personal information in components
+2. Replace project images in `src/assets/`
+3. Modify color scheme in `tailwind.config.ts`
+4. Add your own projects and blog posts
+5. Update social media links
+
+## 📝 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## 🤝 Connect With Me
+
+- **GitHub**: [@Mattathiasa](https://github.com/Mattathiasa)
+- **LinkedIn**: [Your LinkedIn](https://linkedin.com)
+- **Instagram**: [@mattathiasa](https://www.instagram.com/mattathiasa/)
+- **Email**: mattathiasabraham@gmail.com
+
+---
+
+⭐ If you like this portfolio, give it a star!
+
+Built with ❤️ by Mattathias Abraham
