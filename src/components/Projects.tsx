@@ -5,6 +5,7 @@ import { ExternalLink, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import clashrollerImage from '@/assets/project-clashroller.png';
 import footballFreestyleImage from '@/assets/project-football-freestyle.png';
+import skzpyImage from '@/assets/project-skypy.png';
 
 const projects = [
   {
@@ -25,11 +26,11 @@ const projects = [
     github: 'https://github.com/Mattathiasa/Football-Freestyle',
     demo: 'https://football-freestyle.vercel.app/',
   },
-  
+
   {
     title: 'SKZPY Music Player',
     description: 'A music player that rates your music on a radar chart, have line by line lyrics and have an original, english translation and rom translation lyrics.',
-    image: footballFreestyleImage,
+    image: skzpyImage,
     tags: ['React', 'TypeScript', 'Node.js'],
     category: ['Web Apps', 'Mobile'],
     github: 'https://github.com/Mattathiasa/skz-player',
