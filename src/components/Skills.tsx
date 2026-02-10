@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
-import { Award, Trophy, CheckCircle2 } from 'lucide-react';
+
 
 const skills = [
   { name: 'JavaScript/TypeScript', level: 90 },
@@ -87,27 +87,7 @@ export const Skills = () => {
               ))}
             </div>
 
-            {/* Achievements */}
-            <div className="pt-6 sm:pt-8">
-              <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6">Achievements</h3>
-              <div className="space-y-4">
-                {achievements.map((achievement, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={isVisible ? { opacity: 1, x: 0 } : {}}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    className="glass-card p-3 sm:p-4 rounded-lg flex items-center gap-3 sm:gap-4 transition-smooth hover:glow-accent"
-                  >
-                    <achievement.icon className="w-8 h-8 sm:w-10 sm:h-10 text-accent flex-shrink-0" />
-                    <div>
-                      <h4 className="text-sm sm:text-base font-semibold text-foreground">{achievement.title}</h4>
-                      <p className="text-xs sm:text-sm text-muted-foreground">{achievement.description}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+
           </motion.div>
         </div>
       </div>
