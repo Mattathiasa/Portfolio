@@ -25,3 +25,6 @@ dist-ssr
 
 # Large video files
 public/football-skills.mp4
+
+.vercel
+.env*.local

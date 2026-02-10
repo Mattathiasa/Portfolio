@@ -18,23 +18,7 @@ const tools = [
   'MongoDB', 'PostgreSQL', 'Firebase', 'Vercel', 'Jira', 'Slack'
 ];
 
-const achievements = [
-  {
-    icon: Award,
-    title: "Dean's List",
-    description: 'Academic Excellence Recognition',
-  },
-  {
-    icon: Trophy,
-    title: 'Hackathon Winner',
-    description: 'Best Innovation Award 2024',
-  },
-  {
-    icon: CheckCircle2,
-    title: 'AWS Certified',
-    description: 'Cloud Practitioner',
-  },
-];
+
 
 export const Skills = () => {
   const { ref, isVisible } = useScrollAnimation();
