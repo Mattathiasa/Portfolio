@@ -3,38 +3,38 @@ import { motion } from 'framer-motion';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import { ExternalLink, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import footballAnalyticsImage from '@/assets/project-football-analytics.jpg';
-import gamesImage from '@/assets/project-games.jpg';
-import portfolioImage from '@/assets/project-portfolio.jpg';
+import clashrollerImage from '@/assets/project-clashroller.png';
+import footballFreestyleImage from '@/assets/project-football-freestyle.png';
 
 const projects = [
   {
-    title: 'Football Analytics Dashboard',
-    description: 'Interactive dashboard for analyzing football matches, player statistics, and team performance with real-time data visualization.',
-    image: footballAnalyticsImage,
-    tags: ['React', 'TypeScript', 'D3.js', 'Node.js', 'MongoDB'],
-    category: 'web',
-    github: '#',
-    demo: '#',
+    title: 'Clashroller',
+    description: 'A character vs character multiverse battle with live-action, cartoon, and anime characters.',
+    image: clashrollerImage,
+    tags: ['React', 'TypeScript', 'Node.js'],
+    category: ['Games', 'Web Apps', 'Mobile'],
+    github: 'https://github.com/Mattathiasa/animecrewdraft',
+    demo: 'https://mn-clashroller.vercel.app/',
   },
   {
-    title: 'Football Mini-Games Collection',
-    description: 'Collection of fun football-themed mobile games including penalty shootouts, skills challenges, and tactical quizzes.',
-    image: gamesImage,
-    tags: ['React Native', 'TypeScript', 'Firebase', 'Redux'],
-    category: 'mobile',
-    github: '#',
-    demo: '#',
+    title: 'Football Freestyle',
+    description: 'My Personal Football trick short, freestyle videos.',
+    image: footballFreestyleImage,
+    tags: ['React', 'TypeScript', 'Node.js'],
+    category: ['Web Apps', 'Mobile'],
+    github: 'https://github.com/Mattathiasa/Football-Freestyle',
+    demo: 'https://football-freestyle.vercel.app/',
   },
+  
   {
-    title: 'Content Creator Portfolio',
-    description: 'Modern portfolio website for showcasing video content, with integrated video player and content management system.',
-    image: portfolioImage,
-    tags: ['Next.js', 'Tailwind', 'Framer Motion', 'Supabase'],
-    category: 'web',
-    github: '#',
-    demo: '#',
-  },
+    title: 'SKZPY Music Player',
+    description: 'A music player that rates your music on a radar chart, have line by line lyrics and have an original, english translation and rom translation lyrics.',
+    image: footballFreestyleImage,
+    tags: ['React', 'TypeScript', 'Node.js'],
+    category: ['Web Apps', 'Mobile'],
+    github: 'https://github.com/Mattathiasa/skz-player',
+    demo: 'https://skz-player.vercel.app/',
+  }
 ];
 
 const categories = ['All', 'Web Apps', 'Mobile', 'Games', 'Content'];
@@ -83,61 +83,63 @@ export const Projects = () => {
 
         {/* Projects Grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
-          {projects.map((project, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 30 }}
-              animate={isVisible ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              className="glass-card rounded-xl overflow-hidden group transition-smooth hover:scale-105 hover:glow-accent"
-            >
-              <div className="relative overflow-hidden aspect-video">
-                <img
-                  src={project.image}
-                  alt={project.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60" />
-                <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 right-2 sm:right-4 flex gap-2">
-                  <Button
-                    size="sm"
-                    className="bg-accent text-accent-foreground hover:bg-accent/90"
-                    asChild
-                  >
-                    <a href={project.github} target="_blank" rel="noopener noreferrer">
-                      <Github className="w-4 h-4 mr-1" />
-                      Code
-                    </a>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
-                    asChild
-                  >
-                    <a href={project.demo} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      Demo
-                    </a>
-                  </Button>
-                </div>
-              </div>
-              <div className="p-4 sm:p-6">
-                <h3 className="text-lg sm:text-xl font-bold text-foreground mb-2">{project.title}</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-4">{project.description}</p>
-                <div className="flex flex-wrap gap-2">
-                  {project.tags.map((tag, tagIndex) => (
-                    <span
-                      key={tagIndex}
-                      className="text-xs px-3 py-1 bg-accent/10 text-accent rounded-full border border-accent/20"
+          {projects
+            .filter((project) => activeCategory === 'All' || project.category === activeCategory)
+            .map((project, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 30 }}
+                animate={isVisible ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className="glass-card rounded-xl overflow-hidden group transition-smooth hover:scale-105 hover:glow-accent"
+              >
+                <div className="relative overflow-hidden aspect-video">
+                  <img
+                    src={project.image}
+                    alt={project.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60" />
+                  <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 right-2 sm:right-4 flex gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-accent text-accent-foreground hover:bg-accent/90"
+                      asChild
                     >
-                      {tag}
-                    </span>
-                  ))}
+                      <a href={project.github} target="_blank" rel="noopener noreferrer">
+                        <Github className="w-4 h-4 mr-1" />
+                        Code
+                      </a>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+                      asChild
+                    >
+                      <a href={project.demo} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-4 h-4 mr-1" />
+                        Demo
+                      </a>
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+                <div className="p-4 sm:p-6">
+                  <h3 className="text-lg sm:text-xl font-bold text-foreground mb-2">{project.title}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-4">{project.description}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {project.tags.map((tag, tagIndex) => (
+                      <span
+                        key={tagIndex}
+                        className="text-xs px-3 py-1 bg-accent/10 text-accent rounded-full border border-accent/20"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
         </div>
 
         {/* View More */}

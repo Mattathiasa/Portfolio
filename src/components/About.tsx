@@ -60,13 +60,13 @@ export const About = () => {
             transition={{ duration: 0.8 }}
             className="relative"
           >
-            <div className="relative rounded-2xl overflow-hidden shadow-elegant glow-accent">
+            <div className="relative">
               <img
                 src={workspaceImage}
                 alt="Mattathias Abraham's workspace"
                 className="w-full h-auto"
+                style={{ background: 'transparent' }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
             </div>
           </motion.div>
 
@@ -102,22 +102,22 @@ export const About = () => {
         </div>
 
         {/* Stats Grid */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={isVisible ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-12 sm:mb-16"
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mb-8"
         >
           {stats.map((stat, index) => (
             <div
               key={index}
-              className="glass-card p-4 sm:p-6 rounded-xl text-center transition-smooth hover:scale-105"
+              className="glass-card p-4 sm:p-5 rounded-xl text-center transition-smooth hover:scale-105"
             >
               <div className="text-3xl sm:text-4xl font-bold gradient-text mb-2">{stat.number}</div>
               <div className="text-xs sm:text-sm text-muted-foreground">{stat.label}</div>
             </div>
           ))}
-        </motion.div>
+        </motion.div> */}
 
         {/* Highlights */}
         <motion.div

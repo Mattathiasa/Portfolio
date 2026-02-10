@@ -100,7 +100,7 @@ This project can be easily deployed to:
 
 ## 📂 Project Structure
 
-```
+```>
 Portfolio/
 ├── public/              # Static assets
 ├── src/

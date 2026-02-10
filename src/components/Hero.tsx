@@ -38,7 +38,7 @@ export const Hero = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold mb-4">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold font-ailerons mb-4">
               <span className="gradient-text">Mattathias</span>
               <br />
               <span className="gradient-text">Abraham</span>

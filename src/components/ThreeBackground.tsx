@@ -154,6 +154,7 @@ export const ThreeBackground = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
+      
       renderer.dispose();
       particlesGeometry.dispose();
       particlesMaterial.dispose();

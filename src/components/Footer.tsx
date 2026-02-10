@@ -1,6 +1,4 @@
 import { Mail, Phone, MapPin, Github, Linkedin, Instagram } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 
 const footerLinks = {
   quickLinks: [
@@ -8,13 +6,12 @@ const footerLinks = {
     { name: 'About', href: '#about' },
     { name: 'Skills', href: '#skills' },
     { name: 'Projects', href: '#projects' },
-    { name: 'Blog', href: '#blog' },
     { name: 'Contact', href: '#contact' },
   ],
   contact: [
-    { icon: Mail, text: 'mattathias.abraham@email.com' },
-    { icon: Phone, text: '+1 (555) 123-4567' },
-    { icon: MapPin, text: 'Toronto, Canada' },
+    { icon: Mail, text: 'mattathiasabraham@gmail.com' },
+    { icon: Phone, text: '+251 902 212 622' },
+    { icon: MapPin, text: 'Addis Ababa, Ethiopia' },
   ],
   social: [
     { icon: Github, href: 'https://github.com', label: 'GitHub' },
@@ -27,7 +24,7 @@ export const Footer = () => {
   return (
     <footer className="relative bg-gradient-to-b from-background to-[hsl(var(--gradient-end))] border-t border-border">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+        <div className="grid md:grid-cols-3 gap-8 lg:gap-12 mb-8">
           {/* Brand */}
           <div className="space-y-4">
             <h3 className="text-2xl font-display gradient-text">MA</h3>
@@ -79,27 +76,6 @@ export const Footer = () => {
                 </li>
               ))}
             </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <h4 className="text-lg font-semibold text-foreground mb-4">Stay Updated</h4>
-            <p className="text-sm text-muted-foreground mb-4">
-              Subscribe to get updates on my latest projects and blog posts.
-            </p>
-            <form className="space-y-2" onSubmit={(e) => e.preventDefault()}>
-              <Input
-                type="email"
-                placeholder="Your email"
-                className="bg-secondary border-border"
-              />
-              <Button
-                type="submit"
-                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
-              >
-                Subscribe
-              </Button>
-            </form>
           </div>
         </div>
 
