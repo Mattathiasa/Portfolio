@@ -31,7 +31,7 @@ const projects = [
     title: 'SKZPY Music Player',
     description: 'A music player that rates your music on a radar chart, have line by line lyrics and have an original, english translation and rom translation lyrics.',
     image: skzpyImage,
-    tags: ['React', 'TypeScript', 'Node.js'],
+    tags: ['React', 'TypeScript', 'Node.js', 'Electron'],
     category: ['Web Apps', 'Mobile'],
     github: 'https://github.com/Mattathiasa/skz-player',
     demo: 'https://skz-player.vercel.app/',

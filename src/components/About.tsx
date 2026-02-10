@@ -24,8 +24,8 @@ const highlights = [
   },
   {
     icon: Video,
-    title: 'Football Content',
-    description: 'Producing engaging football analysis and highlights videos',
+    title: 'Football Videos',
+    description: 'Making Football tricks, skills and trick shot videos',
   },
   {
     icon: Users,
