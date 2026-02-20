@@ -5,17 +5,19 @@ import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 const skills = [
   { name: 'JavaScript/TypeScript', level: 90 },
   { name: 'React & Next.js', level: 85 },
-  { name: 'Node.js & Express', level: 80 },
-  { name: 'Python & Django', level: 75 },
-  { name: 'Database Design', level: 85 },
+  { name: 'Flutter', level: 83 },
+  { name: 'Java', level: 75 },
+  { name: 'Database Design', level: 70 },
   { name: 'Cloud Services', level: 70 },
-  { name: 'Mobile Development', level: 75 },
+  { name: 'Mobile Development', level: 89 },
   { name: 'UI/UX Design', level: 80 },
+  { name: 'Angular', level: 80 },
 ];
 
 const tools = [
   'Git', 'Docker', 'VS Code', 'Figma', 'Postman', 'AWS',
-  'MongoDB', 'PostgreSQL', 'Firebase', 'Vercel', 'Jira', 'Slack'
+  'MongoDB', 'PostgreSQL', 'Firebase', 'Supabase', 'Vercel', 'Android Studio', 'Xcode',
+  'Slack', 'Dotnet', 'SQL', 'Azure Data Studio', 'Notion'
 ];
 
 

@@ -6,7 +6,7 @@ export const Hero = () => {
   return (
     <section id="home" className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--hero-gradient-from))] via-[hsl(var(--hero-gradient-via))] to-[hsl(var(--hero-gradient-to))]" />
-      
+
       {/* Floating shapes */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(5)].map((_, i) => (
@@ -52,10 +52,10 @@ export const Hero = () => {
             className="space-y-3 sm:space-y-4"
           >
             <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground/90">
-              Software Engineer 
+              Software Engineer
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
-              Recent software engineering graduate passionate about building innovative applications
+              Software engineering graduate passionate about building innovative applications
               and creating engaging football content. Combining technical expertise with creative storytelling.
             </p>
           </motion.div>
