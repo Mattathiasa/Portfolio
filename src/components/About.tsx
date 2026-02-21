@@ -81,7 +81,7 @@ export const About = () => {
               Software Engineering Graduate with a Passion for Innovation
             </h3>
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              I'm a Software Engineering graduate from Addis Ababa, with a strong passion
+              I'm a Software Engineering graduate from <a href="https://www.google.com/maps/place/Addis+Ababa,+Ethiopia" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline decoration-accent/30 underline-offset-4">Addis Ababa</a>, with a strong passion
               for building innovative web and mobileapplications that solve real-world problems. My journey in tech
               is complemented by my creative side - I love making football videos, combining my
               technical skills with storytelling and video editing.
@@ -121,20 +121,38 @@ export const About = () => {
 
         {/* Highlights */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={isVisible ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, delay: 0.4 }}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.15,
+              },
+            },
+          }}
           className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
         >
           {highlights.map((item, index) => (
-            <div
+            <motion.div
               key={index}
-              className="glass-card p-4 sm:p-6 rounded-xl transition-smooth hover:scale-105 hover:glow-accent"
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0 },
+              }}
+              whileHover={{
+                y: -10,
+                transition: { type: "spring", stiffness: 400, damping: 10 }
+              }}
+              className="glass-card p-4 sm:p-6 rounded-2xl border border-accent/10 transition-all hover:border-accent/30 hover:glow-accent group relative overflow-hidden"
             >
-              <item.icon className="w-10 h-10 sm:w-12 sm:h-12 text-accent mb-3 sm:mb-4" />
-              <h4 className="text-base sm:text-lg font-semibold text-foreground mb-2">{item.title}</h4>
-              <p className="text-xs sm:text-sm text-muted-foreground">{item.description}</p>
-            </div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full -mr-12 -mt-12 group-hover:bg-accent/10 transition-colors" />
+              <item.icon className="w-10 h-10 sm:w-12 sm:h-12 text-accent mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300" />
+              <h4 className="text-base sm:text-lg font-bold text-foreground mb-2 group-hover:text-accent transition-colors">{item.title}</h4>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">{item.description}</p>
+            </motion.div>
           ))}
         </motion.div>
       </div>

@@ -9,9 +9,9 @@ const footerLinks = {
     { name: 'Contact', href: '#contact' },
   ],
   contact: [
-    { icon: Mail, text: 'mattathiasabraham@gmail.com' },
-    { icon: Phone, text: '+251 902 212 622' },
-    { icon: MapPin, text: 'Addis Ababa, Ethiopia' },
+    { icon: Mail, text: 'mattathiasabraham@gmail.com', href: 'mailto:mattathiasabraham@gmail.com' },
+    { icon: Phone, text: '+251 902 212 622', href: 'tel:+251902212622' },
+    { icon: MapPin, text: 'Addis Ababa, Ethiopia', href: 'https://www.google.com/maps/place/Addis+Ababa,+Ethiopia' },
   ],
   social: [
     { icon: Github, href: 'https://github.com', label: 'GitHub' },
@@ -70,9 +70,16 @@ export const Footer = () => {
             <h4 className="text-lg font-semibold text-foreground mb-4">Contact Info</h4>
             <ul className="space-y-3">
               {footerLinks.contact.map((contact, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <contact.icon className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-muted-foreground">{contact.text}</span>
+                <li key={index} className="flex items-start gap-2 group">
+                  <contact.icon className="w-4 h-4 text-accent mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                  <a
+                    href={contact.href}
+                    target={contact.icon === MapPin ? "_blank" : undefined}
+                    rel={contact.icon === MapPin ? "noopener noreferrer" : undefined}
+                    className="text-sm text-muted-foreground hover:text-accent transition-colors"
+                  >
+                    {contact.text}
+                  </a>
                 </li>
               ))}
             </ul>

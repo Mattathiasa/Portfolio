@@ -7,28 +7,47 @@ export const Hero = () => {
     <section id="home" className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--hero-gradient-from))] via-[hsl(var(--hero-gradient-via))] to-[hsl(var(--hero-gradient-to))]" />
 
-      {/* Floating shapes */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(5)].map((_, i) => (
+      {/* Floating shapes and Animated Background Gradients */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-32 h-32 border-2 border-accent/20 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+            className="absolute w-16 h-16 sm:w-32 sm:h-32 border-2 border-accent/10 rounded-full"
+            initial={{
+              left: Math.random() * 100 + '%',
+              top: Math.random() * 100 + '%',
+              scale: Math.random() * 0.5 + 0.5
             }}
             animate={{
-              y: [0, -30, 0],
-              x: [0, 15, 0],
+              y: [0, -40, 0],
+              x: [0, 20, 0],
               rotate: [0, 180, 360],
             }}
             transition={{
-              duration: 10 + i * 2,
+              duration: 15 + i * 5,
               repeat: Infinity,
               ease: 'linear',
             }}
           />
         ))}
+
+        {/* Animated Background Gradients */}
+        <motion.div
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent/10 rounded-full filter blur-[120px]"
+          animate={{
+            x: [0, 50, 0],
+            y: [0, 30, 0],
+          }}
+          transition={{ duration: 15, repeat: Infinity }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full filter blur-[120px]"
+          animate={{
+            x: [0, -50, 0],
+            y: [0, -30, 0],
+          }}
+          transition={{ duration: 18, repeat: Infinity }}
+        />
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">

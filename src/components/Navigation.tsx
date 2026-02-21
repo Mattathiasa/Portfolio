@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll as useScrollProgress } from 'framer-motion';
 
 const navItems = [
   { name: 'Home', href: '#home' },
@@ -14,6 +14,7 @@ export const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
+  const { scrollYProgress } = useScrollProgress();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -21,7 +22,7 @@ export const Navigation = () => {
 
       // Update active section
       const sections = navItems.map(item => item.href.substring(1));
-      const scrollPosition = window.scrollY + 100;
+      const scrollPosition = window.scrollY + 200;
 
       for (const section of sections) {
         const element = document.getElementById(section);
@@ -41,10 +42,14 @@ export const Navigation = () => {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-        isScrolled ? 'glass shadow-elegant py-4' : 'py-6'
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'glass shadow-elegant py-3' : 'py-6'
+        }`}
     >
+      {/* Scroll Progress Bar */}
+      <motion.div
+        className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent origin-left z-50"
+        style={{ scaleX: scrollYProgress }}
+      />
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
@@ -69,11 +74,10 @@ export const Navigation = () => {
               <a
                 key={item.name}
                 href={item.href}
-                className={`relative text-sm font-medium transition-colors hover:text-accent ${
-                  activeSection === item.href.substring(1)
-                    ? 'text-accent'
-                    : 'text-foreground/80'
-                }`}
+                className={`relative text-sm font-medium transition-colors hover:text-accent ${activeSection === item.href.substring(1)
+                  ? 'text-accent'
+                  : 'text-foreground/80'
+                  }`}
               >
                 {item.name}
                 {activeSection === item.href.substring(1) && (
@@ -113,11 +117,10 @@ export const Navigation = () => {
                   key={item.name}
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`text-lg font-medium transition-colors ${
-                    activeSection === item.href.substring(1)
-                      ? 'text-accent'
-                      : 'text-foreground/80 hover:text-accent'
-                  }`}
+                  className={`text-lg font-medium transition-colors ${activeSection === item.href.substring(1)
+                    ? 'text-accent'
+                    : 'text-foreground/80 hover:text-accent'
+                    }`}
                 >
                   {item.name}
                 </a>

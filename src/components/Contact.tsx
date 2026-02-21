@@ -25,14 +25,14 @@ const contactInfo = [
     icon: MapPin,
     label: 'Location',
     value: 'Addis Ababa, Ethiopia',
-    link: '#',
+    link: 'https://www.google.com/maps/place/Addis+Ababa,+Ethiopia',
   },
 ];
 
 const socialLinks = [
-  { icon: Github, label: 'GitHub', link: 'https://github.com/Mattathiasa' },
-  { icon: Linkedin, label: 'LinkedIn', link: 'https://linkedin.com' },
-  { icon: Instagram, label: 'Instagram', link: 'https://www.instagram.com/mattathiasa/' },
+  { icon: Github, label: 'GitHub', link: 'https://github.com/Mattathiasa', color: '#6e5494' },
+  { icon: Linkedin, label: 'LinkedIn', link: 'https://linkedin.com', color: '#0077b5' },
+  { icon: Instagram, label: 'Instagram', link: 'https://www.instagram.com/mattathiasa/', color: '#e4405f' },
 ];
 
 export const Contact = () => {
@@ -229,16 +229,31 @@ export const Contact = () => {
               <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6">Connect With Me</h3>
               <div className="flex gap-4">
                 {socialLinks.map((social, index) => (
-                  <a
+                  <motion.a
                     key={index}
                     href={social.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center transition-smooth hover:bg-accent hover:scale-110 group"
+                    whileHover={{
+                      scale: 1.2,
+                      rotate: 5,
+                      backgroundColor: "hsl(var(--accent))",
+                      color: "hsl(var(--accent-foreground))"
+                    }}
+                    whileTap={{ scale: 0.9 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={isVisible ? { opacity: 1, y: 0 } : {}}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 10,
+                      delay: 0.2 + index * 0.1
+                    }}
+                    className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center transition-colors group"
                     aria-label={social.label}
                   >
-                    <social.icon className="w-6 h-6 text-accent group-hover:text-accent-foreground" />
-                  </a>
+                    <social.icon className="w-6 h-6 text-accent group-hover:text-inherit transition-colors" />
+                  </motion.a>
                 ))}
               </div>
             </div>

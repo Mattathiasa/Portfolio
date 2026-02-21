@@ -65,6 +65,30 @@ export const Skills = () => {
                 </div>
               </div>
             ))}
+            {/* Floating shapes */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(8)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-16 h-16 sm:w-32 sm:h-32 border-2 border-accent/10 rounded-full"
+                  initial={{
+                    x: Math.random() * 100 + '%',
+                    y: Math.random() * 100 + '%',
+                    scale: Math.random() * 0.5 + 0.5
+                  }}
+                  animate={{
+                    y: [0, -40, 0],
+                    x: [0, 20, 0],
+                    rotate: [0, 180, 360],
+                  }}
+                  transition={{
+                    duration: 15 + i * 5,
+                    repeat: Infinity,
+                    ease: 'linear',
+                  }}
+                />
+              ))}
+            </div>
           </motion.div>
 
           {/* Tools & Technologies */}
@@ -80,11 +104,21 @@ export const Skills = () => {
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, scale: 0.8 }}
-                  animate={isVisible ? { opacity: 1, scale: 1 } : {}}
-                  transition={{ duration: 0.5, delay: index * 0.05 }}
-                  className="glass-card p-3 sm:p-4 rounded-lg text-center transition-smooth hover:scale-105 hover:glow-accent"
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  whileHover={{
+                    scale: 1.1,
+                    rotate: index % 2 === 0 ? 2 : -2,
+                    boxShadow: "0 0 20px hsl(var(--accent) / 0.4)"
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 10,
+                    delay: index * 0.02
+                  }}
+                  className="glass-card p-3 sm:p-4 rounded-xl text-center transition-all cursor-default border border-accent/10 hover:border-accent/40"
                 >
-                  <span className="text-xs sm:text-sm font-medium text-foreground">{tool}</span>
+                  <span className="text-xs sm:text-sm font-medium text-foreground/90 group-hover:text-foreground">{tool}</span>
                 </motion.div>
               ))}
             </div>
