@@ -101,8 +101,18 @@ export const Hero = () => {
               className="border-accent text-accent hover:bg-accent hover:text-accent-foreground transition-smooth"
               asChild
             >
-              <a href="#contact">
+              <a href="/resume.html" target="_blank" rel="noopener noreferrer">
                 <Mail className="mr-2 h-5 w-5" />
+                Download CV
+              </a>
+            </Button>
+            <Button
+              size="lg"
+              variant="ghost"
+              className="text-muted-foreground hover:text-accent transition-smooth"
+              asChild
+            >
+              <a href="#contact">
                 Get In Touch
               </a>
             </Button>

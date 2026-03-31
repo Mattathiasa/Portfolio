@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mattathias Abraham — Resume</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.5;
+      color: #1a1a1a;
+      background: #fff;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 36px 44px;
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+    .header {
+      text-align: center;
+      padding-bottom: 12px;
+      border-bottom: 2.5px solid #2563eb;
+      margin-bottom: 18px;
+    }
+
+    .header h1 {
+      font-size: 24pt;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      color: #0f172a;
+    }
+
+    .header .role {
+      font-size: 11pt;
+      font-weight: 600;
+      color: #2563eb;
+      margin: 3px 0 2px;
+    }
+
+    .contact-row {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 4px 14px;
+      font-size: 8.5pt;
+      color: #475569;
+      margin-top: 8px;
+    }
+
+    .contact-row a {
+      color: #2563eb;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .contact-row a:hover {
+      text-decoration: underline;
+      opacity: 0.85;
+    }
+
+    .sep {
+      color: #cbd5e1;
+    }
+
+    /* ── Section ──────────────────────────────────────────── */
+    .section {
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 9pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #2563eb;
+      border-bottom: 1px solid #dbeafe;
+      padding-bottom: 3px;
+      margin-bottom: 8px;
+      margin-top: 4px;
+    }
+
+    /* ── Entry (experience / education) ──────────────────── */
+    .entry, .project {
+      margin-bottom: 10px;
+      page-break-inside: avoid;
+    }
+
+    .entry-top, .project-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .entry-title, .project-name {
+      font-weight: 700;
+      font-size: 10pt;
+      color: #0f172a;
+    }
+
+    .entry-org {
+      font-size: 9pt;
+      color: #475569;
+      font-style: italic;
+      margin-top: 1px;
+    }
+
+    .entry-date {
+      font-size: 8.5pt;
+      color: #475569;
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .entry-badge {
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #2563eb;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 3px;
+      padding: 1px 5px;
+      white-space: nowrap;
+    }
+
+    .entry ul, .project-desc {
+      margin: 5px 0 0 16px;
+      list-style: disc;
+    }
+
+    .entry ul li, .project-desc li {
+      font-size: 9.5pt;
+      color: #334155;
+      margin-bottom: 3px;
+    }
+
+    /* ── Summary ──────────────────────────────────────────── */
+    .summary {
+      font-size: 9.5pt;
+      color: #334155;
+      line-height: 1.55;
+    }
+
+    /* ── Skills ───────────────────────────────────────────── */
+    .skills-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5pt;
+    }
+
+    .skills-table td {
+      padding: 2px 6px 2px 0;
+      vertical-align: top;
+    }
+
+    .skills-table .sk-label {
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+      width: 130px;
+    }
+
+    .skills-table .sk-value {
+      color: #334155;
+    }
+
+    /* ── Projects ─────────────────────────────────────────── */
+    .project-link {
+      font-size: 8.5pt;
+      color: #2563eb;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .project-link:hover {
+      text-decoration: underline;
+    }
+
+    .project-tech {
+      font-size: 8.5pt;
+      color: #64748b;
+      font-style: italic;
+      margin: 2px 0;
+    }
+
+    /* ── Languages ────────────────────────────────────────── */
+    .lang-row {
+      font-size: 9.5pt;
+      color: #334155;
+    }
+
+    /* ── Print ────────────────────────────────────────────── */
+    @media print {
+      body {
+        padding: 18px 28px;
+      }
+
+      a {
+        color: #2563eb !important;
+      }
+
+      @page {
+        margin: 0.4in;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="header">
+    <h1>Mattathias Abraham</h1>
+    <div class="role">Flutter &nbsp;·&nbsp; React Native &nbsp;·&nbsp; Mobile App Developer</div>
+    <div style="font-size:8.5pt; color:#64748b;">Building scalable mobile systems with real-time data and role-based architecture</div>
+    <div style="font-size:8.5pt; color:#64748b; margin-top:2px;">Open to remote opportunities and international relocation</div>
+    <div class="contact-row">
+      <a href="mailto:mattathiasabraham@gmail.com">mattathiasabraham@gmail.com</a>
+      <span class="sep">|</span>
+      <a href="tel:+251902212622">+251 902 212 622</a>
+      <span class="sep">|</span>
+      <a href="https://maps.google.com/?q=Addis+Ababa,+Ethiopia" target="_blank">Addis Ababa, Ethiopia</a>
+      <span class="sep">|</span>
+      <a href="https://www.linkedin.com/in/mattathias-abraham-3707a0398/">LinkedIn</a>
+      <span class="sep">|</span>
+      <a href="https://mattathiasportfolio.vercel.app/">Portfolio</a>
+      <span class="sep">|</span>
+      <a href="https://github.com/Mattathiasa">GitHub</a>
+    </div>
+  </div>
+
+  <!-- ── Summary ─────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Summary</div>
+    <p class="summary">
+      Software Engineering graduate specializing in high-performance mobile development with Flutter and React Native. 
+      Proven track record of designing and building role-based systems with hierarchical access control, real-time data synchronization, 
+      and scalable cloud architectures. Focused on transforming complex requirements into scalable, user-centered mobile solutions.
+    </p>
+  </div>
+
+  <!-- ── Skills ──────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Skills</div>
+    <table class="skills-table">
+      <tr>
+        <td class="sk-label">Mobile</td>
+        <td class="sk-value">Flutter, React Native, Android (Java), iOS (Xcode)</td>
+      </tr>
+      <tr>
+        <td class="sk-label">Frontend</td>
+        <td class="sk-value">React, Next.js, Angular, TypeScript, JavaScript, HTML/CSS, Tailwind CSS</td>
+      </tr>
+      <tr>
+        <td class="sk-label">Backend</td>
+        <td class="sk-value">Node.js, .NET, Java, REST APIs</td>
+      </tr>
+      <tr>
+        <td class="sk-label">Databases</td>
+        <td class="sk-value">Firebase (Realtime & Firestore), Supabase, PostgreSQL, MongoDB, SQL</td>
+      </tr>
+      <tr>
+        <td class="sk-label">Cloud &amp; DevOps</td>
+        <td class="sk-value">AWS, Azure, Vercel, Docker, Git</td>
+      </tr>
+      <tr>
+        <td class="sk-label">Tools &amp; Design</td>
+        <td class="sk-value">Figma, Postman, Android Studio, VS Code, Notion</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ── Work Experience ─────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Work Experience</div>
+
+    <!-- DAFTech -->
+    <div class="entry">
+      <div class="entry-top">
+        <div>
+          <div class="entry-title">Full Stack Developer &nbsp;<span class="entry-badge">Full-time</span></div>
+          <div class="entry-org">DAFTech Computer Engineering &nbsp;·&nbsp; Addis Ababa, Ethiopia</div>
+        </div>
+        <div class="entry-date">Feb 2026 – Present</div>
+      </div>
+      <ul>
+        <li>Leading migration of a legacy Android (Java) application to Flutter, enabling cross-platform deployment and reducing maintenance overhead</li>
+        <li>Designed and implemented the Inventory module with REST API integration for real-time tracking of 1,000+ records</li>
+        <li>Improved system maintainability and reduced platform-specific code by consolidating into a single Flutter codebase</li>
+        <li>Identified and resolved performance bottlenecks during development, improving application responsiveness</li>
+      </ul>
+    </div>
+
+    <!-- Mahibere Ahaw -->
+    <div class="entry">
+      <div class="entry-top">
+        <div>
+          <div class="entry-title">Freelance Software Developer &nbsp;<span class="entry-badge">Freelance</span></div>
+          <div class="entry-org">Mahibere Ahaw Church &nbsp;·&nbsp; Remote</div>
+        </div>
+        <div class="entry-date">Oct 2025 – Present</div>
+      </div>
+      <ul>
+        <li>Developing a full-scale Church Management System using React Native and Firebase with role-based access for 7 hierarchical user levels</li>
+        <li>Actively used by church leadership to manage 300+ members and organizational workflows</li>
+        <li>Implementing real-time data synchronization, member management, and administrative workflows</li>
+        <li>Designing scalable data structures to support hundreds of active users</li>
+      </ul>
+    </div>
+
+    <!-- African Union -->
+    <div class="entry">
+      <div class="entry-top">
+        <div>
+          <div class="entry-title">IT Intern &nbsp;<span class="entry-badge">Internship</span></div>
+          <div class="entry-org">African Union &nbsp;·&nbsp; Addis Ababa, Ethiopia</div>
+        </div>
+        <div class="entry-date">Mar 2024 – May 2024</div>
+      </div>
+      <ul>
+        <li>Contributed to a data mining assignment, collecting and structuring organizational data for analysis.</li>
+        <li>Converted AFP XML files into well-structured, user-friendly HTML documents to improve content accessibility.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Projects ────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Projects</div>
+
+    <div class="project">
+      <div class="project-top">
+        <span class="project-name">Ahaw Church Management App</span>
+        <div>
+          <a class="project-link" href="https://mahibereahaw.vercel.app/">Live</a>
+          <span class="sep">|</span>
+          <a class="project-link" href="https://github.com/Mattathiasa">GitHub</a>
+        </div>
+      </div>
+      <div class="project-tech">React Native (Expo) · Firebase · Role-Based Architecture</div>
+      <ul class="project-desc">
+        <li>Engineered a role-based mobile application supporting 7 hierarchical user levels with secure access control</li>
+        <li>Deployed for real-world use to support organizational communication and member management</li>
+        <li>Architected hierarchical role system (Sinodos → Hiyawan Mahderat) ensuring scalable access control across organizational levels</li>
+        <li>Implemented real-time data synchronization using Firebase Realtime Database</li>
+      </ul>
+    </div>
+
+    <div class="project">
+      <div class="project-top">
+        <span class="project-name">Clashroller</span>
+        <a class="project-link" href="https://mn-clashroller.vercel.app/">mn-clashroller.vercel.app</a>
+      </div>
+      <div class="project-tech">React &nbsp;·&nbsp; TypeScript &nbsp;·&nbsp; Node.js &nbsp;·&nbsp; Framer Motion &nbsp;·&nbsp; Tailwind CSS</div>
+      <ul class="project-desc">
+        <li>Built a multiverse battle simulator using React and TypeScript</li>
+        <li>Developed a custom event-driven state machine for real-time interactions</li>
+        <li>Optimized rendering performance for smooth interactions under dynamic state updates</li>
+        <li>Synchronized complex animations with game logic for smooth user experience</li>
+      </ul>
+    </div>
+
+    <div class="project">
+      <div class="project-top">
+        <span class="project-name">SKZPY Music Player</span>
+        <a class="project-link" href="https://skz-player.vercel.app/">skz-player.vercel.app</a>
+      </div>
+      <div class="project-tech">Electron &nbsp;·&nbsp; React &nbsp;·&nbsp; Recharts &nbsp;·&nbsp; Zustand &nbsp;·&nbsp; Web Audio API</div>
+      <ul class="project-desc">
+        <li>Engineered a cross-platform desktop music player with radar-chart vibe ratings</li>
+        <li>Developed a custom millisecond-accurate lyric synchronization engine for multi-language display</li>
+        <li>Implemented advanced state management for real-time visualization of audio data</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Education ───────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Education</div>
+    <div class="entry">
+      <div class="entry-top">
+        <div>
+          <div class="entry-title">BSc Software Engineering</div>
+          <div class="entry-org">HiLCoE — Higher Learning College of Engineering &nbsp;·&nbsp; Addis Ababa, Ethiopia</div>
+        </div>
+        <div class="entry-date" style="text-align:right;">
+          Graduated 2025<br>
+          <span style="color:#2563eb; font-weight:700;">GPA: 3.5 / 4.0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Languages ───────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Languages</div>
+    <div class="lang-row">
+      <strong>Amharic</strong> — Native &nbsp;&nbsp;|&nbsp;&nbsp; <strong>English</strong> — Professional
+    </div>
+  </div>
+
+</body>
+
+</html>

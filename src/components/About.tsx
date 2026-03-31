@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import workspaceImage from '@/assets/workspace.jpg';
 
 const stats = [
-  { number: '0+', label: 'Years Experience' },
-  { number: '15+', label: 'Projects' },
-  { number: '10+', label: 'Technologies' },
-  { number: '100%', label: 'Dedication' },
+  { number: '1+', label: 'Years Experience' },
+  { number: '15+', label: 'Open Source Projects' },
+  { number: '10+', label: 'Technologies Mastered' },
+  { number: '24/7', label: 'Problem Solving' },
 ];
 
 const highlights = [
