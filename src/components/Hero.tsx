@@ -15,10 +15,11 @@ export const Hero = () => {
     retry: false,
   });
 
-  const heroTitle       = content?.heroTitle       ?? DEFAULT_CONTENT.heroTitle;
-  const heroSubtitle    = content?.heroSubtitle    ?? DEFAULT_CONTENT.heroSubtitle;
-  const heroDescription = content?.heroDescription ?? DEFAULT_CONTENT.heroDescription;
-  const cvUrl           = content?.cvUrl           ?? DEFAULT_CONTENT.cvUrl;
+  const heroTitle          = content?.heroTitle          ?? DEFAULT_CONTENT.heroTitle;
+  const heroSubtitle       = content?.heroSubtitle       ?? DEFAULT_CONTENT.heroSubtitle;
+  const heroDescription    = content?.heroDescription    ?? DEFAULT_CONTENT.heroDescription;
+  const cvUrl              = content?.cvUrl              ?? DEFAULT_CONTENT.cvUrl;
+  const currentlyWorking   = content?.currentlyWorking   ?? DEFAULT_CONTENT.currentlyWorking;
 
   return (
     <section id="home" className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
@@ -69,6 +70,22 @@ export const Hero = () => {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
+
+          {/* Availability badge */}
+          {currentlyWorking && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="flex justify-center"
+            >
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-sm text-accent">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
+                {currentlyWorking}
+              </span>
+            </motion.div>
+          )}
+
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}

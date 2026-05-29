@@ -22,15 +22,22 @@ export interface Skill {
   order: number;
 }
 
+export interface AboutStat {
+  number: string;
+  label: string;
+}
+
 export interface PortfolioContent {
   heroTitle?: string;
   heroSubtitle?: string;
   heroDescription?: string;
+  currentlyWorking?: string;
   siteInitials?: string;
   aboutHeading?: string;
   aboutBody1?: string;
   aboutBody2?: string;
   aboutImage?: string;
+  aboutStats?: AboutStat[];
   footerBio?: string;
   cvUrl?: string;
 }

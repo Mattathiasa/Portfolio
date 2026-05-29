@@ -61,6 +61,7 @@ export const Blog = () => {
                   <img
                     src={post.image}
                     alt={post.title}
+                    loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 ) : (
@@ -91,12 +92,18 @@ export const Blog = () => {
                 <p className="text-xs sm:text-sm text-muted-foreground mb-4 line-clamp-3">
                   {post.excerpt}
                 </p>
-                <Button variant="ghost" className="text-accent hover:text-accent hover:bg-accent/10 p-0 h-auto" asChild>
-                  <a href={post.link || '#'} className="inline-flex items-center gap-2" target={post.link && post.link !== '#' ? '_blank' : undefined} rel="noopener noreferrer">
-                    Read More
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </a>
-                </Button>
+                {post.link && post.link !== '#' ? (
+                  <Button variant="ghost" className="text-accent hover:text-accent hover:bg-accent/10 p-0 h-auto" asChild>
+                    <a href={post.link} className="inline-flex items-center gap-2" target="_blank" rel="noopener noreferrer">
+                      Read More
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </a>
+                  </Button>
+                ) : (
+                  <span className="inline-flex items-center gap-2 text-xs text-muted-foreground/50 border border-border/40 rounded-full px-3 py-1">
+                    Coming Soon
+                  </span>
+                )}
               </div>
             </motion.article>
           ))}

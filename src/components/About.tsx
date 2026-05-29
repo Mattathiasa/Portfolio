@@ -42,7 +42,8 @@ export const About = () => {
   const aboutBody1   = content?.aboutBody1   ?? DEFAULT_CONTENT.aboutBody1;
   const aboutBody2   = content?.aboutBody2   ?? DEFAULT_CONTENT.aboutBody2;
   const aboutImage   = content?.aboutImage   || workspaceImage;
-  const highlights   = firestoreHighlights ?? DEFAULT_HIGHLIGHTS;
+  const aboutStats   = content?.aboutStats   ?? DEFAULT_CONTENT.aboutStats;
+  const highlights   = firestoreHighlights   ?? DEFAULT_HIGHLIGHTS;
 
   return (
     <section id="about" ref={ref} className="min-h-screen flex items-center justify-center relative py-24">
@@ -104,22 +105,25 @@ export const About = () => {
         </div>
 
         {/* Stats Grid */}
-        {/* <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={isVisible ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mb-8"
-        >
-          {stats.map((stat, index) => (
-            <div
-              key={index}
-              className="glass-card p-4 sm:p-5 rounded-xl text-center transition-smooth hover:scale-105"
-            >
-              <div className="text-3xl sm:text-4xl font-bold gradient-text mb-2">{stat.number}</div>
-              <div className="text-xs sm:text-sm text-muted-foreground">{stat.label}</div>
-            </div>
-          ))}
-        </motion.div> */}
+        {aboutStats && aboutStats.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={isVisible ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mb-8"
+          >
+            {aboutStats.map((stat, index) => (
+              <motion.div
+                key={index}
+                whileHover={{ scale: 1.05 }}
+                className="glass-card p-4 sm:p-5 rounded-xl text-center border border-accent/10 hover:border-accent/30 transition-all"
+              >
+                <div className="text-3xl sm:text-4xl font-bold gradient-text mb-1">{stat.number}</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">{stat.label}</div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
 
         {/* Highlights */}
         <motion.div

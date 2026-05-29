@@ -27,7 +27,7 @@ import {
   Download, BookOpen, Users, Mail,
 } from 'lucide-react';
 import * as fb from '@/lib/firestore';
-import type { Project, Skill, PortfolioContent, CVData, CVExperience, CVProject, CVEducation, CVLanguage } from '@/types/portfolio';
+import type { Project, Skill, PortfolioContent, AboutStat, CVData, CVExperience, CVProject, CVEducation, CVLanguage } from '@/types/portfolio';
 import { DEFAULT_PROJECTS, DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT, DEFAULT_CV, DEFAULT_HIGHLIGHTS, DEFAULT_CONTACT, DEFAULT_BLOG_POSTS } from '@/data/defaults';
 
 const CATEGORIES = ['Web Apps', 'Mobile', 'Games', 'Content'];
@@ -1032,7 +1032,7 @@ function ContentTab() {
     onError: (err) => toast.error(`Failed: ${(err as Error).message}`),
   });
 
-  const set = <K extends keyof PortfolioContent>(k: K, v: string) =>
+  const set = <K extends keyof PortfolioContent>(k: K, v: PortfolioContent[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
 
   if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>;
@@ -1064,6 +1064,10 @@ function ContentTab() {
             <Label>Hero Description</Label>
             <Textarea rows={3} value={form.heroDescription ?? ''} onChange={e => set('heroDescription', e.target.value)} />
           </div>
+          <div className="space-y-2">
+            <Label>Availability / Currently Badge <span className="text-muted-foreground font-normal">(green dot in hero)</span></Label>
+            <Input value={form.currentlyWorking ?? ''} onChange={e => set('currentlyWorking', e.target.value)} placeholder="Open to remote opportunities" />
+          </div>
         </CardContent>
       </Card>
 
@@ -1094,6 +1098,52 @@ function ContentTab() {
               onUrlChange={url => set('aboutImage', url)}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats */}
+      <Card className="glass-card border-accent/10">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ChevronRight className="w-4 h-4 text-accent" /> About Stats
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">The 4 number cards shown in the About section.</p>
+          {(form.aboutStats ?? DEFAULT_CONTENT.aboutStats).map((stat, i) => (
+            <div key={i} className="flex gap-2 items-center">
+              <Input
+                className="w-24 shrink-0 h-8 text-sm text-center font-bold"
+                placeholder="15+"
+                value={stat.number}
+                onChange={e => {
+                  const stats = [...(form.aboutStats ?? DEFAULT_CONTENT.aboutStats)];
+                  stats[i] = { ...stats[i], number: e.target.value };
+                  set('aboutStats', stats);
+                }}
+              />
+              <Input
+                className="flex-1 h-8 text-sm"
+                placeholder="Projects Built"
+                value={stat.label}
+                onChange={e => {
+                  const stats = [...(form.aboutStats ?? DEFAULT_CONTENT.aboutStats)];
+                  stats[i] = { ...stats[i], label: e.target.value };
+                  set('aboutStats', stats);
+                }}
+              />
+              <Button size="icon" variant="ghost" className="shrink-0 hover:text-destructive" onClick={() => {
+                const stats = (form.aboutStats ?? DEFAULT_CONTENT.aboutStats).filter((_, j) => j !== i);
+                set('aboutStats', stats);
+              }}>
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="border-dashed w-full border-accent/30 text-muted-foreground hover:text-foreground"
+            onClick={() => set('aboutStats', [...(form.aboutStats ?? DEFAULT_CONTENT.aboutStats), { number: '', label: '' }])}>
+            <Plus className="w-3.5 h-3.5 mr-1" /> Add stat
+          </Button>
         </CardContent>
       </Card>
 

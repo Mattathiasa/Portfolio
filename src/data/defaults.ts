@@ -83,6 +83,7 @@ export const DEFAULT_CONTENT = {
   heroTitle: 'Mattathias Abraham',
   siteInitials: 'MA',
   heroSubtitle: 'Software Engineer',
+  currentlyWorking: 'Open to remote opportunities',
   heroDescription:
     'Software engineering graduate passionate about building innovative applications and creating engaging football content. Combining technical expertise with creative storytelling.',
   aboutHeading: 'Software Engineering Graduate with a Passion for Innovation',
@@ -90,6 +91,12 @@ export const DEFAULT_CONTENT = {
     "I'm a Software Engineering graduate from Addis Ababa, with a strong passion for building innovative web and mobile applications that solve real-world problems. My journey in tech is complemented by my creative side — I love making football videos, combining my technical skills with storytelling and video editing.",
   aboutBody2:
     "Whether it's developing full-stack applications, creating mobile experiences, or making my personal skill football videos, I bring dedication and creativity to everything I do. I'm always excited to learn new technologies and take on challenging projects.",
+  aboutStats: [
+    { number: '1+',  label: 'Years Experience' },
+    { number: '15+', label: 'Projects Built' },
+    { number: '10+', label: 'Technologies' },
+    { number: '300+',label: 'Users Served' },
+  ],
   footerBio: 'Software Engineer & Football Content Creator passionate about building innovative solutions and creating engaging content.',
   cvUrl: '/resume',
 };
