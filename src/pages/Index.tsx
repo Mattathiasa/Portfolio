@@ -4,7 +4,6 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { ThreeBackground } from '@/components/ThreeBackground';
 import { Navigation } from '@/components/Navigation';
 import { Hero } from '@/components/Hero';
-import { ScrollytellingSection } from '@/components/ScrollytellingSection';
 import { About } from '@/components/About';
 import { Skills } from '@/components/Skills';
 import { Projects } from '@/components/Projects';
@@ -35,7 +34,6 @@ const Index = () => {
           <Navigation />
           <main>
             <Hero />
-            <ScrollytellingSection />
             <About />
             <Skills />
             <Projects />

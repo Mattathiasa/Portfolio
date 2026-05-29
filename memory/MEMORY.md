@@ -1,0 +1,4 @@
+# Portfolio Project Memory
+
+- [Project overview](project-overview.md) — Vite+React+TS portfolio, Firebase backend, Vercel deployment
+- [User profile](user-profile.md) — Who Mattathias is and what he's building
