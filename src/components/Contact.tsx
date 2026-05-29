@@ -7,37 +7,36 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import emailjs from '@emailjs/browser';
-
-const contactInfo = [
-  {
-    icon: Mail,
-    label: 'Email',
-    value: 'mattathiasabraham@gmail.com',
-    link: 'mailto:mattathiasabraham@gmail.com',
-  },
-  {
-    icon: Phone,
-    label: 'Phone',
-    value: '+251 902 212 622',
-    link: 'tel:+251902212622',
-  },
-  {
-    icon: MapPin,
-    label: 'Location',
-    value: 'Addis Ababa, Ethiopia',
-    link: 'https://www.google.com/maps/place/Addis+Ababa,+Ethiopia',
-  },
-];
-
-const socialLinks = [
-  { icon: Github, label: 'GitHub', link: 'https://github.com/Mattathiasa', color: '#6e5494' },
-  { icon: Linkedin, label: 'LinkedIn', link: 'https://linkedin.com', color: '#0077b5' },
-  { icon: Instagram, label: 'Instagram', link: 'https://www.instagram.com/mattathiasa/', color: '#e4405f' },
-];
+import { useQuery } from '@tanstack/react-query';
+import { getContactData } from '@/lib/firestore';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { DEFAULT_CONTACT } from '@/data/defaults';
 
 export const Contact = () => {
   const { ref, isVisible } = useScrollAnimation();
   const { toast } = useToast();
+
+  const { data: contactData } = useQuery({
+    queryKey: ['contact'],
+    queryFn: getContactData,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const c = contactData ?? DEFAULT_CONTACT;
+
+  const contactInfo = [
+    { icon: Mail,    label: 'Email',    value: c.email,    link: `mailto:${c.email}` },
+    { icon: Phone,   label: 'Phone',    value: c.phone,    link: `tel:${c.phone.replace(/\s/g, '')}` },
+    { icon: MapPin,  label: 'Location', value: c.location, link: c.locationUrl },
+  ];
+
+  const socialLinks = [
+    { icon: Github,   label: 'GitHub',    link: c.github },
+    { icon: Linkedin, label: 'LinkedIn',  link: c.linkedin },
+    { icon: Instagram,label: 'Instagram', link: c.instagram },
+  ];
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -204,7 +203,7 @@ export const Contact = () => {
             <div className="glass-card p-6 sm:p-8 rounded-xl">
               <div className="flex items-center gap-3 mb-4 sm:mb-6">
                 <div className="w-3 h-3 bg-accent rounded-full animate-pulse" />
-                <span className="text-xs sm:text-sm font-medium text-accent">Available for new projects</span>
+                <span className="text-xs sm:text-sm font-medium text-accent">{c.availabilityText}</span>
               </div>
               <div className="space-y-4 sm:space-y-6">
                 {contactInfo.map((info, index) => (

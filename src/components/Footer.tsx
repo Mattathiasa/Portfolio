@@ -1,41 +1,65 @@
 import { Mail, Phone, MapPin, Github, Linkedin, Instagram } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { getContent, getContactData } from '@/lib/firestore';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { DEFAULT_CONTENT, DEFAULT_CONTACT } from '@/data/defaults';
 
-const footerLinks = {
-  quickLinks: [
-    { name: 'Home', href: '#home' },
-    { name: 'About', href: '#about' },
-    { name: 'Skills', href: '#skills' },
-    { name: 'Projects', href: '#projects' },
-    { name: 'Contact', href: '#contact' },
-  ],
-  contact: [
-    { icon: Mail, text: 'mattathiasabraham@gmail.com', href: 'mailto:mattathiasabraham@gmail.com' },
-    { icon: Phone, text: '+251 902 212 622', href: 'tel:+251902212622' },
-    { icon: MapPin, text: 'Addis Ababa, Ethiopia', href: 'https://www.google.com/maps/place/Addis+Ababa,+Ethiopia' },
-  ],
-  social: [
-    { icon: Github, href: 'https://github.com', label: 'GitHub' },
-    { icon: Linkedin, href: 'https://linkedin.com', label: 'LinkedIn' },
-    { icon: Instagram, href: 'https://instagram.com', label: 'Instagram' },
-  ],
-};
+const QUICK_LINKS = [
+  { name: 'Home',     href: '#home' },
+  { name: 'About',    href: '#about' },
+  { name: 'Skills',   href: '#skills' },
+  { name: 'Projects', href: '#projects' },
+  { name: 'Blog',     href: '#blog' },
+  { name: 'Contact',  href: '#contact' },
+];
 
 export const Footer = () => {
+  const { data: content } = useQuery({
+    queryKey: ['content'],
+    queryFn: getContent,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const { data: contactData } = useQuery({
+    queryKey: ['contact'],
+    queryFn: getContactData,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const c        = contactData ?? DEFAULT_CONTACT;
+  const initials = content?.siteInitials ?? DEFAULT_CONTENT.siteInitials;
+  const bio      = content?.footerBio    ?? DEFAULT_CONTENT.footerBio;
+  const name     = content?.heroTitle    ?? DEFAULT_CONTENT.heroTitle;
+
+  const contactItems = [
+    { icon: Mail,   text: c.email,    href: `mailto:${c.email}`,                   external: false },
+    { icon: Phone,  text: c.phone,    href: `tel:${c.phone.replace(/\s/g, '')}`,   external: false },
+    { icon: MapPin, text: c.location, href: c.locationUrl,                          external: true  },
+  ];
+
+  const socialItems = [
+    { icon: Github,    href: c.github,    label: 'GitHub' },
+    { icon: Linkedin,  href: c.linkedin,  label: 'LinkedIn' },
+    { icon: Instagram, href: c.instagram, label: 'Instagram' },
+  ];
+
   return (
     <footer className="relative bg-gradient-to-b from-background to-[hsl(var(--gradient-end))] border-t border-border">
       <div className="container mx-auto px-4 py-12">
         <div className="grid md:grid-cols-3 gap-8 lg:gap-12 mb-8">
+
           {/* Brand */}
           <div className="space-y-4">
-            <h3 className="text-2xl font-display gradient-text">MA</h3>
-            <p className="text-sm text-muted-foreground">
-              Software Engineer & Football Content Creator passionate about building innovative
-              solutions and creating engaging content.
-            </p>
+            <h3 className="text-2xl font-display gradient-text">{initials}</h3>
+            <p className="text-sm text-muted-foreground">{bio}</p>
             <div className="flex gap-3">
-              {footerLinks.social.map((social, index) => (
+              {socialItems.map(social => (
                 <a
-                  key={index}
+                  key={social.label}
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -52,12 +76,9 @@ export const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold text-foreground mb-4">Quick Links</h4>
             <ul className="space-y-2">
-              {footerLinks.quickLinks.map((link, index) => (
-                <li key={index}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-accent transition-colors"
-                  >
+              {QUICK_LINKS.map(link => (
+                <li key={link.name}>
+                  <a href={link.href} className="text-sm text-muted-foreground hover:text-accent transition-colors">
                     {link.name}
                   </a>
                 </li>
@@ -69,16 +90,16 @@ export const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold text-foreground mb-4">Contact Info</h4>
             <ul className="space-y-3">
-              {footerLinks.contact.map((contact, index) => (
-                <li key={index} className="flex items-start gap-2 group">
-                  <contact.icon className="w-4 h-4 text-accent mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
+              {contactItems.map((item, i) => (
+                <li key={i} className="flex items-start gap-2 group">
+                  <item.icon className="w-4 h-4 text-accent mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
                   <a
-                    href={contact.href}
-                    target={contact.icon === MapPin ? "_blank" : undefined}
-                    rel={contact.icon === MapPin ? "noopener noreferrer" : undefined}
+                    href={item.href}
+                    target={item.external ? '_blank' : undefined}
+                    rel={item.external ? 'noopener noreferrer' : undefined}
                     className="text-sm text-muted-foreground hover:text-accent transition-colors"
                   >
-                    {contact.text}
+                    {item.text}
                   </a>
                 </li>
               ))}
@@ -88,11 +109,9 @@ export const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-border">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground text-center md:text-left">
-              © {new Date().getFullYear()} Mattathias Abraham. All rights reserved.
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground text-center md:text-left">
+            © {new Date().getFullYear()} {name}. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>

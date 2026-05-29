@@ -1,41 +1,48 @@
 import { motion } from 'framer-motion';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
-import { Code, Smartphone, Video, Users } from 'lucide-react';
+import {
+  Code, Smartphone, Video, Users, Globe, Database, Cpu, Zap,
+  Brain, Trophy, Camera, Music, BookOpen, Wrench, Shield, Rocket,
+  Star, Heart, Briefcase, Terminal, Layers, Monitor, Server, type LucideProps,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import workspaceImage from '@/assets/workspace.jpg';
+import { useQuery } from '@tanstack/react-query';
+import { getContent, getHighlights } from '@/lib/firestore';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { DEFAULT_CONTENT, DEFAULT_HIGHLIGHTS } from '@/data/defaults';
+import type { FC } from 'react';
 
-const stats = [
-  { number: '1+', label: 'Years Experience' },
-  { number: '15+', label: 'Open Source Projects' },
-  { number: '10+', label: 'Technologies Mastered' },
-  { number: '24/7', label: 'Problem Solving' },
-];
-
-const highlights = [
-  {
-    icon: Code,
-    title: 'Full-Stack Development',
-    description: 'Building scalable web applications with modern technologies',
-  },
-  {
-    icon: Smartphone,
-    title: 'Mobile Development',
-    description: 'Creating responsive and intuitive mobile experiences',
-  },
-  {
-    icon: Video,
-    title: 'Football Videos',
-    description: 'Making Football tricks, skills and trick shot videos',
-  },
-  {
-    icon: Users,
-    title: 'Team Collaboration',
-    description: 'Working effectively in agile development teams',
-  },
-];
+const ICON_MAP: Record<string, FC<LucideProps>> = {
+  Code, Smartphone, Video, Users, Globe, Database, Cpu, Zap,
+  Brain, Trophy, Camera, Music, BookOpen, Wrench, Shield, Rocket,
+  Star, Heart, Briefcase, Terminal, Layers, Monitor, Server,
+};
 
 export const About = () => {
   const { ref, isVisible } = useScrollAnimation();
+
+  const { data: content } = useQuery({
+    queryKey: ['content'],
+    queryFn: getContent,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const { data: firestoreHighlights } = useQuery({
+    queryKey: ['highlights'],
+    queryFn: getHighlights,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const aboutHeading = content?.aboutHeading ?? DEFAULT_CONTENT.aboutHeading;
+  const aboutBody1   = content?.aboutBody1   ?? DEFAULT_CONTENT.aboutBody1;
+  const aboutBody2   = content?.aboutBody2   ?? DEFAULT_CONTENT.aboutBody2;
+  const aboutImage   = content?.aboutImage   || workspaceImage;
+  const highlights   = firestoreHighlights ?? DEFAULT_HIGHLIGHTS;
 
   return (
     <section id="about" ref={ref} className="min-h-screen flex items-center justify-center relative py-24">
@@ -62,7 +69,7 @@ export const About = () => {
           >
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-border/50">
               <img
-                src={workspaceImage}
+                src={aboutImage}
                 alt="Mattathias Abraham's workspace"
                 className="w-full h-auto object-cover transition-smooth hover:scale-105"
                 style={{ background: 'transparent' }}
@@ -78,18 +85,13 @@ export const About = () => {
             className="space-y-4 sm:space-y-6"
           >
             <h3 className="text-2xl sm:text-3xl font-bold text-foreground">
-              Software Engineering Graduate with a Passion for Innovation
+              {aboutHeading}
             </h3>
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              I'm a Software Engineering graduate from <a href="https://www.google.com/maps/place/Addis+Ababa,+Ethiopia" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline decoration-accent/30 underline-offset-4">Addis Ababa</a>, with a strong passion
-              for building innovative web and mobileapplications that solve real-world problems. My journey in tech
-              is complemented by my creative side - I love making football videos, combining my
-              technical skills with storytelling and video editing.
+              {aboutBody1}
             </p>
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Whether it's developing full-stack applications, creating mobile experiences, or
-              making my personal skill football videos, I bring dedication and creativity to everything
-              I do. I'm always excited to learn new technologies and take on challenging projects.
+              {aboutBody2}
             </p>
             <Button
               size="lg"
@@ -135,25 +137,22 @@ export const About = () => {
           }}
           className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
         >
-          {highlights.map((item, index) => (
-            <motion.div
-              key={index}
-              variants={{
-                hidden: { opacity: 0, y: 20 },
-                visible: { opacity: 1, y: 0 },
-              }}
-              whileHover={{
-                y: -10,
-                transition: { type: "spring", stiffness: 400, damping: 10 }
-              }}
-              className="glass-card p-4 sm:p-6 rounded-2xl border border-accent/10 transition-all hover:border-accent/30 hover:glow-accent group relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full -mr-12 -mt-12 group-hover:bg-accent/10 transition-colors" />
-              <item.icon className="w-10 h-10 sm:w-12 sm:h-12 text-accent mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300" />
-              <h4 className="text-base sm:text-lg font-bold text-foreground mb-2 group-hover:text-accent transition-colors">{item.title}</h4>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">{item.description}</p>
-            </motion.div>
-          ))}
+          {highlights.map((item, index) => {
+            const IconComponent = ICON_MAP[item.icon] ?? Code;
+            return (
+              <motion.div
+                key={item.id ?? index}
+                variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                whileHover={{ y: -10, transition: { type: 'spring', stiffness: 400, damping: 10 } }}
+                className="glass-card p-4 sm:p-6 rounded-2xl border border-accent/10 transition-all hover:border-accent/30 hover:glow-accent group relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full -mr-12 -mt-12 group-hover:bg-accent/10 transition-colors" />
+                <IconComponent className="w-10 h-10 sm:w-12 sm:h-12 text-accent mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300" />
+                <h4 className="text-base sm:text-lg font-bold text-foreground mb-2 group-hover:text-accent transition-colors">{item.title}</h4>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">{item.description}</p>
+              </motion.div>
+            );
+          })}
         </motion.div>
       </div>
     </section>

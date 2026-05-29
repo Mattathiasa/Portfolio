@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence, useScroll as useScrollProgress } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
+import { getContent } from '@/lib/firestore';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { DEFAULT_CONTENT } from '@/data/defaults';
 
-const navItems = [
-  { name: 'Home', href: '#home' },
-  { name: 'About', href: '#about' },
-  { name: 'Skills', href: '#skills' },
+const NAV_ITEMS = [
+  { name: 'Home',     href: '#home' },
+  { name: 'About',    href: '#about' },
+  { name: 'Skills',   href: '#skills' },
   { name: 'Projects', href: '#projects' },
-  { name: 'Contact', href: '#contact' },
-  { name: 'Resume', href: '/resume.html' },
+  { name: 'Blog',     href: '#blog' },
+  { name: 'Contact',  href: '#contact' },
+  { name: 'Resume',   href: '/resume' },
 ];
 
 export const Navigation = () => {
@@ -17,40 +22,40 @@ export const Navigation = () => {
   const [activeSection, setActiveSection] = useState('home');
   const { scrollYProgress } = useScrollProgress();
 
+  const { data: content } = useQuery({
+    queryKey: ['content'],
+    queryFn: getContent,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const initials = content?.siteInitials ?? DEFAULT_CONTENT.siteInitials;
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
-
-      // Update active section
-      const sections = navItems.map(item => item.href.substring(1));
       const scrollPosition = window.scrollY + 200;
-
-      for (const section of sections) {
-        const element = document.getElementById(section);
-        if (element) {
-          const { offsetTop, offsetHeight } = element;
+      for (const item of NAV_ITEMS) {
+        const id = item.href.replace('#', '');
+        const el = document.getElementById(id);
+        if (el) {
+          const { offsetTop, offsetHeight } = el;
           if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            setActiveSection(section);
+            setActiveSection(id);
             break;
           }
         }
       }
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'glass shadow-elegant py-3' : 'py-6'
-        }`}
-    >
-      {/* Scroll Progress Bar */}
-      <motion.div
-        className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent origin-left z-50"
-        style={{ scaleX: scrollYProgress }}
-      />
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'glass shadow-elegant py-3' : 'py-6'}`}>
+      <motion.div className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent origin-left z-50" style={{ scaleX: scrollYProgress }} />
+
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
@@ -61,7 +66,7 @@ export const Navigation = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
           >
-            MA
+            {initials}
           </motion.a>
 
           {/* Desktop Navigation */}
@@ -71,33 +76,34 @@ export const Navigation = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            {navItems.map((item, index) => (
-              <a
-                key={item.name}
-                href={item.href}
-                className={`relative text-sm font-medium transition-colors hover:text-accent ${activeSection === item.href.substring(1)
-                  ? 'text-accent'
-                  : 'text-foreground/80'
-                  }`}
-              >
-                {item.name}
-                {activeSection === item.href.substring(1) && (
-                  <motion.div
-                    layoutId="activeSection"
-                    className="absolute -bottom-1 left-0 right-0 h-0.5 bg-accent"
-                    initial={false}
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-              </a>
-            ))}
+            {NAV_ITEMS.map(item => {
+              const isExternal = item.href.startsWith('/');
+              const id = item.href.replace('#', '');
+              const isActive = !isExternal && activeSection === id;
+              return (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  target={isExternal ? '_blank' : undefined}
+                  rel={isExternal ? 'noopener noreferrer' : undefined}
+                  className={`relative text-sm font-medium transition-colors hover:text-accent ${isActive ? 'text-accent' : 'text-foreground/80'}`}
+                >
+                  {item.name}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeSection"
+                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-accent"
+                      initial={false}
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </a>
+              );
+            })}
           </motion.div>
 
           {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden text-foreground"
-          >
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden text-foreground">
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -113,19 +119,22 @@ export const Navigation = () => {
             className="md:hidden glass mt-4 overflow-hidden"
           >
             <div className="container mx-auto px-4 py-6 flex flex-col gap-4">
-              {navItems.map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`text-lg font-medium transition-colors ${activeSection === item.href.substring(1)
-                    ? 'text-accent'
-                    : 'text-foreground/80 hover:text-accent'
-                    }`}
-                >
-                  {item.name}
-                </a>
-              ))}
+              {NAV_ITEMS.map(item => {
+                const isExternal = item.href.startsWith('/');
+                const id = item.href.replace('#', '');
+                return (
+                  <a
+                    key={item.name}
+                    href={item.href}
+                    target={isExternal ? '_blank' : undefined}
+                    rel={isExternal ? 'noopener noreferrer' : undefined}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`text-lg font-medium transition-colors ${activeSection === id ? 'text-accent' : 'text-foreground/80 hover:text-accent'}`}
+                  >
+                    {item.name}
+                  </a>
+                );
+              })}
             </div>
           </motion.div>
         )}

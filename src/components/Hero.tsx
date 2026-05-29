@@ -1,8 +1,25 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useQuery } from '@tanstack/react-query';
+import { getContent } from '@/lib/firestore';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { DEFAULT_CONTENT } from '@/data/defaults';
 
 export const Hero = () => {
+  const { data: content } = useQuery({
+    queryKey: ['content'],
+    queryFn: getContent,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const heroTitle       = content?.heroTitle       ?? DEFAULT_CONTENT.heroTitle;
+  const heroSubtitle    = content?.heroSubtitle    ?? DEFAULT_CONTENT.heroSubtitle;
+  const heroDescription = content?.heroDescription ?? DEFAULT_CONTENT.heroDescription;
+  const cvUrl           = content?.cvUrl           ?? DEFAULT_CONTENT.cvUrl;
+
   return (
     <section id="home" className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--hero-gradient-from))] via-[hsl(var(--hero-gradient-via))] to-[hsl(var(--hero-gradient-to))]" />
@@ -58,9 +75,12 @@ export const Hero = () => {
             transition={{ duration: 0.8 }}
           >
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold font-ailerons mb-4">
-              <span className="gradient-text">Mattathias</span>
-              <br />
-              <span className="gradient-text">Abraham</span>
+              {heroTitle.split(' ').map((word, i) => (
+                <span key={i}>
+                  <span className="gradient-text">{word}</span>
+                  {i < heroTitle.split(' ').length - 1 && <br />}
+                </span>
+              ))}
             </h1>
           </motion.div>
 
@@ -71,11 +91,10 @@ export const Hero = () => {
             className="space-y-3 sm:space-y-4"
           >
             <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground/90">
-              Software Engineer
+              {heroSubtitle}
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
-              Software engineering graduate passionate about building innovative applications
-              and creating engaging football content. Combining technical expertise with creative storytelling.
+              {heroDescription}
             </p>
           </motion.div>
 
@@ -101,7 +120,7 @@ export const Hero = () => {
               className="border-accent text-accent hover:bg-accent hover:text-accent-foreground transition-smooth"
               asChild
             >
-              <a href="/resume.html" target="_blank" rel="noopener noreferrer">
+              <a href={cvUrl} target="_blank" rel="noopener noreferrer">
                 <Mail className="mr-2 h-5 w-5" />
                 Download CV
               </a>

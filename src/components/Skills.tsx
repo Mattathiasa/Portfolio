@@ -1,29 +1,33 @@
 import { motion } from 'framer-motion';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
-
-
-const skills = [
-  { name: 'JavaScript/TypeScript', level: 90 },
-  { name: 'React & Next.js', level: 85 },
-  { name: 'Flutter', level: 83 },
-  { name: 'Java', level: 75 },
-  { name: 'Database Design', level: 70 },
-  { name: 'Cloud Services', level: 70 },
-  { name: 'Mobile Development', level: 89 },
-  { name: 'UI/UX Design', level: 80 },
-  { name: 'Angular', level: 80 },
-];
-
-const tools = [
-  'Git', 'Docker', 'VS Code', 'Figma', 'Postman', 'AWS',
-  'MongoDB', 'PostgreSQL', 'Firebase', 'Supabase', 'Vercel', 'Android Studio', 'Xcode',
-  'Slack', 'Dotnet', 'SQL', 'Azure Data Studio', 'Notion'
-];
+import { useQuery } from '@tanstack/react-query';
+import { getSkills, getTools } from '@/lib/firestore';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { DEFAULT_SKILLS, DEFAULT_TOOLS } from '@/data/defaults';
 
 
 
 export const Skills = () => {
   const { ref, isVisible } = useScrollAnimation();
+
+  const { data: firestoreSkills } = useQuery({
+    queryKey: ['skills'],
+    queryFn: getSkills,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const { data: firestoreTools } = useQuery({
+    queryKey: ['tools'],
+    queryFn: getTools,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const skills = (firestoreSkills && firestoreSkills.length > 0) ? firestoreSkills : DEFAULT_SKILLS;
+  const tools = (firestoreTools && firestoreTools.length > 0) ? firestoreTools : DEFAULT_TOOLS;
 
   return (
     <section id="skills" ref={ref} className="min-h-screen flex items-center justify-center relative bg-gradient-to-b from-background to-[hsl(var(--gradient-mid))] py-24">

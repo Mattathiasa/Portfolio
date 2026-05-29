@@ -27,4 +27,6 @@ dist-ssr
 public/football-skills.mp4
 
 .vercel
-.env*.local
+.env
+.env.*
+!.env.example

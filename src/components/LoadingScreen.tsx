@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
+import { getContent } from '@/lib/firestore';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { DEFAULT_CONTENT } from '@/data/defaults';
 
 interface LoadingScreenProps {
   onComplete: () => void;
@@ -7,6 +11,16 @@ interface LoadingScreenProps {
 
 export const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
   const [progress, setProgress] = useState(0);
+
+  const { data: content } = useQuery({
+    queryKey: ['content'],
+    queryFn: getContent,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const displayName = content?.heroTitle ?? DEFAULT_CONTENT.heroTitle;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -32,7 +46,7 @@ export const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
     >
       <div className="text-center space-y-8 px-4">
         <h1 className="text-5xl md:text-7xl font-bold font-display gradient-text">
-          Mattathias Abraham
+          {displayName}
         </h1>
         
         <div className="space-y-4 max-w-md mx-auto">
