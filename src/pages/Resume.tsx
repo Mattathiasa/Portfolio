@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getCV } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
@@ -6,13 +7,21 @@ import type { CVData } from '@/types/portfolio';
 import { Printer } from 'lucide-react';
 
 export default function Resume() {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['cv'],
     queryFn: getCV,
     enabled: isFirebaseConfigured,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
+
+  // Auto-trigger print dialog when opened from "Download CV" button
+  useEffect(() => {
+    const autoPrint = new URLSearchParams(window.location.search).get('print') === '1';
+    if (!autoPrint || isLoading) return;
+    const t = setTimeout(() => window.print(), 800);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   const cv: CVData = data ?? DEFAULT_CV;
   const h = cv.header;

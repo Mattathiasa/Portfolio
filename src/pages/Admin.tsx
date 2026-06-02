@@ -27,7 +27,7 @@ import {
   Download, BookOpen, Users, Mail,
 } from 'lucide-react';
 import * as fb from '@/lib/firestore';
-import type { Project, Skill, PortfolioContent, AboutStat, CVData, CVExperience, CVProject, CVEducation, CVLanguage } from '@/types/portfolio';
+import type { Project, Skill, PortfolioContent, AboutStat, CVData, CVExperience, CVProject, CVEducation, CVLanguage, BlogPost } from '@/types/portfolio';
 import { DEFAULT_PROJECTS, DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT, DEFAULT_CV, DEFAULT_HIGHLIGHTS, DEFAULT_CONTACT, DEFAULT_BLOG_POSTS } from '@/data/defaults';
 
 const CATEGORIES = ['Web Apps', 'Mobile', 'Games', 'Content'];
@@ -179,23 +179,23 @@ function ProjectFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="w-full sm:max-w-2xl bg-background/95 backdrop-blur-xl border-accent/20 h-screen sm:h-auto sm:max-h-[90vh] overflow-hidden flex flex-col rounded-none sm:rounded-xl p-0">
+      <DialogContent className="w-full sm:max-w-2xl bg-background/95 backdrop-blur-xl border-accent/20 h-[100dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col rounded-none sm:rounded-xl p-0">
         <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 border-b border-border/40 shrink-0">
           <DialogTitle className="gradient-text text-lg sm:text-xl">
             {isEdit ? 'Edit Project' : 'Add New Project'}
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-border/50 [&::-webkit-scrollbar-thumb]:rounded-full">
           <div className="space-y-4 p-4 sm:p-6">
 
             {/* ── 1. Core info — always visible on open ── */}
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-              <div className="col-span-2 sm:col-span-3 space-y-1.5">
+            <div className="flex gap-3 items-end">
+              <div className="flex-1 space-y-1.5 min-w-0">
                 <Label>Title *</Label>
                 <Input placeholder="My Awesome Project" value={form.title} onChange={e => set('title', e.target.value)} />
               </div>
-              <div className="space-y-1.5">
+              <div className="w-20 shrink-0 space-y-1.5">
                 <Label>Order</Label>
                 <Input type="number" value={form.order} onChange={e => set('order', Number(e.target.value))} />
               </div>
@@ -312,7 +312,7 @@ function ProjectFormDialog({
             </div>
 
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t border-border/50 shrink-0 flex-row gap-2">
           <Button variant="outline" onClick={onClose} disabled={saving || imgUploading} className="flex-1 sm:flex-none">Cancel</Button>
@@ -374,9 +374,9 @@ function ProjectsTab() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-muted-foreground">{projects.length} project{projects.length !== 1 ? 's' : ''} in Firestore</p>
-        <Button className="bg-accent text-accent-foreground hover:bg-accent/90" onClick={openAdd}>
+        <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0" onClick={openAdd}>
           <Plus className="w-4 h-4 mr-2" /> Add Project
         </Button>
       </div>
@@ -762,9 +762,9 @@ function AboutTab() {
 
   return (
     <div className="space-y-5 max-w-2xl">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-muted-foreground">These 4 cards appear at the bottom of the About section.</p>
-        <Button className="bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
+        <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0" onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
           {saveMut.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Save
         </Button>
       </div>
@@ -889,11 +889,11 @@ function BlogFormDialog({ open, onClose, post }: { open: boolean; onClose: () =>
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="w-full sm:max-w-xl bg-background/95 backdrop-blur-xl border-accent/20 h-screen sm:h-auto sm:max-h-[90vh] overflow-hidden flex flex-col rounded-none sm:rounded-xl p-0">
+      <DialogContent className="w-full sm:max-w-xl bg-background/95 backdrop-blur-xl border-accent/20 h-[100dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col rounded-none sm:rounded-xl p-0">
         <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 border-b border-border/40 shrink-0">
           <DialogTitle className="gradient-text text-lg sm:text-xl">{isEdit ? 'Edit Post' : 'Add Blog Post'}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-border/50 [&::-webkit-scrollbar-thumb]:rounded-full">
           <div className="space-y-4 p-4 sm:p-6">
             <div className="space-y-1"><Label>Cover Image</Label>
               <ImageDropzone image={form.image} onUpload={url => set('image', url)} onUrlChange={url => set('image', url)} />
@@ -909,7 +909,7 @@ function BlogFormDialog({ open, onClose, post }: { open: boolean; onClose: () =>
             </div>
             <div className="space-y-1"><Label>Post Link (URL)</Label><Input placeholder="https://your-blog.com/post" value={form.link} onChange={e => set('link', e.target.value)} /></div>
           </div>
-        </ScrollArea>
+        </div>
         <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t border-border/50 shrink-0 flex-row gap-2">
           <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">Cancel</Button>
           <Button className="bg-accent text-accent-foreground hover:bg-accent/90 flex-1 sm:flex-none" onClick={() => save.mutate()} disabled={save.isPending || !form.title}>
@@ -942,9 +942,9 @@ function BlogTab() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-muted-foreground">{posts.length} post{posts.length !== 1 ? 's' : ''}</p>
-        <Button className="bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => { setEditPost(undefined); setFormOpen(true); }}>
+        <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0" onClick={() => { setEditPost(undefined); setFormOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" /> Add Post
         </Button>
       </div>
@@ -1303,10 +1303,15 @@ function CVTab() {
       <Section id="skills" title="Skills Table">
         <div className="space-y-2">
           {cv.skills.map((s, i) => (
-            <div key={i} className="flex gap-2 items-center">
-              <Input className="w-36 shrink-0 h-8 text-sm font-medium" placeholder="Category" value={s.label} onChange={e => { const sk = [...cv.skills]; sk[i] = { ...sk[i], label: e.target.value }; setCv(p => ({ ...p, skills: sk })); }} />
+            <div key={i} className="flex flex-col xs:flex-row gap-1.5 xs:gap-2 xs:items-center">
+              <div className="flex gap-1.5 items-center">
+                <Input className="w-full xs:w-32 sm:w-36 h-8 text-sm font-medium" placeholder="Category" value={s.label} onChange={e => { const sk = [...cv.skills]; sk[i] = { ...sk[i], label: e.target.value }; setCv(p => ({ ...p, skills: sk })); }} />
+                <Button size="icon" variant="ghost" className="shrink-0 xs:hidden hover:text-destructive" onClick={() => setCv(p => ({ ...p, skills: p.skills.filter((_, j) => j !== i) }))}>
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
               <Input className="flex-1 h-8 text-sm" placeholder="Technologies..." value={s.value} onChange={e => { const sk = [...cv.skills]; sk[i] = { ...sk[i], value: e.target.value }; setCv(p => ({ ...p, skills: sk })); }} />
-              <Button size="icon" variant="ghost" className="shrink-0 hover:text-destructive" onClick={() => setCv(p => ({ ...p, skills: p.skills.filter((_, j) => j !== i) }))}>
+              <Button size="icon" variant="ghost" className="shrink-0 hidden xs:flex hover:text-destructive" onClick={() => setCv(p => ({ ...p, skills: p.skills.filter((_, j) => j !== i) }))}>
                 <X className="w-3.5 h-3.5" />
               </Button>
             </div>
@@ -1524,7 +1529,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <Tabs defaultValue="projects">
           {/* Horizontally scrollable tab bar on mobile */}
-          <ScrollArea className="w-full mb-6 sm:mb-8">
+          <div className="w-full mb-6 sm:mb-8 overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-0.5 [&::-webkit-scrollbar-thumb]:bg-border/50 [&::-webkit-scrollbar-thumb]:rounded-full">
             <TabsList className="bg-secondary/50 border border-border/50 inline-flex h-auto gap-0.5 p-1 w-max min-w-full sm:w-auto sm:flex-wrap">
               {[
                 { value: 'projects', icon: FolderOpen,  label: 'Projects' },
@@ -1545,7 +1550,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </TabsTrigger>
               ))}
             </TabsList>
-          </ScrollArea>
+          </div>
 
           <TabsContent value="projects"><ProjectsTab /></TabsContent>
           <TabsContent value="skills"><SkillsTab /></TabsContent>

@@ -10,6 +10,7 @@ import { Projects } from '@/components/Projects';
 import { Blog } from '@/components/Blog';
 import { Contact } from '@/components/Contact';
 import { Footer } from '@/components/Footer';
+import { PortfolioChat } from '@/components/PortfolioChat';
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +42,7 @@ const Index = () => {
             <Contact />
           </main>
           <Footer />
+          <PortfolioChat />
         </>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Mail } from 'lucide-react';
+import { ArrowRight, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { getContent } from '@/lib/firestore';
@@ -137,8 +137,8 @@ export const Hero = () => {
               className="border-accent text-accent hover:bg-accent hover:text-accent-foreground transition-smooth"
               asChild
             >
-              <a href={cvUrl} target="_blank" rel="noopener noreferrer">
-                <Mail className="mr-2 h-5 w-5" />
+              <a href="/resume?print=1" target="_blank" rel="noopener noreferrer">
+                <Download className="mr-2 h-5 w-5" />
                 Download CV
               </a>
             </Button>
