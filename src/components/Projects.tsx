@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
-import { ExternalLink, Github } from 'lucide-react';
+import { ExternalLink, Github, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -14,11 +14,14 @@ import { DEFAULT_PROJECTS } from '@/data/defaults';
 
 const categories = ['All', 'Web Apps', 'Mobile', 'Games', 'Content'];
 
+const PROJECTS_PER_PAGE = 6;
+
 export const Projects = () => {
   const { ref, isVisible } = useScrollAnimation();
   const [activeCategory, setActiveCategory] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const { data: firestoreProjects } = useQuery({
+  const { data: firestoreProjects, isError, error } = useQuery({
     queryKey: ['projects'],
     queryFn: getProjects,
     enabled: isFirebaseConfigured,
@@ -26,10 +29,20 @@ export const Projects = () => {
     retry: false,
   });
 
+  // Make the fallback cause obvious instead of silently showing demo projects.
+  const usingDefaults = !(firestoreProjects && firestoreProjects.length > 0);
+  if (usingDefaults) {
+    if (!isFirebaseConfigured) {
+      console.warn('[Projects] Firebase is not configured (VITE_FIREBASE_API_KEY missing) — showing bundled demo projects.');
+    } else if (isError) {
+      console.error('[Projects] Failed to load projects from Firestore — showing bundled demo projects.', error);
+    } else if (firestoreProjects) {
+      console.warn('[Projects] Firestore returned 0 projects — showing bundled demo projects.');
+    }
+  }
+
   // Use Firestore data when available; fall back to bundled defaults
-  const rawProjects = (firestoreProjects && firestoreProjects.length > 0)
-    ? firestoreProjects
-    : DEFAULT_PROJECTS;
+  const rawProjects = usingDefaults ? DEFAULT_PROJECTS : firestoreProjects;
 
   // If a Firestore project has no image yet, resolve it from the local defaults
   const projects = rawProjects.map(p => {
@@ -37,6 +50,23 @@ export const Projects = () => {
     const match = DEFAULT_PROJECTS.find(d => d.title === p.title);
     return match ? { ...p, image: match.image } : p;
   });
+
+  const filteredProjects = projects.filter(
+    (project) => activeCategory === 'All' || project.category.includes(activeCategory)
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE));
+  // Clamp the page in case the filtered count shrank below the current page
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedProjects = filteredProjects.slice(
+    (safePage - 1) * PROJECTS_PER_PAGE,
+    safePage * PROJECTS_PER_PAGE
+  );
+
+  const handleCategoryChange = (category: string) => {
+    setActiveCategory(category);
+    setCurrentPage(1);
+  };
 
   return (
     <section id="projects" ref={ref} className="min-h-screen flex items-center justify-center relative py-24">
@@ -51,6 +81,18 @@ export const Projects = () => {
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             A showcase of my recent work and side projects
           </p>
+
+          {/* Dev-only notice so a Firestore fallback is never silent again */}
+          {import.meta.env.DEV && usingDefaults && (
+            <p className="mt-4 inline-block rounded-md border border-yellow-500/40 bg-yellow-500/10 px-3 py-1.5 text-xs text-yellow-600 dark:text-yellow-400">
+              ⚠ Showing bundled demo projects —{' '}
+              {!isFirebaseConfigured
+                ? 'Firebase env vars not set (VITE_FIREBASE_API_KEY missing).'
+                : isError
+                  ? 'Firestore request failed (check console / security rules).'
+                  : 'Firestore returned no projects.'}
+            </p>
+          )}
         </motion.div>
 
         {/* Filter Buttons */}
@@ -64,7 +106,7 @@ export const Projects = () => {
             <Button
               key={category}
               variant={activeCategory === category ? 'default' : 'outline'}
-              onClick={() => setActiveCategory(category)}
+              onClick={() => handleCategoryChange(category)}
               className={
                 activeCategory === category
                   ? 'bg-accent text-accent-foreground hover:bg-accent/90'
@@ -79,8 +121,7 @@ export const Projects = () => {
         {/* Projects Grid */}
         <motion.div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
           <AnimatePresence mode='popLayout'>
-            {projects
-              .filter((project) => activeCategory === 'All' || project.category.includes(activeCategory))
+            {paginatedProjects
               .map((project) => (
                 // motion.div must be the direct child of AnimatePresence so Framer Motion
                 // can forward a ref to a real DOM element (Dialog is a function component
@@ -224,6 +265,56 @@ export const Projects = () => {
               ))}
           </AnimatePresence>
         </motion.div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={isVisible ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex items-center justify-center gap-2 mb-8 sm:mb-12"
+          >
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+              aria-label="Previous page"
+              className="border-accent text-accent hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <Button
+                key={page}
+                variant={safePage === page ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => setCurrentPage(page)}
+                aria-label={`Page ${page}`}
+                aria-current={safePage === page ? 'page' : undefined}
+                className={
+                  safePage === page
+                    ? 'bg-accent text-accent-foreground hover:bg-accent/90'
+                    : 'border-accent text-accent hover:bg-accent hover:text-accent-foreground'
+                }
+              >
+                {page}
+              </Button>
+            ))}
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+              aria-label="Next page"
+              className="border-accent text-accent hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </motion.div>
+        )}
 
         {/* View More */}
         <motion.div
