@@ -62,6 +62,7 @@ PROJECTS
    - A cross-platform desktop music player with radar-chart "vibe ratings" and millisecond-accurate multi-language lyric synchronisation
    - Stack: Electron, React, Recharts, Zustand, Web Audio API
    - Live: https://skz-player.vercel.app/
+   - Have Lyrics AI- functionality that you can ask anything that is related to the lyrics and the lyrics ai will give you a comprehensive answer
 
 ═══════════════════════════════
 WORK EXPERIENCE

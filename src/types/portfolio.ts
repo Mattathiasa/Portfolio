@@ -3,7 +3,8 @@ export interface Project {
   title: string;
   description: string;
   longDescription: string;
-  image: string;
+  image: string;          // cover image (kept = images[0] for backward compatibility)
+  images?: string[];      // full gallery shown as a slideshow
   tags: string[];
   techStack: string[];
   challenges: string;
@@ -77,6 +78,35 @@ export interface BlogPost {
   link: string;
   order: number;
 }
+
+// ── Develop / project notes (admin-only) ─────────────────────────────────────
+
+export const LIFECYCLE_STAGES = [
+  'Idea', 'Planning', 'Design', 'Development', 'Testing', 'Deployment', 'Live', 'Maintenance', 'On Hold',
+] as const;
+export type LifecycleStage = typeof LIFECYCLE_STAGES[number];
+
+export interface DevItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface ProjectDev {
+  stage: string;
+  aiPrompts: DevItem[];   // AI prompts to run later
+  features: DevItem[];    // comments / additional feature ideas
+  todos: DevItem[];       // what to do next
+  notes: string;          // freeform scratchpad
+}
+
+export const emptyProjectDev = (): ProjectDev => ({
+  stage: 'Not set',
+  aiPrompts: [],
+  features: [],
+  todos: [],
+  notes: '',
+});
 
 // ── CV ────────────────────────────────────────────────────────────────────────
 

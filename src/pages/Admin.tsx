@@ -21,13 +21,21 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+  Accordion, AccordionItem, AccordionTrigger, AccordionContent,
+} from '@/components/ui/accordion';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
   Plus, Pencil, Trash2, Upload, X, Lock, LogOut,
   Image as ImageIcon, Github, ExternalLink, Eye, EyeOff,
-  FolderOpen, Layers, Wrench, FileText, ChevronRight, Loader2,
-  Download, BookOpen, Users, Mail,
+  FolderOpen, Layers, Wrench, FileText, ChevronRight, ChevronLeft, Loader2,
+  Download, BookOpen, Users, Mail, Sparkles, ListChecks, MessageSquarePlus, KanbanSquare,
+  ImagePlus, Star, Check,
 } from 'lucide-react';
 import * as fb from '@/lib/firestore';
-import type { Project, Skill, PortfolioContent, AboutStat, CVData, CVExperience, CVProject, CVEducation, CVLanguage, BlogPost } from '@/types/portfolio';
+import type { Project, Skill, PortfolioContent, AboutStat, CVData, CVExperience, CVProject, CVEducation, CVLanguage, BlogPost, ProjectDev, DevItem } from '@/types/portfolio';
+import { LIFECYCLE_STAGES, emptyProjectDev } from '@/types/portfolio';
 import { DEFAULT_PROJECTS, DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT, DEFAULT_CV, DEFAULT_HIGHLIGHTS, DEFAULT_CONTACT, DEFAULT_BLOG_POSTS } from '@/data/defaults';
 
 const CATEGORIES = ['Web Apps', 'Mobile', 'Games', 'Content'];
@@ -82,11 +90,150 @@ function TagInput({
   );
 }
 
+// ── Multi-image gallery uploader ──────────────────────────────────────────────
+
+function MultiImageUploader({
+  images, onChange, onBusyChange,
+}: {
+  images: string[];
+  onChange: (images: string[]) => void;
+  onBusyChange?: (busy: boolean) => void;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(0);
+  const [url, setUrl] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const uploadOne = async (file: File): Promise<string> => {
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const preset    = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', preset);
+    fd.append('folder', 'portfolio/projects');
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: fd });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error.message);
+    return json.secure_url as string;
+  };
+
+  const handleFiles = async (fileList: FileList | File[] | null) => {
+    const files = Array.from(fileList ?? []).filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+    setUploading(files.length);
+    onBusyChange?.(true);
+    const results = await Promise.allSettled(files.map(uploadOne));
+    const urls = results.flatMap(r => r.status === 'fulfilled' ? [r.value] : []);
+    const failed = results.length - urls.length;
+    if (urls.length) { onChange([...images, ...urls]); toast.success(`${urls.length} image${urls.length > 1 ? 's' : ''} uploaded!`); }
+    if (failed) toast.error(`${failed} upload${failed > 1 ? 's' : ''} failed`);
+    setUploading(0);
+    onBusyChange?.(false);
+  };
+
+  const remove = (i: number) => onChange(images.filter((_, idx) => idx !== i));
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= images.length) return;
+    const next = [...images];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+  const makeCover = (i: number) => {
+    if (i === 0) return;
+    const next = [...images];
+    const [pick] = next.splice(i, 1);
+    onChange([pick, ...next]);
+  };
+  const addUrl = () => {
+    const v = url.trim();
+    if (v && !images.includes(v)) onChange([...images, v]);
+    setUrl('');
+  };
+
+  return (
+    <div className="space-y-3">
+      {images.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {images.map((src, i) => (
+            <div key={`${src}-${i}`} className="relative aspect-square rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
+              <img src={src} alt={`Project image ${i + 1}`} className="w-full h-full object-cover" />
+              {i === 0 && (
+                <span className="absolute top-1 left-1 z-10 text-[9px] font-semibold bg-accent text-accent-foreground px-1.5 py-0.5 rounded">
+                  Cover
+                </span>
+              )}
+              {/* Always-visible control bar — works on touch (no hover needed) */}
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-0.5 bg-background/75 backdrop-blur-sm py-1">
+                <button type="button" title="Move left" disabled={i === 0} onClick={() => move(i, -1)}
+                  className="w-6 h-6 rounded flex items-center justify-center hover:bg-accent hover:text-accent-foreground disabled:opacity-25 transition-colors">
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                {i !== 0 && (
+                  <button type="button" title="Set as cover" onClick={() => makeCover(i)}
+                    className="w-6 h-6 rounded flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors">
+                    <Star className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button type="button" title="Remove" onClick={() => remove(i)}
+                  className="w-6 h-6 rounded flex items-center justify-center text-destructive hover:bg-destructive hover:text-white transition-colors">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+                <button type="button" title="Move right" disabled={i === images.length - 1} onClick={() => move(i, 1)}
+                  className="w-6 h-6 rounded flex items-center justify-center hover:bg-accent hover:text-accent-foreground disabled:opacity-25 transition-colors">
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Drop / browse zone (multi-select) */}
+      <div
+        className={`relative w-full h-28 rounded-xl border-2 border-dashed overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
+          dragOver ? 'border-accent bg-accent/10' : 'border-accent/30 bg-secondary/20 hover:border-accent/60 hover:bg-secondary/30'
+        }`}
+        onClick={() => !uploading && fileRef.current?.click()}
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={e => { e.preventDefault(); setDragOver(false); }}
+        onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+      >
+        {uploading ? (
+          <div className="text-center space-y-1">
+            <Loader2 className="w-7 h-7 mx-auto animate-spin text-accent" />
+            <p className="text-xs text-muted-foreground">Uploading {uploading} image{uploading > 1 ? 's' : ''}…</p>
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground space-y-1 px-4">
+            <ImagePlus className="w-7 h-7 mx-auto opacity-40" />
+            <p className="text-sm">Drag & drop or click to add images</p>
+            <p className="text-[11px] opacity-70">You can select multiple — first image is the cover</p>
+          </div>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={e => handleFiles(e.target.files)} />
+
+      <div className="flex gap-2">
+        <Input
+          placeholder="Or paste an image URL…"
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addUrl(); } }}
+        />
+        <Button type="button" variant="outline" className="border-accent/30 shrink-0" onClick={addUrl} disabled={!url.trim()}>
+          <Plus className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ── Project form dialog ───────────────────────────────────────────────────────
 
 const emptyProject = (): Omit<Project, 'id'> => ({
   title: '', description: '', longDescription: '',
-  image: '', tags: [], techStack: [], challenges: '',
+  image: '', images: [], tags: [], techStack: [], challenges: '',
   category: [], github: '', demo: '', order: 0,
 });
 
@@ -99,57 +246,23 @@ function ProjectFormDialog({
 }) {
   const qc = useQueryClient();
   const isEdit = !!project?.id;
-  const fileRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState<Omit<Project, 'id'>>(project ? { ...project } : emptyProject());
-  const [imagePreview, setImagePreview] = useState<string>(project?.image ?? '');
+  // Normalize so `images` is always an array (older projects only had `image`)
+  const normalize = (p?: Project): Omit<Project, 'id'> =>
+    p ? { ...p, images: p.images ?? (p.image ? [p.image] : []) } : emptyProject();
+
+  const [form, setForm] = useState<Omit<Project, 'id'>>(normalize(project));
   const [imgUploading, setImgUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setForm(project ? { ...project } : emptyProject());
-    setImagePreview(project?.image ?? '');
-  }, [project, open]);
+  useEffect(() => { setForm(normalize(project)); }, [project, open]);
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
 
-  // Upload directly to Cloudinary REST API — no widget script, no ad-blocker issues
-  const uploadToCloudinary = async (file: File) => {
-    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-    const preset    = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-
-    setImgUploading(true);
-    const preview = URL.createObjectURL(file);
-    setImagePreview(preview);
-
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('upload_preset', preset);
-      fd.append('folder', 'portfolio/projects');
-
-      const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-        method: 'POST',
-        body: fd,
-      });
-      const json = await res.json();
-      if (json.error) throw new Error(json.error.message);
-
-      set('image', json.secure_url);
-      setImagePreview(json.secure_url);
-      toast.success('Image uploaded!');
-    } catch (err) {
-      toast.error(`Upload failed: ${(err as Error).message}`);
-      setImagePreview('');
-    }
-    setImgUploading(false);
-  };
-
-  const handleFile = (file: File | undefined) => {
-    if (file && file.type.startsWith('image/')) uploadToCloudinary(file);
-  };
+  // Keep `image` (cover) in sync with the first gallery image for backward compatibility
+  const setImages = (images: string[]) =>
+    setForm(prev => ({ ...prev, images, image: images[0] ?? '' }));
 
   const toggleCategory = (cat: string) => {
     set('category', form.category.includes(cat)
@@ -249,55 +362,16 @@ function ProjectFormDialog({
               </div>
             </div>
 
-            {/* ── 5. Image ── */}
+            {/* ── 5. Images (gallery / slideshow) ── */}
             <Separator className="bg-border/50" />
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Image</p>
-            <div className="space-y-2">
-              {/* Compact image zone — fixed 160px height instead of aspect-video */}
-              <div
-                className={`relative w-full h-40 rounded-xl border-2 border-dashed overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                  dragOver
-                    ? 'border-accent bg-accent/10 scale-[1.01]'
-                    : 'border-accent/30 bg-secondary/20 hover:border-accent/60 hover:bg-secondary/30'
-                }`}
-                onClick={() => !imgUploading && fileRef.current?.click()}
-                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={e => { e.preventDefault(); setDragOver(false); }}
-                onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
-              >
-                {imgUploading ? (
-                  <div className="text-center space-y-1">
-                    <Loader2 className="w-8 h-8 mx-auto animate-spin text-accent" />
-                    <p className="text-xs text-muted-foreground">Uploading to Cloudinary…</p>
-                  </div>
-                ) : imagePreview || form.image ? (
-                  <>
-                    <img src={imagePreview || form.image} alt="preview" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-background/70 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <Upload className="w-6 h-6 text-accent" />
-                    </div>
-                    <button
-                      type="button"
-                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-background/80 border border-border flex items-center justify-center hover:bg-destructive hover:text-white transition-colors z-10"
-                      onClick={e => { e.stopPropagation(); set('image', ''); setImagePreview(''); }}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </>
-                ) : (
-                  <div className="text-center text-muted-foreground space-y-1 px-4">
-                    <Upload className="w-8 h-8 mx-auto opacity-40" />
-                    <p className="text-sm">Drag & drop or click to browse</p>
-                  </div>
-                )}
-              </div>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => handleFile(e.target.files?.[0])} />
-              <Input
-                placeholder="Or paste image URL — https://res.cloudinary.com/…"
-                value={form.image}
-                onChange={e => { set('image', e.target.value); setImagePreview(e.target.value); }}
-              />
-            </div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Images <span className="font-normal normal-case">— shown as a slideshow on the card</span>
+            </p>
+            <MultiImageUploader
+              images={form.images ?? []}
+              onChange={setImages}
+              onBusyChange={setImgUploading}
+            />
 
             {/* ── 6. Long text — at the bottom ── */}
             <Separator className="bg-border/50" />
@@ -434,6 +508,9 @@ function ProjectsTab() {
                     ))}
                     {!project.image && (
                       <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-500">no image</Badge>
+                    )}
+                    {(project.images?.length ?? 0) > 1 && (
+                      <Badge variant="outline" className="text-[10px] border-accent/30 text-accent">{project.images!.length} photos</Badge>
                     )}
                   </div>
                   <div className="flex gap-2 pt-1">
@@ -1499,6 +1576,313 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
 
 // ── Admin Dashboard ───────────────────────────────────────────────────────────
 
+// ── Develop Tab (admin-only project notes) ───────────────────────────────────
+
+const STAGE_OPTIONS = ['Not set', ...LIFECYCLE_STAGES];
+
+const STAGE_COLORS: Record<string, string> = {
+  'Not set':   'border-muted-foreground/30 text-muted-foreground',
+  Idea:        'border-purple-500/40 text-purple-400',
+  Planning:    'border-blue-500/40 text-blue-400',
+  Design:      'border-pink-500/40 text-pink-400',
+  Development: 'border-yellow-500/40 text-yellow-400',
+  Testing:     'border-orange-500/40 text-orange-400',
+  Deployment:  'border-cyan-500/40 text-cyan-400',
+  Live:        'border-green-500/40 text-green-400',
+  Maintenance: 'border-teal-500/40 text-teal-400',
+  'On Hold':   'border-muted-foreground/40 text-muted-foreground',
+};
+
+const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+// Reusable editable checklist (used for AI prompts, features, to-dos)
+function DevList({
+  items, onChange, placeholder, multiline, showCheckbox,
+}: {
+  items: DevItem[];
+  onChange: (items: DevItem[]) => void;
+  placeholder: string;
+  multiline?: boolean;
+  showCheckbox?: boolean;
+}) {
+  const [draft, setDraft] = useState('');
+
+  const add = () => {
+    const v = draft.trim();
+    if (!v) return;
+    onChange([...items, { id: uid(), text: v, done: false }]);
+    setDraft('');
+  };
+  const update = (id: string, patch: Partial<DevItem>) =>
+    onChange(items.map(it => it.id === id ? { ...it, ...patch } : it));
+  const remove = (id: string) => onChange(items.filter(it => it.id !== id));
+
+  const rowAlign = multiline ? 'items-start' : 'items-center';
+
+  return (
+    <div className="space-y-1.5">
+      {items.map(it => (
+        <div key={it.id} className={`flex gap-1.5 group ${rowAlign}`}>
+          {showCheckbox && (
+            <Checkbox
+              className="shrink-0"
+              checked={it.done}
+              onCheckedChange={v => update(it.id, { done: !!v })}
+            />
+          )}
+          {multiline ? (
+            <Textarea
+              rows={2}
+              value={it.text}
+              onChange={e => update(it.id, { text: e.target.value })}
+              className={`flex-1 min-w-0 text-sm min-h-0 py-1.5 ${it.done ? 'line-through text-muted-foreground' : ''}`}
+            />
+          ) : (
+            <Input
+              value={it.text}
+              onChange={e => update(it.id, { text: e.target.value })}
+              className={`flex-1 min-w-0 h-8 text-sm ${it.done ? 'line-through text-muted-foreground' : ''}`}
+            />
+          )}
+          <Button
+            size="icon" variant="ghost"
+            aria-label="Remove"
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+            onClick={() => remove(it.id)}
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      ))}
+      <div className="flex items-start gap-1.5">
+        {multiline ? (
+          <Textarea
+            rows={2}
+            placeholder={placeholder}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); add(); } }}
+            className="flex-1 min-w-0 text-sm min-h-0 py-1.5"
+          />
+        ) : (
+          <Input
+            placeholder={placeholder}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+            className="flex-1 min-w-0 h-8 text-sm"
+          />
+        )}
+        <Button size="icon" variant="outline" aria-label="Add" className="h-8 w-8 border-accent/30 shrink-0" onClick={add} disabled={!draft.trim()}>
+          <Plus className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DevSection({ icon: Icon, title, hint, count, children }: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  hint?: string;
+  count?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <Icon className="w-3.5 h-3.5 text-accent shrink-0" />
+        <h4 className="text-xs sm:text-sm font-semibold text-foreground">{title}</h4>
+        {!!count && (
+          <span className="text-[10px] font-medium leading-none rounded-full bg-accent/10 text-accent px-1.5 py-0.5">{count}</span>
+        )}
+        {hint && <span className="text-[11px] text-muted-foreground hidden sm:inline">· {hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function DevelopTab() {
+  const qc = useQueryClient();
+  const [data, setData] = useState<Record<string, ProjectDev>>({});
+  const [dirty, setDirty] = useState(false);
+  const dirtyRef = useRef(false);   // read inside debounce without re-triggering it
+  const seeded = useRef(false);     // seed local state from Firestore only once
+
+  const { data: projects = [], isLoading: loadingProjects } = useQuery({
+    queryKey: ['projects'],
+    queryFn: fb.getProjects,
+  });
+  const { data: saved, isLoading: loadingDev } = useQuery({
+    queryKey: ['develop'],
+    queryFn: fb.getDevelopData,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (saved && !seeded.current) { setData(saved); seeded.current = true; }
+  }, [saved]);
+
+  const saveMut = useMutation({
+    mutationFn: (next: Record<string, ProjectDev>) => fb.saveDevelopData(next),
+    onSuccess: (_res, next) => {
+      // Keep the query cache in sync without a refetch (a refetch could clobber
+      // edits typed while the save was in flight).
+      qc.setQueryData(['develop'], next);
+      dirtyRef.current = false;
+      setDirty(false);
+    },
+    onError: (err) => toast.error(`Autosave failed: ${(err as Error).message}`),
+  });
+
+  // Debounced autosave — fires ~900ms after the last edit, any single section is enough.
+  useEffect(() => {
+    if (!dirtyRef.current) return;
+    const t = setTimeout(() => saveMut.mutate(data), 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  const get = (id: string): ProjectDev => data[id] ?? emptyProjectDev();
+  const patch = (id: string, p: Partial<ProjectDev>) => {
+    setData(prev => ({ ...prev, [id]: { ...get(id), ...p } }));
+    dirtyRef.current = true;
+    setDirty(true);
+  };
+
+  const isLoading = loadingProjects || loadingDev;
+
+  if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>;
+
+  if (projects.length === 0) {
+    return (
+      <Card className="border-accent/30 bg-accent/5">
+        <CardContent className="p-5">
+          <p className="font-semibold text-foreground">No projects yet</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Add projects in the <span className="text-accent">Projects</span> tab first — then plan their development here.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const openCount = (d: ProjectDev) => d.todos.filter(t => !t.done).length;
+
+  return (
+    <div className="space-y-3 sm:space-y-4">
+      {/* Header — autosave status sticks to the top on mobile so it's always visible */}
+      <div className="flex items-start justify-between gap-2 sticky top-14 sm:top-16 z-20 -mx-3 sm:mx-0 px-3 sm:px-0 py-2 bg-background/80 backdrop-blur-sm">
+        <p className="text-xs sm:text-sm text-muted-foreground leading-snug">
+          Private planning notes for {projects.length} project{projects.length !== 1 ? 's' : ''}. Changes save automatically.
+        </p>
+        <div className="flex items-center gap-1.5 text-xs sm:text-sm shrink-0 text-muted-foreground whitespace-nowrap">
+          {saveMut.isPending ? (
+            <><Loader2 className="w-3.5 h-3.5 animate-spin text-accent" /> <span className="hidden xs:inline">Saving…</span></>
+          ) : dirty ? (
+            <><span className="w-2 h-2 rounded-full bg-yellow-500" /> <span className="hidden xs:inline">Unsaved…</span></>
+          ) : (
+            <><Check className="w-3.5 h-3.5 text-green-500" /> <span className="hidden xs:inline">Saved</span></>
+          )}
+        </div>
+      </div>
+
+      <Accordion type="multiple" className="space-y-2.5">
+        {projects.map(project => {
+          const d = get(project.id!);
+          const open = openCount(d);
+          return (
+            <AccordionItem
+              key={project.id}
+              value={project.id!}
+              className="glass-card border border-accent/10 rounded-xl px-3 sm:px-4 data-[state=open]:border-accent/30"
+            >
+              <AccordionTrigger className="hover:no-underline py-2.5 gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 flex-wrap text-left">
+                  <span className="font-semibold text-sm text-foreground truncate max-w-full">{project.title}</span>
+                  <span className="flex items-center gap-1.5 shrink-0">
+                    <Badge variant="outline" className={`text-[10px] px-1.5 ${STAGE_COLORS[d.stage] ?? 'border-accent/30 text-accent'}`}>
+                      {d.stage}
+                    </Badge>
+                    {open > 0 && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 border-yellow-500/30 text-yellow-500">
+                        {open} to-do{open !== 1 ? 's' : ''}
+                      </Badge>
+                    )}
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 pt-1 space-y-3.5">
+
+                {/* Stage */}
+                <DevSection icon={KanbanSquare} title="Lifecycle Stage">
+                  <Select value={d.stage} onValueChange={v => patch(project.id!, { stage: v })}>
+                    <SelectTrigger className="h-9 w-full sm:max-w-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {STAGE_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </DevSection>
+
+                <Separator className="bg-border/50" />
+
+                {/* AI prompts */}
+                <DevSection icon={Sparkles} title="AI Prompts" hint="run later" count={d.aiPrompts.length}>
+                  <DevList
+                    items={d.aiPrompts}
+                    onChange={v => patch(project.id!, { aiPrompts: v })}
+                    placeholder="Add an AI prompt…"
+                    multiline
+                  />
+                </DevSection>
+
+                <Separator className="bg-border/50" />
+
+                {/* Features / comments */}
+                <DevSection icon={MessageSquarePlus} title="Comments & Features" count={d.features.length}>
+                  <DevList
+                    items={d.features}
+                    onChange={v => patch(project.id!, { features: v })}
+                    placeholder="Add a feature idea or comment…"
+                    showCheckbox
+                  />
+                </DevSection>
+
+                <Separator className="bg-border/50" />
+
+                {/* To-dos */}
+                <DevSection icon={ListChecks} title="What To Do Next" count={open}>
+                  <DevList
+                    items={d.todos}
+                    onChange={v => patch(project.id!, { todos: v })}
+                    placeholder="Add a next step…"
+                    showCheckbox
+                  />
+                </DevSection>
+
+                <Separator className="bg-border/50" />
+
+                {/* Notes */}
+                <DevSection icon={FileText} title="Notes">
+                  <Textarea
+                    rows={3}
+                    placeholder="Freeform scratchpad…"
+                    value={d.notes}
+                    onChange={e => patch(project.id!, { notes: e.target.value })}
+                    className="text-sm"
+                  />
+                </DevSection>
+
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
+    </div>
+  );
+}
+
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="min-h-screen bg-background">
@@ -1533,6 +1917,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             <TabsList className="bg-secondary/50 border border-border/50 inline-flex h-auto gap-0.5 p-1 w-max min-w-full sm:w-auto sm:flex-wrap">
               {[
                 { value: 'projects', icon: FolderOpen,  label: 'Projects' },
+                { value: 'develop',  icon: KanbanSquare, label: 'Develop' },
                 { value: 'skills',   icon: Layers,       label: 'Skills' },
                 { value: 'blog',     icon: BookOpen,     label: 'Blog' },
                 { value: 'about',    icon: Users,        label: 'About Cards' },
@@ -1553,6 +1938,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           </div>
 
           <TabsContent value="projects"><ProjectsTab /></TabsContent>
+          <TabsContent value="develop"><DevelopTab /></TabsContent>
           <TabsContent value="skills"><SkillsTab /></TabsContent>
           <TabsContent value="blog"><BlogTab /></TabsContent>
           <TabsContent value="about"><AboutTab /></TabsContent>

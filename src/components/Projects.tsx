@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import { ExternalLink, Github, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -15,6 +15,95 @@ import { DEFAULT_PROJECTS } from '@/data/defaults';
 const categories = ['All', 'Web Apps', 'Mobile', 'Games', 'Content'];
 
 const PROJECTS_PER_PAGE = 6;
+
+// Resolve a project's gallery: prefer `images`, fall back to the single `image`
+const projectImages = (p: { images?: string[]; image?: string }): string[] =>
+  p.images && p.images.length ? p.images : p.image ? [p.image] : [];
+
+// ── Slideshow ─────────────────────────────────────────────────────────────────
+
+const Slideshow = ({
+  images, alt, autoPlay = false, interval = 3500, showArrows = 'hover',
+}: {
+  images: string[];
+  alt: string;
+  autoPlay?: boolean;
+  interval?: number;
+  showArrows?: 'hover' | 'always';
+}) => {
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const count = images.length;
+
+  // Keep index valid if the image list shrinks
+  useEffect(() => { setIdx(i => (i >= count ? 0 : i)); }, [count]);
+
+  useEffect(() => {
+    if (!autoPlay || paused || count <= 1) return;
+    const t = setInterval(() => setIdx(i => (i + 1) % count), interval);
+    return () => clearInterval(t);
+  }, [autoPlay, paused, count, interval]);
+
+  if (count === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 text-4xl font-bold">
+        {alt[0]}
+      </div>
+    );
+  }
+
+  const go = (dir: number) => (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    setIdx(i => (i + dir + count) % count);
+  };
+  const jump = (i: number) => (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    setIdx(i);
+  };
+
+  const arrowVis = showArrows === 'always' ? 'opacity-100' : 'opacity-0 group-hover/slide:opacity-100';
+  const arrowBase = 'absolute top-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-background/70 backdrop-blur flex items-center justify-center text-foreground hover:bg-accent hover:text-accent-foreground transition';
+
+  return (
+    <div
+      className="group/slide relative w-full h-full"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {images.map((src, i) => (
+        <img
+          key={i}
+          src={src}
+          alt={`${alt} – image ${i + 1}`}
+          loading="lazy"
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === idx ? 'opacity-100' : 'opacity-0'}`}
+        />
+      ))}
+
+      {count > 1 && (
+        <>
+          <button type="button" aria-label="Previous image" onClick={go(-1)} className={`${arrowBase} left-2 ${arrowVis}`}>
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button type="button" aria-label="Next image" onClick={go(1)} className={`${arrowBase} right-2 ${arrowVis}`}>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex gap-1.5">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Go to image ${i + 1}`}
+                onClick={jump(i)}
+                className={`h-1.5 rounded-full transition-all ${i === idx ? 'w-4 bg-accent' : 'w-1.5 bg-foreground/40 hover:bg-foreground/70'}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 export const Projects = () => {
   const { ref, isVisible } = useScrollAnimation();
@@ -44,9 +133,9 @@ export const Projects = () => {
   // Use Firestore data when available; fall back to bundled defaults
   const rawProjects = usingDefaults ? DEFAULT_PROJECTS : firestoreProjects;
 
-  // If a Firestore project has no image yet, resolve it from the local defaults
+  // If a Firestore project has no image(s) yet, resolve them from the local defaults
   const projects = rawProjects.map(p => {
-    if (p.image) return p;
+    if ((p.images && p.images.length) || p.image) return p;
     const match = DEFAULT_PROJECTS.find(d => d.title === p.title);
     return match ? { ...p, image: match.image } : p;
   });
@@ -137,22 +226,11 @@ export const Projects = () => {
                   <Dialog>
                   <DialogTrigger asChild>
                     <div className="glass-card rounded-xl overflow-hidden group transition-smooth hover:scale-[1.02] hover:glow-accent cursor-pointer flex flex-col">
-                      {/* Image */}
+                      {/* Image slideshow */}
                       <div className="relative overflow-hidden aspect-video bg-secondary/30 shrink-0">
-                        {project.image ? (
-                          <img
-                            src={project.image}
-                            alt={project.title}
-                            loading="lazy"
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 text-4xl font-bold">
-                            {project.title[0]}
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <Slideshow images={projectImages(project)} alt={project.title} autoPlay />
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           <Button size="sm" className="bg-accent text-accent-foreground">
                             View Details
                           </Button>
@@ -215,9 +293,9 @@ export const Projects = () => {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-6 pt-4">
-                      {project.image && (
+                      {projectImages(project).length > 0 && (
                         <div className="aspect-video rounded-lg overflow-hidden border border-accent/10">
-                          <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
+                          <Slideshow images={projectImages(project)} alt={project.title} autoPlay interval={4500} showArrows="always" />
                         </div>
                       )}
                       <div className="space-y-2">

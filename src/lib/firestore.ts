@@ -4,7 +4,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebase';
-import type { Project, Skill, PortfolioContent, CVData, AboutHighlight, ContactData, BlogPost } from '@/types/portfolio';
+import type { Project, Skill, PortfolioContent, CVData, AboutHighlight, ContactData, BlogPost, ProjectDev } from '@/types/portfolio';
 
 // ── Projects ────────────────────────────────────────────────────────────────
 
@@ -119,6 +119,19 @@ export async function updateBlogPost(id: string, data: Partial<BlogPost>): Promi
 
 export async function deleteBlogPost(id: string): Promise<void> {
   await deleteDoc(doc(db, 'blog', id));
+}
+
+// ── Develop / project dev notes (admin-only) ─────────────────────────────────
+// Stored as a single doc mapping projectId → ProjectDev.
+
+export async function getDevelopData(): Promise<Record<string, ProjectDev>> {
+  const snap = await getDoc(doc(db, 'content', 'develop'));
+  if (snap.exists()) return (snap.data().items as Record<string, ProjectDev>) ?? {};
+  return {};
+}
+
+export async function saveDevelopData(items: Record<string, ProjectDev>): Promise<void> {
+  await setDoc(doc(db, 'content', 'develop'), { items });
 }
 
 // ── CV ────────────────────────────────────────────────────────────────────────
