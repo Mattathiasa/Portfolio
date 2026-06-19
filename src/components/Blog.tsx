@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getBlogPosts } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { DEFAULT_BLOG_POSTS } from '@/data/defaults';
+import type { BlogPost } from '@/types/portfolio';
 import reactImage from '@/assets/blog-react.jpg';
 import analyticsImage from '@/assets/blog-analytics.jpg';
 import careerImage from '@/assets/blog-career.jpg';
@@ -24,7 +25,7 @@ export const Blog = () => {
     retry: false,
   });
 
-  const rawPosts = (firestorePosts && firestorePosts.length > 0) ? firestorePosts : DEFAULT_BLOG_POSTS;
+  const rawPosts: BlogPost[] = (firestorePosts && firestorePosts.length > 0) ? firestorePosts : DEFAULT_BLOG_POSTS;
 
   // Resolve empty images: use local fallback by order index
   const posts = rawPosts.map((p, i) => ({

@@ -17,6 +17,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,11 +32,11 @@ import {
   Image as ImageIcon, Github, ExternalLink, Eye, EyeOff,
   FolderOpen, Layers, Wrench, FileText, ChevronRight, ChevronLeft, Loader2,
   Download, BookOpen, Users, Mail, Sparkles, ListChecks, MessageSquarePlus, KanbanSquare,
-  ImagePlus, Star, Check,
+  ImagePlus, Star, Check, Monitor, Smartphone, AppWindow, Crop,
 } from 'lucide-react';
 import * as fb from '@/lib/firestore';
-import type { Project, Skill, PortfolioContent, AboutStat, CVData, CVExperience, CVProject, CVEducation, CVLanguage, BlogPost, ProjectDev, DevItem } from '@/types/portfolio';
-import { LIFECYCLE_STAGES, emptyProjectDev } from '@/types/portfolio';
+import type { Project, Skill, PortfolioContent, AboutStat, CVData, CVExperience, CVProject, CVEducation, CVLanguage, BlogPost, ProjectDev, DevItem, ProjectImage, ImageDevice } from '@/types/portfolio';
+import { LIFECYCLE_STAGES, emptyProjectDev, DEVICE_DEFAULTS, ASPECT_PRESETS, toProjectMedia } from '@/types/portfolio';
 import { DEFAULT_PROJECTS, DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT, DEFAULT_CV, DEFAULT_HIGHLIGHTS, DEFAULT_CONTACT, DEFAULT_BLOG_POSTS } from '@/data/defaults';
 
 const CATEGORIES = ['Web Apps', 'Mobile', 'Games', 'Content'];
@@ -90,99 +91,371 @@ function TagInput({
   );
 }
 
+// ── Cloudinary upload helper (shared) ─────────────────────────────────────────
+
+async function uploadToCloudinary(file: File | Blob, folder = 'portfolio/projects'): Promise<string> {
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const preset    = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('upload_preset', preset);
+  fd.append('folder', folder);
+  const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: fd });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message);
+  return json.secure_url as string;
+}
+
+// ── Device metadata ───────────────────────────────────────────────────────────
+
+const DEVICE_META: Record<ImageDevice, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+  desktop: { label: 'Desktop', icon: Monitor },
+  mobile:  { label: 'Mobile',  icon: Smartphone },
+  app:     { label: 'App',     icon: AppWindow },
+};
+
+const ratioOf = (s: string): number | null => {
+  const [a, b] = s.split('/').map(Number);
+  return a && b ? a / b : null;
+};
+
+// ── Interactive crop tool ─────────────────────────────────────────────────────
+
+type CropRect = { x: number; y: number; w: number; h: number };
+
+function ImageCropper({
+  open, src, aspect, onClose, onCropped,
+}: {
+  open: boolean;
+  src: string;
+  aspect: string;          // suggested lock ratio ('auto' = free)
+  onClose: () => void;
+  onCropped: (url: string) => void;
+}) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [disp, setDisp] = useState({ w: 0, h: 0 });
+  const [rect, setRect] = useState<CropRect | null>(null);
+  const [lock, setLock] = useState<string>(aspect && aspect !== 'auto' ? aspect : 'free');
+  const [busy, setBusy] = useState(false);
+  const drag = useRef<null | { mode: string; px: number; py: number; r: CropRect }>(null);
+
+  // Centered crop rect for a given ratio inside the display box
+  const centered = (w: number, h: number, ratioStr: string): CropRect => {
+    const r = ratioStr === 'free' ? null : ratioOf(ratioStr);
+    if (!r) { const cw = w * 0.85, ch = h * 0.85; return { x: (w - cw) / 2, y: (h - ch) / 2, w: cw, h: ch }; }
+    let cw = w * 0.9, ch = cw / r;
+    if (ch > h * 0.9) { ch = h * 0.9; cw = ch * r; }
+    return { x: (w - cw) / 2, y: (h - ch) / 2, w: cw, h: ch };
+  };
+
+  const layout = () => {
+    const img = imgRef.current, box = boxRef.current?.parentElement;
+    if (!img || !img.naturalWidth || !box) return;
+    const availW = box.clientWidth || 320;
+    const maxH = Math.min(window.innerHeight * 0.5, 480);
+    const scale = Math.min(availW / img.naturalWidth, maxH / img.naturalHeight, 1);
+    const w = Math.round(img.naturalWidth * scale);
+    const h = Math.round(img.naturalHeight * scale);
+    setDisp({ w, h });
+    setRect(centered(w, h, lock));
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onResize = () => layout();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Re-fit crop box when the lock ratio changes
+  useEffect(() => {
+    if (disp.w) setRect(centered(disp.w, disp.h, lock));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lock]);
+
+  const MIN = 24;
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+  const start = (mode: string) => (e: React.PointerEvent) => {
+    if (!rect) return;
+    e.preventDefault(); e.stopPropagation();
+    boxRef.current?.setPointerCapture(e.pointerId);
+    drag.current = { mode, px: e.clientX, py: e.clientY, r: { ...rect } };
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const dx = e.clientX - d.px, dy = e.clientY - d.py;
+    const r = ratioOf(lock);
+    let { x, y, w, h } = d.r;
+
+    if (d.mode === 'move') {
+      x = clamp(d.r.x + dx, 0, disp.w - w);
+      y = clamp(d.r.y + dy, 0, disp.h - h);
+    } else {
+      const right = d.r.x + d.r.w, bottom = d.r.y + d.r.h;
+      if (d.mode.includes('e')) w = d.r.w + dx;
+      if (d.mode.includes('s')) h = d.r.h + dy;
+      if (d.mode.includes('w')) { x = d.r.x + dx; w = right - x; }
+      if (d.mode.includes('n')) { y = d.r.y + dy; h = bottom - y; }
+      if (r && lock !== 'free') {
+        // Derive the dependent side from the dominant drag axis
+        if (d.mode === 'n' || d.mode === 's') w = h * r;
+        else h = w / r;
+        if (d.mode.includes('w')) x = right - w;
+        if (d.mode.includes('n')) y = bottom - h;
+      }
+      // Clamp into bounds, keeping a minimum size
+      w = clamp(w, MIN, disp.w); h = clamp(h, MIN, disp.h);
+      x = clamp(x, 0, disp.w - w); y = clamp(y, 0, disp.h - h);
+      if (x + w > disp.w) w = disp.w - x;
+      if (y + h > disp.h) h = disp.h - y;
+      if (r && lock !== 'free') { // re-derive after clamping so ratio holds
+        if (w / r <= disp.h - y) h = w / r; else { h = disp.h - y; w = h * r; }
+      }
+    }
+    setRect({ x, y, w, h });
+  };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (drag.current) { boxRef.current?.releasePointerCapture(e.pointerId); drag.current = null; }
+  };
+
+  const apply = async () => {
+    const img = imgRef.current;
+    if (!img || !rect || !disp.w) return;
+    setBusy(true);
+    try {
+      const scale = img.naturalWidth / disp.w;
+      const sx = rect.x * scale, sy = rect.y * scale;
+      const sw = rect.w * scale, sh = rect.h * scale;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(sw));
+      canvas.height = Math.max(1, Math.round(sh));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas not supported');
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      const blob: Blob = await new Promise((resolve, reject) =>
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Could not read the image (cross-origin). Try uploading the file instead of pasting a URL.')), 'image/png'),
+      );
+      const newUrl = await uploadToCloudinary(blob);
+      toast.success('Cropped & saved');
+      onCropped(newUrl);
+      onClose();
+    } catch (err) {
+      toast.error(`Crop failed: ${(err as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handle = 'absolute w-3 h-3 bg-accent border border-background rounded-sm z-20';
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="w-full sm:max-w-xl bg-background/95 backdrop-blur-xl border-accent/20 max-h-[92dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="gradient-text text-lg flex items-center gap-2"><Crop className="w-4 h-4" /> Crop image</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          {/* Stage */}
+          <div className="flex justify-center select-none">
+            <div ref={boxRef} className="relative touch-none" style={{ width: disp.w || undefined, height: disp.h || undefined }}
+              onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+              <img
+                ref={imgRef}
+                src={src}
+                crossOrigin="anonymous"
+                onLoad={layout}
+                alt="Crop source"
+                style={{ width: disp.w || '100%', height: disp.h || 'auto', display: 'block' }}
+                className="rounded-md select-none pointer-events-none"
+                draggable={false}
+              />
+              {rect && (
+                <div
+                  className="absolute border-2 border-accent cursor-move"
+                  style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h, boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)' }}
+                  onPointerDown={start('move')}
+                >
+                  <div className={`${handle} -left-1.5 -top-1.5 cursor-nwse-resize`} onPointerDown={start('nw')} />
+                  <div className={`${handle} -right-1.5 -top-1.5 cursor-nesw-resize`} onPointerDown={start('ne')} />
+                  <div className={`${handle} -left-1.5 -bottom-1.5 cursor-nesw-resize`} onPointerDown={start('sw')} />
+                  <div className={`${handle} -right-1.5 -bottom-1.5 cursor-nwse-resize`} onPointerDown={start('se')} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ratio lock */}
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            <span className="text-xs text-muted-foreground">Lock ratio:</span>
+            {['free', '16/9', '9/16', '1/1', '4/3', '3/4'].map(r => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setLock(r)}
+                className={`text-xs px-2 py-1 rounded-md border transition-colors ${lock === r ? 'bg-accent text-accent-foreground border-accent' : 'border-border/60 hover:border-accent/50'}`}
+              >
+                {r === 'free' ? 'Free' : r.replace('/', ':')}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <DialogFooter className="flex-row gap-2">
+          <Button variant="outline" onClick={onClose} disabled={busy} className="flex-1 sm:flex-none">Cancel</Button>
+          <Button className="bg-accent text-accent-foreground hover:bg-accent/90 flex-1 sm:flex-none" onClick={apply} disabled={busy || !rect}>
+            {busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Apply crop
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Multi-image gallery uploader ──────────────────────────────────────────────
 
 function MultiImageUploader({
-  images, onChange, onBusyChange,
+  media, onChange, onBusyChange,
 }: {
-  images: string[];
-  onChange: (images: string[]) => void;
+  media: ProjectImage[];
+  onChange: (media: ProjectImage[]) => void;
   onBusyChange?: (busy: boolean) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(0);
   const [url, setUrl] = useState('');
+  const [cropIdx, setCropIdx] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const uploadOne = async (file: File): Promise<string> => {
-    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-    const preset    = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('upload_preset', preset);
-    fd.append('folder', 'portfolio/projects');
-    const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: fd });
-    const json = await res.json();
-    if (json.error) throw new Error(json.error.message);
-    return json.secure_url as string;
-  };
+  const newImage = (url: string): ProjectImage => ({ url, device: 'desktop', aspect: 'auto', fit: 'cover' });
 
   const handleFiles = async (fileList: FileList | File[] | null) => {
     const files = Array.from(fileList ?? []).filter(f => f.type.startsWith('image/'));
     if (!files.length) return;
     setUploading(files.length);
     onBusyChange?.(true);
-    const results = await Promise.allSettled(files.map(uploadOne));
+    const results = await Promise.allSettled(files.map(f => uploadToCloudinary(f)));
     const urls = results.flatMap(r => r.status === 'fulfilled' ? [r.value] : []);
     const failed = results.length - urls.length;
-    if (urls.length) { onChange([...images, ...urls]); toast.success(`${urls.length} image${urls.length > 1 ? 's' : ''} uploaded!`); }
+    if (urls.length) { onChange([...media, ...urls.map(newImage)]); toast.success(`${urls.length} image${urls.length > 1 ? 's' : ''} uploaded!`); }
     if (failed) toast.error(`${failed} upload${failed > 1 ? 's' : ''} failed`);
     setUploading(0);
     onBusyChange?.(false);
   };
 
-  const remove = (i: number) => onChange(images.filter((_, idx) => idx !== i));
+  const patch = (i: number, p: Partial<ProjectImage>) =>
+    onChange(media.map((m, idx) => idx === i ? { ...m, ...p } : m));
+  const remove = (i: number) => onChange(media.filter((_, idx) => idx !== i));
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir;
-    if (j < 0 || j >= images.length) return;
-    const next = [...images];
+    if (j < 0 || j >= media.length) return;
+    const next = [...media];
     [next[i], next[j]] = [next[j], next[i]];
     onChange(next);
   };
   const makeCover = (i: number) => {
     if (i === 0) return;
-    const next = [...images];
+    const next = [...media];
     const [pick] = next.splice(i, 1);
     onChange([pick, ...next]);
   };
+  const setDevice = (i: number, device: ImageDevice) =>
+    patch(i, { device, ...DEVICE_DEFAULTS[device] });
   const addUrl = () => {
     const v = url.trim();
-    if (v && !images.includes(v)) onChange([...images, v]);
+    if (v && !media.some(m => m.url === v)) onChange([...media, newImage(v)]);
     setUrl('');
   };
 
   return (
     <div className="space-y-3">
-      {images.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          {images.map((src, i) => (
-            <div key={`${src}-${i}`} className="relative aspect-square rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
-              <img src={src} alt={`Project image ${i + 1}`} className="w-full h-full object-cover" />
-              {i === 0 && (
-                <span className="absolute top-1 left-1 z-10 text-[9px] font-semibold bg-accent text-accent-foreground px-1.5 py-0.5 rounded">
-                  Cover
-                </span>
-              )}
-              {/* Always-visible control bar — works on touch (no hover needed) */}
-              <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-0.5 bg-background/75 backdrop-blur-sm py-1">
-                <button type="button" title="Move left" disabled={i === 0} onClick={() => move(i, -1)}
-                  className="w-6 h-6 rounded flex items-center justify-center hover:bg-accent hover:text-accent-foreground disabled:opacity-25 transition-colors">
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                {i !== 0 && (
-                  <button type="button" title="Set as cover" onClick={() => makeCover(i)}
-                    className="w-6 h-6 rounded flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors">
-                    <Star className="w-3.5 h-3.5" />
-                  </button>
+      {media.length > 0 && (
+        <div className="space-y-2.5">
+          {media.map((m, i) => (
+            <div key={`${m.url}-${i}`} className="flex gap-3 rounded-lg border border-border/50 bg-secondary/20 p-2.5">
+              {/* Thumbnail (reflects device + fit) */}
+              <div className={`relative shrink-0 w-20 sm:w-24 self-start overflow-hidden rounded-md bg-background/60 ${m.device === 'desktop' ? 'aspect-video' : 'aspect-[9/16]'}`}>
+                <img src={m.url} alt={`Image ${i + 1}`} className={`w-full h-full ${m.fit === 'contain' ? 'object-contain' : 'object-cover'}`} />
+                {i === 0 && (
+                  <span className="absolute top-0.5 left-0.5 text-[8px] font-semibold bg-accent text-accent-foreground px-1 py-0.5 rounded">Cover</span>
                 )}
-                <button type="button" title="Remove" onClick={() => remove(i)}
-                  className="w-6 h-6 rounded flex items-center justify-center text-destructive hover:bg-destructive hover:text-white transition-colors">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-                <button type="button" title="Move right" disabled={i === images.length - 1} onClick={() => move(i, 1)}
-                  className="w-6 h-6 rounded flex items-center justify-center hover:bg-accent hover:text-accent-foreground disabled:opacity-25 transition-colors">
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+              </div>
+
+              {/* Controls */}
+              <div className="flex-1 min-w-0 space-y-2">
+                {/* Device selector */}
+                <div className="flex gap-1">
+                  {(Object.keys(DEVICE_META) as ImageDevice[]).map(dev => {
+                    const { label, icon: Icon } = DEVICE_META[dev];
+                    const active = m.device === dev;
+                    return (
+                      <button
+                        key={dev} type="button" onClick={() => setDevice(i, dev)}
+                        className={`flex-1 flex items-center justify-center gap-1 rounded-md border px-1.5 py-1 text-[11px] transition-colors ${active ? 'bg-accent text-accent-foreground border-accent' : 'border-border/60 text-muted-foreground hover:border-accent/50'}`}
+                      >
+                        <Icon className="w-3 h-3" /> <span className="hidden xs:inline">{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Aspect + fit */}
+                <div className="flex items-center gap-1.5">
+                  <Select value={ASPECT_PRESETS.includes(m.aspect as typeof ASPECT_PRESETS[number]) ? m.aspect : 'custom'} onValueChange={v => patch(i, { aspect: v === 'custom' ? (ASPECT_PRESETS.includes(m.aspect as typeof ASPECT_PRESETS[number]) ? '3/2' : m.aspect) : v })}>
+                    <SelectTrigger className="h-7 text-[11px] flex-1"><SelectValue placeholder="Ratio" /></SelectTrigger>
+                    <SelectContent>
+                      {ASPECT_PRESETS.map(a => <SelectItem key={a} value={a} className="text-xs">{a === 'auto' ? 'Auto' : a.replace('/', ':')}</SelectItem>)}
+                      <SelectItem value="custom" className="text-xs">Custom…</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {!ASPECT_PRESETS.includes(m.aspect as typeof ASPECT_PRESETS[number]) && (
+                    <Input
+                      value={m.aspect}
+                      onChange={e => patch(i, { aspect: e.target.value })}
+                      placeholder="W/H e.g. 3/4"
+                      className="h-7 w-24 text-[11px]"
+                    />
+                  )}
+                  <button
+                    type="button" title="Toggle fit"
+                    onClick={() => patch(i, { fit: m.fit === 'cover' ? 'contain' : 'cover' })}
+                    className="h-7 px-2 rounded-md border border-border/60 text-[11px] text-muted-foreground hover:border-accent/50 shrink-0"
+                  >
+                    {m.fit === 'cover' ? 'Cover' : 'Contain'}
+                  </button>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-0.5">
+                  <button type="button" title="Move up" disabled={i === 0} onClick={() => move(i, -1)}
+                    className="w-7 h-7 rounded flex items-center justify-center hover:bg-accent hover:text-accent-foreground disabled:opacity-25 transition-colors">
+                    <ChevronLeft className="w-3.5 h-3.5 rotate-90" />
+                  </button>
+                  <button type="button" title="Move down" disabled={i === media.length - 1} onClick={() => move(i, 1)}
+                    className="w-7 h-7 rounded flex items-center justify-center hover:bg-accent hover:text-accent-foreground disabled:opacity-25 transition-colors">
+                    <ChevronRight className="w-3.5 h-3.5 rotate-90" />
+                  </button>
+                  {i !== 0 && (
+                    <button type="button" title="Set as cover" onClick={() => makeCover(i)}
+                      className="w-7 h-7 rounded flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors">
+                      <Star className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button type="button" title="Crop" onClick={() => setCropIdx(i)}
+                    className="w-7 h-7 rounded flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors">
+                    <Crop className="w-3.5 h-3.5" />
+                  </button>
+                  <button type="button" title="Remove" onClick={() => remove(i)}
+                    className="w-7 h-7 rounded flex items-center justify-center text-destructive hover:bg-destructive hover:text-white transition-colors ml-auto">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -208,7 +481,7 @@ function MultiImageUploader({
           <div className="text-center text-muted-foreground space-y-1 px-4">
             <ImagePlus className="w-7 h-7 mx-auto opacity-40" />
             <p className="text-sm">Drag & drop or click to add images</p>
-            <p className="text-[11px] opacity-70">You can select multiple — first image is the cover</p>
+            <p className="text-[11px] opacity-70">Multiple allowed · pick a device & ratio per image · first is the cover</p>
           </div>
         )}
       </div>
@@ -225,6 +498,16 @@ function MultiImageUploader({
           <Plus className="w-4 h-4" />
         </Button>
       </div>
+
+      {cropIdx !== null && media[cropIdx] && (
+        <ImageCropper
+          open={cropIdx !== null}
+          src={media[cropIdx].url}
+          aspect={media[cropIdx].aspect}
+          onClose={() => setCropIdx(null)}
+          onCropped={url => patch(cropIdx, { url })}
+        />
+      )}
     </div>
   );
 }
@@ -233,7 +516,7 @@ function MultiImageUploader({
 
 const emptyProject = (): Omit<Project, 'id'> => ({
   title: '', description: '', longDescription: '',
-  image: '', images: [], tags: [], techStack: [], challenges: '',
+  image: '', images: [], media: [], visible: true, tags: [], techStack: [], challenges: '',
   category: [], github: '', demo: '', order: 0,
 });
 
@@ -247,9 +530,12 @@ function ProjectFormDialog({
   const qc = useQueryClient();
   const isEdit = !!project?.id;
 
-  // Normalize so `images` is always an array (older projects only had `image`)
-  const normalize = (p?: Project): Omit<Project, 'id'> =>
-    p ? { ...p, images: p.images ?? (p.image ? [p.image] : []) } : emptyProject();
+  // Normalize so `media` is always populated (older projects only had `image`/`images`)
+  const normalize = (p?: Project): Omit<Project, 'id'> => {
+    if (!p) return emptyProject();
+    const media = toProjectMedia(p);
+    return { ...p, media, visible: p.visible !== false };
+  };
 
   const [form, setForm] = useState<Omit<Project, 'id'>>(normalize(project));
   const [imgUploading, setImgUploading] = useState(false);
@@ -260,9 +546,9 @@ function ProjectFormDialog({
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
 
-  // Keep `image` (cover) in sync with the first gallery image for backward compatibility
-  const setImages = (images: string[]) =>
-    setForm(prev => ({ ...prev, images, image: images[0] ?? '' }));
+  // Keep legacy `image`/`images` in sync with the rich `media` gallery for backward compatibility
+  const setMedia = (media: ProjectImage[]) =>
+    setForm(prev => ({ ...prev, media, images: media.map(m => m.url), image: media[0]?.url ?? '' }));
 
   const toggleCategory = (cat: string) => {
     set('category', form.category.includes(cat)
@@ -319,6 +605,22 @@ function ProjectFormDialog({
               <Input placeholder="One-line summary shown on the card" value={form.description} onChange={e => set('description', e.target.value)} />
             </div>
 
+            {/* Visibility */}
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-secondary/20 px-3 py-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                {form.visible !== false
+                  ? <Eye className="w-4 h-4 text-green-500 shrink-0" />
+                  : <EyeOff className="w-4 h-4 text-muted-foreground shrink-0" />}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Visible on site</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {form.visible !== false ? 'Shown in the public Projects section' : 'Hidden from the public site'}
+                  </p>
+                </div>
+              </div>
+              <Switch checked={form.visible !== false} onCheckedChange={v => set('visible', v)} />
+            </div>
+
             {/* ── 2. Links ── */}
             <Separator className="bg-border/50" />
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Links</p>
@@ -368,8 +670,8 @@ function ProjectFormDialog({
               Images <span className="font-normal normal-case">— shown as a slideshow on the card</span>
             </p>
             <MultiImageUploader
-              images={form.images ?? []}
-              onChange={setImages}
+              media={form.media ?? []}
+              onChange={setMedia}
               onBusyChange={setImgUploading}
             />
 
@@ -437,6 +739,12 @@ function ProjectsTab() {
     onError: (err) => toast.error(`Failed: ${(err as Error).message}`),
   });
 
+  const visMut = useMutation({
+    mutationFn: ({ id, visible }: { id: string; visible: boolean }) => fb.updateProject(id, { visible }),
+    onSuccess: (_r, { visible }) => { qc.invalidateQueries({ queryKey: ['projects'] }); toast.success(visible ? 'Project shown on site' : 'Project hidden from site'); },
+    onError: (err) => toast.error(`Failed: ${(err as Error).message}`),
+  });
+
   const openAdd  = () => { setEditProject(undefined); setFormOpen(true); };
   const openEdit = (p: Project) => { setEditProject(p); setFormOpen(true); };
 
@@ -486,15 +794,22 @@ function ProjectsTab() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {projects.map(project => {
             const img = resolveImage(project);
+            const hidden = project.visible === false;
+            const photoCount = project.media?.length ?? project.images?.length ?? 0;
             return (
-              <Card key={project.id} className="glass-card border-accent/10 overflow-hidden">
-                <div className="aspect-video overflow-hidden bg-secondary/30">
+              <Card key={project.id} className={`glass-card border-accent/10 overflow-hidden ${hidden ? 'opacity-60' : ''}`}>
+                <div className="relative aspect-video overflow-hidden bg-secondary/30">
                   {img ? (
-                    <img src={img} alt={project.title} className="w-full h-full object-cover" />
+                    <img src={img} alt={project.title} className={`w-full h-full object-cover ${hidden ? 'grayscale' : ''}`} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground/20 text-5xl font-bold">
                       {project.title[0]}
                     </div>
+                  )}
+                  {hidden && (
+                    <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-semibold bg-background/85 text-muted-foreground px-1.5 py-0.5 rounded">
+                      <EyeOff className="w-3 h-3" /> Hidden
+                    </span>
                   )}
                 </div>
                 <CardContent className="p-4 space-y-3">
@@ -509,9 +824,21 @@ function ProjectsTab() {
                     {!project.image && (
                       <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-500">no image</Badge>
                     )}
-                    {(project.images?.length ?? 0) > 1 && (
-                      <Badge variant="outline" className="text-[10px] border-accent/30 text-accent">{project.images!.length} photos</Badge>
+                    {photoCount > 1 && (
+                      <Badge variant="outline" className="text-[10px] border-accent/30 text-accent">{photoCount} photos</Badge>
                     )}
+                  </div>
+                  {/* Quick visibility toggle */}
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-border/40 bg-secondary/20 px-2.5 py-1.5">
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-green-500" />}
+                      {hidden ? 'Hidden' : 'Visible'}
+                    </span>
+                    <Switch
+                      checked={!hidden}
+                      disabled={visMut.isPending}
+                      onCheckedChange={v => visMut.mutate({ id: project.id!, visible: v })}
+                    />
                   </div>
                   <div className="flex gap-2 pt-1">
                     <Button size="sm" variant="outline" className="flex-1 border-accent/30" onClick={() => openEdit(project)}>
@@ -1681,21 +2008,26 @@ function DevList({
   );
 }
 
-function DevSection({ icon: Icon, title, hint, count, children }: {
+function DevSection({ icon: Icon, title, hint, count, done, children }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   hint?: string;
   count?: number;
+  done?: number;          // when provided, badge shows done/total + complete state
   children: React.ReactNode;
 }) {
+  const allDone = count !== undefined && count > 0 && done === count;
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5 flex-wrap">
         <Icon className="w-3.5 h-3.5 text-accent shrink-0" />
         <h4 className="text-xs sm:text-sm font-semibold text-foreground">{title}</h4>
         {!!count && (
-          <span className="text-[10px] font-medium leading-none rounded-full bg-accent/10 text-accent px-1.5 py-0.5">{count}</span>
+          <span className={`text-[10px] font-medium leading-none rounded-full px-1.5 py-0.5 ${allDone ? 'bg-green-500/15 text-green-500' : 'bg-accent/10 text-accent'}`}>
+            {done !== undefined ? `${done}/${count}` : count}
+          </span>
         )}
+        {allDone && <Check className="w-3.5 h-3.5 text-green-500" />}
         {hint && <span className="text-[11px] text-muted-foreground hidden sm:inline">· {hint}</span>}
       </div>
       {children}
@@ -1769,6 +2101,11 @@ function DevelopTab() {
   }
 
   const openCount = (d: ProjectDev) => d.todos.filter(t => !t.done).length;
+  const doneCount = (items: DevItem[]) => items.filter(t => t.done).length;
+  const progress = (d: ProjectDev) => {
+    const all = [...d.aiPrompts, ...d.features, ...d.todos];
+    return { done: all.filter(t => t.done).length, total: all.length };
+  };
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -1792,6 +2129,8 @@ function DevelopTab() {
         {projects.map(project => {
           const d = get(project.id!);
           const open = openCount(d);
+          const prog = progress(d);
+          const allDone = prog.total > 0 && prog.done === prog.total;
           return (
             <AccordionItem
               key={project.id}
@@ -1805,6 +2144,11 @@ function DevelopTab() {
                     <Badge variant="outline" className={`text-[10px] px-1.5 ${STAGE_COLORS[d.stage] ?? 'border-accent/30 text-accent'}`}>
                       {d.stage}
                     </Badge>
+                    {prog.total > 0 && (
+                      <Badge variant="outline" className={`text-[10px] px-1.5 flex items-center gap-1 ${allDone ? 'border-green-500/40 text-green-500' : 'border-accent/30 text-accent'}`}>
+                        {allDone && <Check className="w-3 h-3" />}{prog.done}/{prog.total} done
+                      </Badge>
+                    )}
                     {open > 0 && (
                       <Badge variant="outline" className="text-[10px] px-1.5 border-yellow-500/30 text-yellow-500">
                         {open} to-do{open !== 1 ? 's' : ''}
@@ -1828,19 +2172,20 @@ function DevelopTab() {
                 <Separator className="bg-border/50" />
 
                 {/* AI prompts */}
-                <DevSection icon={Sparkles} title="AI Prompts" hint="run later" count={d.aiPrompts.length}>
+                <DevSection icon={Sparkles} title="AI Prompts" hint="tick when run" count={d.aiPrompts.length} done={doneCount(d.aiPrompts)}>
                   <DevList
                     items={d.aiPrompts}
                     onChange={v => patch(project.id!, { aiPrompts: v })}
                     placeholder="Add an AI prompt…"
                     multiline
+                    showCheckbox
                   />
                 </DevSection>
 
                 <Separator className="bg-border/50" />
 
                 {/* Features / comments */}
-                <DevSection icon={MessageSquarePlus} title="Comments & Features" count={d.features.length}>
+                <DevSection icon={MessageSquarePlus} title="Comments & Features" hint="tick when done" count={d.features.length} done={doneCount(d.features)}>
                   <DevList
                     items={d.features}
                     onChange={v => patch(project.id!, { features: v })}
@@ -1852,7 +2197,7 @@ function DevelopTab() {
                 <Separator className="bg-border/50" />
 
                 {/* To-dos */}
-                <DevSection icon={ListChecks} title="What To Do Next" count={open}>
+                <DevSection icon={ListChecks} title="What To Do Next" hint="tick when done" count={d.todos.length} done={doneCount(d.todos)}>
                   <DevList
                     items={d.todos}
                     onChange={v => patch(project.id!, { todos: v })}

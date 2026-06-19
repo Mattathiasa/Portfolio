@@ -1,10 +1,50 @@
+// ── Project media ──────────────────────────────────────────────────────────────
+
+export type ImageDevice = 'desktop' | 'mobile' | 'app';
+export type ImageFit = 'cover' | 'contain';
+
+export interface ProjectImage {
+  url: string;
+  device: ImageDevice;   // how the image is framed/displayed
+  aspect: string;        // 'auto' | '16/9' | '9/16' | '1/1' | '4/3' | '3/4' | custom 'W/H'
+  fit: ImageFit;         // object-fit when shown
+}
+
+// Sensible defaults applied when a device is chosen.
+export const DEVICE_DEFAULTS: Record<ImageDevice, { aspect: string; fit: ImageFit }> = {
+  desktop: { aspect: '16/9', fit: 'cover' },
+  mobile:  { aspect: '9/16', fit: 'contain' },
+  app:     { aspect: '9/16', fit: 'contain' },
+};
+
+export const ASPECT_PRESETS = ['auto', '16/9', '4/3', '1/1', '3/4', '9/16'] as const;
+
+// Normalize any project (old or new) into a rich ProjectImage[] gallery.
+export function toProjectMedia(
+  p: { media?: ProjectImage[]; images?: string[]; image?: string },
+): ProjectImage[] {
+  if (p.media && p.media.length) {
+    // Backfill any missing fields so callers can rely on them.
+    return p.media.map(m => ({
+      url: m.url,
+      device: m.device ?? 'desktop',
+      aspect: m.aspect ?? 'auto',
+      fit: m.fit ?? 'cover',
+    }));
+  }
+  const urls = p.images && p.images.length ? p.images : p.image ? [p.image] : [];
+  return urls.map(url => ({ url, device: 'desktop' as ImageDevice, aspect: 'auto', fit: 'cover' as ImageFit }));
+}
+
 export interface Project {
   id?: string;
   title: string;
   description: string;
   longDescription: string;
-  image: string;          // cover image (kept = images[0] for backward compatibility)
-  images?: string[];      // full gallery shown as a slideshow
+  image: string;          // cover image (kept = media[0].url for backward compatibility)
+  images?: string[];      // legacy gallery (kept = media.map(url) for backward compatibility)
+  media?: ProjectImage[]; // rich gallery: per-image device / aspect / fit
+  visible?: boolean;      // shown on the public site? (undefined = visible)
   tags: string[];
   techStack: string[];
   challenges: string;

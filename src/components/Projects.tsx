@@ -11,21 +11,53 @@ import { useQuery } from '@tanstack/react-query';
 import { getProjects } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { DEFAULT_PROJECTS } from '@/data/defaults';
+import { toProjectMedia } from '@/types/portfolio';
+import type { ProjectImage } from '@/types/portfolio';
 
 const categories = ['All', 'Web Apps', 'Mobile', 'Games', 'Content'];
 
 const PROJECTS_PER_PAGE = 6;
 
-// Resolve a project's gallery: prefer `images`, fall back to the single `image`
-const projectImages = (p: { images?: string[]; image?: string }): string[] =>
-  p.images && p.images.length ? p.images : p.image ? [p.image] : [];
+const isPhone = (device: string) => device === 'mobile' || device === 'app';
+const cssAspect = (a: string) => a.replace('/', ' / ');
+
+// Container proportion derived from the cover image — keeps the gallery dynamic
+// in width/height instead of forcing every image into a 16:9 desktop frame.
+const cardAspect = (cover?: ProjectImage): string =>
+  !cover ? '16 / 9'
+    : isPhone(cover.device) ? '4 / 5'
+    : cover.aspect !== 'auto' ? cssAspect(cover.aspect) : '16 / 9';
+
+const modalStyle = (cover?: ProjectImage): React.CSSProperties =>
+  cover && isPhone(cover.device)
+    ? { aspectRatio: '9 / 16', height: 'min(60vh, 32rem)', maxWidth: '100%' }
+    : { aspectRatio: cover && cover.aspect !== 'auto' ? cssAspect(cover.aspect) : '16 / 9' };
+
+// ── A single slide (desktop image, or a phone-framed mobile/app screenshot) ────
+
+const MediaSlide = ({ image, alt, active }: { image: ProjectImage; alt: string; active: boolean }) => {
+  const fit = image.fit === 'contain' ? 'object-contain' : 'object-cover';
+  const base = `absolute inset-0 transition-opacity duration-700 ${active ? 'opacity-100' : 'opacity-0'}`;
+
+  if (isPhone(image.device)) {
+    return (
+      <div className={`${base} flex items-center justify-center p-3 bg-gradient-to-br from-accent/5 to-secondary/30`}>
+        <div className="relative h-full aspect-[9/19] max-w-full rounded-[1.6rem] border-[5px] border-foreground/85 bg-black shadow-xl overflow-hidden">
+          <img src={image.url} alt={alt} loading="lazy" className={`w-full h-full ${fit}`} />
+          <span className="absolute top-1.5 left-1/2 -translate-x-1/2 w-10 h-1.5 rounded-full bg-white/30" />
+        </div>
+      </div>
+    );
+  }
+  return <img src={image.url} alt={alt} loading="lazy" className={`${base} w-full h-full ${fit}`} />;
+};
 
 // ── Slideshow ─────────────────────────────────────────────────────────────────
 
 const Slideshow = ({
-  images, alt, autoPlay = false, interval = 3500, showArrows = 'hover',
+  media, alt, autoPlay = false, interval = 3500, showArrows = 'hover',
 }: {
-  images: string[];
+  media: ProjectImage[];
   alt: string;
   autoPlay?: boolean;
   interval?: number;
@@ -33,7 +65,7 @@ const Slideshow = ({
 }) => {
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
-  const count = images.length;
+  const count = media.length;
 
   // Keep index valid if the image list shrinks
   useEffect(() => { setIdx(i => (i >= count ? 0 : i)); }, [count]);
@@ -70,14 +102,8 @@ const Slideshow = ({
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {images.map((src, i) => (
-        <img
-          key={i}
-          src={src}
-          alt={`${alt} – image ${i + 1}`}
-          loading="lazy"
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === idx ? 'opacity-100' : 'opacity-0'}`}
-        />
+      {media.map((image, i) => (
+        <MediaSlide key={i} image={image} alt={`${alt} – image ${i + 1}`} active={i === idx} />
       ))}
 
       {count > 1 && (
@@ -89,7 +115,7 @@ const Slideshow = ({
             <ChevronRight className="w-4 h-4" />
           </button>
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex gap-1.5">
-            {images.map((_, i) => (
+            {media.map((_, i) => (
               <button
                 key={i}
                 type="button"
@@ -141,7 +167,9 @@ export const Projects = () => {
   });
 
   const filteredProjects = projects.filter(
-    (project) => activeCategory === 'All' || project.category.includes(activeCategory)
+    (project) =>
+      project.visible !== false &&
+      (activeCategory === 'All' || project.category.includes(activeCategory))
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE));
@@ -211,7 +239,9 @@ export const Projects = () => {
         <motion.div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
           <AnimatePresence mode='popLayout'>
             {paginatedProjects
-              .map((project) => (
+              .map((project) => {
+                const media = toProjectMedia(project);
+                return (
                 // motion.div must be the direct child of AnimatePresence so Framer Motion
                 // can forward a ref to a real DOM element (Dialog is a function component
                 // without forwardRef and would throw a ref warning otherwise).
@@ -227,8 +257,8 @@ export const Projects = () => {
                   <DialogTrigger asChild>
                     <div className="glass-card rounded-xl overflow-hidden group transition-smooth hover:scale-[1.02] hover:glow-accent cursor-pointer flex flex-col">
                       {/* Image slideshow */}
-                      <div className="relative overflow-hidden aspect-video bg-secondary/30 shrink-0">
-                        <Slideshow images={projectImages(project)} alt={project.title} autoPlay />
+                      <div className="relative overflow-hidden bg-secondary/30 shrink-0" style={{ aspectRatio: cardAspect(media[0]) }}>
+                        <Slideshow media={media} alt={project.title} autoPlay />
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           <Button size="sm" className="bg-accent text-accent-foreground">
@@ -293,9 +323,9 @@ export const Projects = () => {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-6 pt-4">
-                      {projectImages(project).length > 0 && (
-                        <div className="aspect-video rounded-lg overflow-hidden border border-accent/10">
-                          <Slideshow images={projectImages(project)} alt={project.title} autoPlay interval={4500} showArrows="always" />
+                      {media.length > 0 && (
+                        <div className="mx-auto rounded-lg overflow-hidden border border-accent/10 bg-secondary/30" style={modalStyle(media[0])}>
+                          <Slideshow media={media} alt={project.title} autoPlay interval={4500} showArrows="always" />
                         </div>
                       )}
                       <div className="space-y-2">
@@ -340,7 +370,8 @@ export const Projects = () => {
                   </DialogContent>
                 </Dialog>
                 </motion.div>
-              ))}
+                );
+              })}
           </AnimatePresence>
         </motion.div>
 
