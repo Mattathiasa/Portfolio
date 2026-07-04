@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
-import { ExternalLink, Github, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ExternalLink, Github, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SplitReveal } from '@/components/SplitReveal';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogTrigger, DialogDescription,
@@ -139,35 +140,58 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
     <div className="project-card w-full md:w-[42vw] xl:w-[36vw] shrink-0">
       <Dialog>
         <DialogTrigger asChild>
-          <div className="glass-card rounded-xl overflow-hidden group transition-smooth hover:scale-[1.02] hover:glow-accent cursor-pointer flex flex-col">
+          <div className="group relative glass-card rounded-xl overflow-hidden cursor-pointer flex flex-col border border-border/30 hover:border-accent/40 transition-all duration-500 hover:shadow-[0_0_40px_hsl(72_72%_73%/0.12)]">
+
             {/* Image slideshow */}
             <div className="relative overflow-hidden bg-secondary/30 shrink-0" style={{ aspectRatio: cardAspect(media[0]) }}>
               <Slideshow media={media} alt={project.title} autoPlay />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <Button size="sm" className="bg-accent text-accent-foreground">
-                  View Details
-                </Button>
+
+              {/* Hover gradient */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/90 via-background/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+              {/* Bottom-left editorial CTA */}
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-4 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+                <span className="font-title text-[11px] tracking-widest text-accent flex items-center gap-2">
+                  VIEW PROJECT <ArrowRight className="w-3.5 h-3.5" />
+                </span>
               </div>
-              <span className="pointer-events-none absolute top-3 left-3 font-title text-sm text-foreground/50 bg-background/50 backdrop-blur rounded px-2 py-0.5">
-                {String(index + 1).padStart(2, '0')}
+
+              {/* Category badge — top right */}
+              <span className="pointer-events-none absolute top-3 right-3 font-title text-[10px] tracking-widest text-foreground/60 bg-background/60 backdrop-blur rounded px-2.5 py-1">
+                {project.category}
               </span>
             </div>
 
             {/* Card body */}
-            <div className="p-4 sm:p-5 flex flex-col flex-1 gap-3">
+            <div className="relative p-5 sm:p-6 flex flex-col flex-1 gap-4 overflow-hidden">
+
+              {/* Faint oversized background index number */}
+              <span
+                aria-hidden
+                className="absolute -bottom-3 right-3 font-title text-[5.5rem] leading-none text-stroke select-none pointer-events-none opacity-[0.06]"
+              >
+                {String(index + 1).padStart(2, '0')}
+              </span>
+
               <div>
-                <h3 className="text-lg sm:text-xl font-bold text-foreground mb-1 group-hover:text-accent transition-colors">{project.title}</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+                <p className="font-title text-[10px] tracking-[0.2em] text-accent/60 mb-2">
+                  {String(index + 1).padStart(2, '0')}
+                </p>
+                <h3 className="font-title text-2xl sm:text-3xl leading-tight text-foreground group-hover:text-accent transition-colors duration-300">
+                  {project.title}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">
+                  {project.description}
+                </p>
               </div>
 
-              {/* Languages / tags */}
+              {/* Tags */}
               {project.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {project.tags.map((tag, i) => (
                     <span
                       key={i}
-                      className="text-[10px] uppercase tracking-wider px-2 py-0.5 bg-accent/5 text-accent/80 rounded border border-accent/10"
+                      className="glass-card text-[10px] tracking-wider px-2.5 py-1 text-accent/80 rounded-lg border border-accent/10"
                     >
                       {tag}
                     </span>
@@ -175,16 +199,16 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
                 </div>
               )}
 
-              {/* GitHub + Demo links */}
-              <div className="flex items-center gap-2 mt-auto pt-1" onClick={e => e.stopPropagation()}>
+              {/* Links + accent line */}
+              <div className="flex items-center gap-4 mt-auto pt-2" onClick={e => e.stopPropagation()}>
                 {project.github && (
                   <a
                     href={project.github}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 hover:border-accent/40 rounded-md px-2.5 py-1.5"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
                   >
-                    <Github className="w-3.5 h-3.5" /> GitHub
+                    <Github className="w-3.5 h-3.5" /> Source
                   </a>
                 )}
                 {project.demo && (
@@ -192,51 +216,63 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
                     href={project.demo}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 hover:border-accent/40 rounded-md px-2.5 py-1.5"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" /> Live Demo
+                    <ExternalLink className="w-3.5 h-3.5" /> Live
                   </a>
                 )}
+                {/* Growing accent line on hover */}
+                <div className="ml-auto h-px w-0 group-hover:w-16 bg-accent rounded-full transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]" />
               </div>
             </div>
           </div>
         </DialogTrigger>
 
+        {/* ── Detail dialog ── */}
         <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-xl border-accent/20">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold gradient-text">{project.title}</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
+          <DialogHeader className="pb-2">
+            <p className="font-title text-[10px] tracking-[0.25em] text-accent/60 mb-1">
+              Project {String(index + 1).padStart(2, '0')}
+            </p>
+            <DialogTitle className="font-title text-3xl sm:text-4xl gradient-text leading-tight">
+              {project.title}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
               Detailed Project Breakdown
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6 pt-4">
+
+          <div className="space-y-6 pt-2">
             {media.length > 0 && (
               <div className="mx-auto rounded-lg overflow-hidden border border-accent/10 bg-secondary/30" style={modalStyle(media[0])}>
                 <Slideshow media={media} alt={project.title} autoPlay interval={4500} showArrows="always" />
               </div>
             )}
+
             <div className="space-y-2">
-              <h4 className="text-lg font-semibold text-foreground">Overview</h4>
+              <p className="font-title text-[10px] tracking-[0.2em] text-accent/60">Overview</p>
               <p className="text-sm text-muted-foreground leading-relaxed">{project.longDescription}</p>
             </div>
+
             <div className="grid sm:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <h4 className="text-lg font-semibold text-foreground">Tech Stack</h4>
+              <div className="space-y-3">
+                <p className="font-title text-[10px] tracking-[0.2em] text-accent/60">Tech Stack</p>
                 <div className="flex flex-wrap gap-2">
                   {project.techStack.map((tech) => (
-                    <span key={tech} className="text-xs px-2 py-1 bg-accent/10 text-accent rounded-md border border-accent/20">
+                    <span key={tech} className="glass-card text-xs px-3 py-1.5 text-foreground/90 rounded-xl border border-accent/10">
                       {tech}
                     </span>
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
-                <h4 className="text-lg font-semibold text-foreground">The Challenge</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed italic">
-                  "{project.challenges}"
+              <div className="space-y-3">
+                <p className="font-title text-[10px] tracking-[0.2em] text-accent/60">The Challenge</p>
+                <p className="text-sm text-muted-foreground leading-relaxed italic">
+                  &ldquo;{project.challenges}&rdquo;
                 </p>
               </div>
             </div>
+
             <div className="flex gap-4 pt-4">
               {project.github && (
                 <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
@@ -246,7 +282,7 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
                 </Button>
               )}
               {project.demo && (
-                <Button variant="outline" className="flex-1 border-accent text-accent hover:bg-accent" asChild>
+                <Button variant="outline" className="flex-1 border-accent/40 text-accent hover:bg-accent hover:text-accent-foreground" asChild>
                   <a href={project.demo} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="w-4 h-4 mr-2" /> Live Demo
                   </a>
@@ -378,13 +414,28 @@ export const Projects = () => {
   );
 
   return (
-    <section id="projects" ref={sectionRef} className="relative py-24">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full">
+    <section id="projects" ref={sectionRef} className="relative py-24 overflow-hidden">
+
+      {/* Editorial background label */}
+      <span
+        aria-hidden
+        className="pointer-events-none select-none absolute -top-[5vw] right-0 font-title text-[28vw] leading-none text-stroke opacity-[0.025] block"
+      >
+        WORK
+      </span>
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full relative">
         <div className="text-center mb-8 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4">Featured Projects</h2>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
+          <SplitReveal
+            as="h2"
+            type="chars"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4"
+          >
+            Featured Projects
+          </SplitReveal>
+          <SplitReveal as="p" className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             A showcase of my recent work and side projects
-          </p>
+          </SplitReveal>
 
           {/* Dev-only notice so a Firestore fallback is never silent again */}
           {import.meta.env.DEV && usingDefaults && (
@@ -399,21 +450,20 @@ export const Projects = () => {
           )}
         </div>
 
-        {/* Filter Buttons */}
-        <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-8 sm:mb-12">
+        {/* Filter Buttons — editorial pill style */}
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8 sm:mb-12">
           {categories.map((category) => (
-            <Button
+            <button
               key={category}
-              variant={activeCategory === category ? 'default' : 'outline'}
               onClick={() => setActiveCategory(category)}
-              className={
+              className={`font-title text-[11px] tracking-widest px-5 py-2 rounded-full border transition-all duration-300 ${
                 activeCategory === category
-                  ? 'bg-accent text-accent-foreground hover:bg-accent/90'
-                  : 'border-accent text-accent hover:bg-accent hover:text-accent-foreground'
-              }
+                  ? 'bg-accent text-accent-foreground border-accent'
+                  : 'border-accent/30 text-accent/70 hover:border-accent hover:text-accent bg-transparent'
+              }`}
             >
               {category}
-            </Button>
+            </button>
           ))}
         </div>
       </div>
