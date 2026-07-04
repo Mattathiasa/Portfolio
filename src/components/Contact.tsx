@@ -1,6 +1,4 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useScrollAnimation } from '@/hooks/useScrollAnimation';
+import { useRef, useState } from 'react';
 import { Mail, Phone, MapPin, Send, Github, Linkedin, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +9,12 @@ import { useQuery } from '@tanstack/react-query';
 import { getContactData } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { DEFAULT_CONTACT } from '@/data/defaults';
+import { SplitReveal } from '@/components/SplitReveal';
+import { gsap, ScrollTrigger, useGSAP } from '@/lib/gsap';
 
 export const Contact = () => {
-  const { ref, isVisible } = useScrollAnimation();
+  const sectionRef = useRef<HTMLElement>(null);
+  const magneticRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const { data: contactData } = useQuery({
@@ -87,31 +88,86 @@ export const Contact = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  useGSAP(
+    () => {
+      const section = sectionRef.current;
+      if (!section) return;
+
+      const mm = gsap.matchMedia();
+      mm.add(
+        {
+          motionOk: '(prefers-reduced-motion: no-preference)',
+          reduced: '(prefers-reduced-motion: reduce)',
+          finePointer: '(pointer: fine) and (prefers-reduced-motion: no-preference)',
+        },
+        (ctx) => {
+          const reveals = gsap.utils.toArray<HTMLElement>('.contact-reveal', section);
+
+          if (ctx.conditions?.reduced) {
+            gsap.set(reveals, { opacity: 1, y: 0 });
+            return;
+          }
+
+          gsap.set(reveals, { opacity: 0, y: 28 });
+          ScrollTrigger.batch(reveals, {
+            start: 'top 88%',
+            once: true,
+            onEnter: (batch) =>
+              gsap.to(batch, { opacity: 1, y: 0, duration: 0.7, stagger: 0.09, ease: 'power3.out' }),
+          });
+
+          // Magnetic submit button (desktop pointers only).
+          if (ctx.conditions?.finePointer && magneticRef.current) {
+            const wrap = magneticRef.current;
+            const xTo = gsap.quickTo(wrap, 'x', { duration: 0.4, ease: 'power3.out' });
+            const yTo = gsap.quickTo(wrap, 'y', { duration: 0.4, ease: 'power3.out' });
+
+            const onMove = (e: MouseEvent) => {
+              const rect = wrap.getBoundingClientRect();
+              const dx = e.clientX - (rect.left + rect.width / 2);
+              const dy = e.clientY - (rect.top + rect.height / 2);
+              const dist = Math.hypot(dx, dy);
+              const radius = 140;
+              if (dist < radius) {
+                const pull = 1 - dist / radius;
+                xTo(dx * pull * 0.4);
+                yTo(dy * pull * 0.4);
+              } else {
+                xTo(0);
+                yTo(0);
+              }
+            };
+            window.addEventListener('mousemove', onMove);
+            return () => window.removeEventListener('mousemove', onMove);
+          }
+        }
+      );
+    },
+    { scope: sectionRef }
+  );
+
   return (
-    <section id="contact" ref={ref} className="min-h-screen flex items-center justify-center relative py-24">
+    <section id="contact" ref={sectionRef} className="min-h-screen flex items-center justify-center relative py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={isVisible ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12 sm:mb-16"
-        >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4">Get In Touch</h2>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
+        <div className="text-center mb-12 sm:mb-16">
+          <SplitReveal
+            as="h2"
+            type="chars"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4"
+          >
+            Get In Touch
+          </SplitReveal>
+          <SplitReveal as="p" className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             Available for new projects and collaborations
-          </p>
-        </motion.div>
+          </SplitReveal>
+        </div>
 
         <div className="grid lg:grid-cols-2 gap-8 sm:gap-12">
           {/* Contact Form */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={isVisible ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.8 }}
-          >
+          <div>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
+                <div className="contact-reveal space-y-2">
                   <label htmlFor="name" className="text-sm font-medium text-foreground">
                     Name
                   </label>
@@ -125,7 +181,7 @@ export const Contact = () => {
                     className="bg-secondary border-border focus:border-accent"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="contact-reveal space-y-2">
                   <label htmlFor="email" className="text-sm font-medium text-foreground">
                     Email
                   </label>
@@ -141,7 +197,7 @@ export const Contact = () => {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="contact-reveal space-y-2">
                 <label htmlFor="subject" className="text-sm font-medium text-foreground">
                   Subject
                 </label>
@@ -155,7 +211,7 @@ export const Contact = () => {
                   className="bg-secondary border-border focus:border-accent"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="contact-reveal space-y-2">
                 <div className="flex justify-between items-center">
                   <label htmlFor="message" className="text-sm font-medium text-foreground">
                     Message
@@ -175,32 +231,29 @@ export const Contact = () => {
                   className="bg-secondary border-border focus:border-accent resize-none"
                 />
               </div>
-              <Button
-                type="submit"
-                size="lg"
-                disabled={isSubmitting}
-                className="w-full bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth glow-accent"
-              >
-                {isSubmitting ? (
-                  'Sending...'
-                ) : (
-                  <>
-                    <Send className="mr-2 h-5 w-5" />
-                    Send Message
-                  </>
-                )}
-              </Button>
+              <div ref={magneticRef} className="contact-reveal will-change-transform">
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isSubmitting}
+                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth glow-accent"
+                >
+                  {isSubmitting ? (
+                    'Sending...'
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-5 w-5" />
+                      Send Message
+                    </>
+                  )}
+                </Button>
+              </div>
             </form>
-          </motion.div>
+          </div>
 
           {/* Contact Info */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={isVisible ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.8 }}
-            className="space-y-8"
-          >
-            <div className="glass-card p-6 sm:p-8 rounded-xl">
+          <div className="space-y-8">
+            <div className="contact-reveal glass-card p-6 sm:p-8 rounded-xl">
               <div className="flex items-center gap-3 mb-4 sm:mb-6">
                 <div className="w-3 h-3 bg-accent rounded-full animate-pulse" />
                 <span className="text-xs sm:text-sm font-medium text-accent">{c.availabilityText}</span>
@@ -224,39 +277,24 @@ export const Contact = () => {
               </div>
             </div>
 
-            <div className="glass-card p-6 sm:p-8 rounded-xl">
+            <div className="contact-reveal glass-card p-6 sm:p-8 rounded-xl">
               <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6">Connect With Me</h3>
               <div className="flex gap-4">
                 {socialLinks.map((social, index) => (
-                  <motion.a
+                  <a
                     key={index}
                     href={social.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    whileHover={{
-                      scale: 1.2,
-                      rotate: 5,
-                      backgroundColor: "hsl(var(--accent))",
-                      color: "hsl(var(--accent-foreground))"
-                    }}
-                    whileTap={{ scale: 0.9 }}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={isVisible ? { opacity: 1, y: 0 } : {}}
-                    transition={{
-                      type: "spring",
-                      stiffness: 400,
-                      damping: 10,
-                      delay: 0.2 + index * 0.1
-                    }}
-                    className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center transition-colors group"
+                    className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:rotate-3 hover:bg-accent group"
                     aria-label={social.label}
                   >
-                    <social.icon className="w-6 h-6 text-accent group-hover:text-inherit transition-colors" />
-                  </motion.a>
+                    <social.icon className="w-6 h-6 text-accent group-hover:text-accent-foreground transition-colors" />
+                  </a>
                 ))}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

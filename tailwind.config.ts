@@ -16,6 +16,12 @@ export default {
       screens: {
         xs: "400px",
       },
+      fontFamily: {
+        title: ["Anton", "Futura", "Century Gothic", "sans-serif"],
+        heading: ["Neuton", "serif"],
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        display: ["Pacifico", "cursive"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

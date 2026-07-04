@@ -1,12 +1,20 @@
-import { motion } from 'framer-motion';
+import { useRef } from 'react';
 import { ArrowRight, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { getContent } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { DEFAULT_CONTENT } from '@/data/defaults';
+import { gsap, SplitText, useGSAP } from '@/lib/gsap';
 
-export const Hero = () => {
+interface HeroProps {
+  introReady: boolean;
+}
+
+export const Hero = ({ introReady }: HeroProps) => {
+  const sectionRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+
   const { data: content } = useQuery({
     queryKey: ['content'],
     queryFn: getContent,
@@ -15,112 +23,119 @@ export const Hero = () => {
     retry: false,
   });
 
-  const heroTitle          = content?.heroTitle          ?? DEFAULT_CONTENT.heroTitle;
-  const heroSubtitle       = content?.heroSubtitle       ?? DEFAULT_CONTENT.heroSubtitle;
-  const heroDescription    = content?.heroDescription    ?? DEFAULT_CONTENT.heroDescription;
-  const cvUrl              = content?.cvUrl              ?? DEFAULT_CONTENT.cvUrl;
-  const currentlyWorking   = content?.currentlyWorking   ?? DEFAULT_CONTENT.currentlyWorking;
+  const heroTitle        = content?.heroTitle        ?? DEFAULT_CONTENT.heroTitle;
+  const heroSubtitle     = content?.heroSubtitle     ?? DEFAULT_CONTENT.heroSubtitle;
+  const heroDescription  = content?.heroDescription  ?? DEFAULT_CONTENT.heroDescription;
+  const currentlyWorking = content?.currentlyWorking ?? DEFAULT_CONTENT.currentlyWorking;
+
+  useGSAP(
+    () => {
+      if (!introReady || !titleRef.current) return;
+
+      const mm = gsap.matchMedia();
+
+      mm.add(
+        {
+          motionOk: '(prefers-reduced-motion: no-preference)',
+          reduced: '(prefers-reduced-motion: reduce)',
+        },
+        (ctx) => {
+          const revealTargets = ['.hero-badge', '.hero-subtitle', '.hero-description', '.hero-ctas', '.hero-scroll-hint'];
+
+          if (ctx.conditions?.reduced) {
+            gsap.set(titleRef.current, { opacity: 1 });
+            gsap.set(revealTargets, { opacity: 1, y: 0 });
+            return;
+          }
+
+          const split = SplitText.create(titleRef.current, {
+            type: 'chars,lines',
+            mask: 'lines',
+            linesClass: 'overflow-hidden',
+          });
+
+          gsap.set(titleRef.current, { opacity: 1 });
+
+          const intro = gsap.timeline({ defaults: { ease: 'power4.out' } });
+          intro
+            .from(split.chars, {
+              yPercent: 120,
+              rotateX: -90,
+              duration: 1.1,
+              stagger: 0.03,
+            })
+            .to('.hero-badge', { opacity: 1, y: 0, duration: 0.6 }, '-=0.7')
+            .to('.hero-subtitle', { opacity: 1, y: 0, duration: 0.7 }, '-=0.5')
+            .to('.hero-description', { opacity: 1, y: 0, duration: 0.7 }, '-=0.55')
+            .to('.hero-ctas', { opacity: 1, y: 0, duration: 0.7 }, '-=0.55')
+            .to('.hero-scroll-hint', { opacity: 1, duration: 0.6 }, '-=0.3');
+
+          // Scrubbed exit: characters scatter and the block lifts away as the
+          // scene morphs toward the About sphere.
+          const mid = (split.chars.length - 1) / 2;
+          gsap
+            .timeline({
+              scrollTrigger: {
+                trigger: sectionRef.current,
+                start: 'top top',
+                end: 'bottom top',
+                scrub: true,
+              },
+            })
+            .to(split.chars, {
+              x: (i) => (i - mid) * 14,
+              letterSpacing: '0.08em',
+              ease: 'none',
+            }, 0)
+            .to('.hero-content', { yPercent: -18, opacity: 0, ease: 'none' }, 0);
+
+          return () => split.revert();
+        }
+      );
+    },
+    { scope: sectionRef, dependencies: [introReady, heroTitle] }
+  );
 
   return (
-    <section id="home" className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--hero-gradient-from))] via-[hsl(var(--hero-gradient-via))] to-[hsl(var(--hero-gradient-to))]" />
-
-      {/* Floating shapes and Animated Background Gradients */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(8)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-16 h-16 sm:w-32 sm:h-32 border-2 border-accent/10 rounded-full"
-            initial={{
-              left: Math.random() * 100 + '%',
-              top: Math.random() * 100 + '%',
-              scale: Math.random() * 0.5 + 0.5
-            }}
-            animate={{
-              y: [0, -40, 0],
-              x: [0, 20, 0],
-              rotate: [0, 180, 360],
-            }}
-            transition={{
-              duration: 15 + i * 5,
-              repeat: Infinity,
-              ease: 'linear',
-            }}
-          />
-        ))}
-
-        {/* Animated Background Gradients */}
-        <motion.div
-          className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent/10 rounded-full filter blur-[120px]"
-          animate={{
-            x: [0, 50, 0],
-            y: [0, 30, 0],
-          }}
-          transition={{ duration: 15, repeat: Infinity }}
-        />
-        <motion.div
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full filter blur-[120px]"
-          animate={{
-            x: [0, -50, 0],
-            y: [0, -30, 0],
-          }}
-          transition={{ duration: 18, repeat: Infinity }}
-        />
-      </div>
-
+    <section
+      ref={sectionRef}
+      id="home"
+      className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20"
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
-
-          {/* Availability badge */}
+        <div className="hero-content max-w-5xl mx-auto text-center space-y-6 sm:space-y-8">
           {currentlyWorking && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="flex justify-center"
-            >
+            <div className="hero-badge flex justify-center opacity-0 translate-y-3">
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-sm text-accent">
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
                 {currentlyWorking}
               </span>
-            </motion.div>
+            </div>
           )}
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+          <h1
+            ref={titleRef}
+            className="font-title text-[13vw] leading-[0.95] md:text-[7.5rem] lg:text-[8.5rem] text-foreground opacity-0"
+            style={{ perspective: '600px' }}
           >
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold font-ailerons mb-4">
-              {heroTitle.split(' ').map((word, i) => (
-                <span key={i}>
-                  <span className="gradient-text">{word}</span>
-                  {i < heroTitle.split(' ').length - 1 && <br />}
-                </span>
-              ))}
-            </h1>
-          </motion.div>
+            {heroTitle.split(' ').map((word, i, words) => (
+              <span key={i} className={i === words.length - 1 ? 'text-accent' : undefined}>
+                {word}
+                {i < words.length - 1 && <br />}
+              </span>
+            ))}
+          </h1>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="space-y-3 sm:space-y-4"
-          >
-            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground/90">
+          <div className="space-y-3 sm:space-y-4">
+            <h2 className="hero-subtitle text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground/90 opacity-0 translate-y-4">
               {heroSubtitle}
             </h2>
-            <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
+            <p className="hero-description text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4 opacity-0 translate-y-4">
               {heroDescription}
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6"
-          >
+          <div className="hero-ctas flex flex-col sm:flex-row gap-4 justify-center items-center pt-6 opacity-0 translate-y-4">
             <Button
               size="lg"
               className="bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth glow-accent group"
@@ -148,28 +163,17 @@ export const Hero = () => {
               className="text-muted-foreground hover:text-accent transition-smooth"
               asChild
             >
-              <a href="#contact">
-                Get In Touch
-              </a>
+              <a href="#contact">Get In Touch</a>
             </Button>
-          </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <motion.div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        animate={{ y: [0, 10, 0] }}
-        transition={{ duration: 2, repeat: Infinity }}
-      >
+      <div className="hero-scroll-hint absolute bottom-8 left-1/2 -translate-x-1/2 opacity-0">
         <div className="w-6 h-10 border-2 border-accent rounded-full flex items-start justify-center p-2">
-          <motion.div
-            className="w-1.5 h-1.5 bg-accent rounded-full"
-            animate={{ y: [0, 16, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
+          <div className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce" />
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 };

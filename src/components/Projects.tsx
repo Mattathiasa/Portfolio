@@ -1,6 +1,4 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useScrollAnimation } from '@/hooks/useScrollAnimation';
+import { useRef, useState, useEffect } from 'react';
 import { ExternalLink, Github, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,11 +10,12 @@ import { getProjects } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { DEFAULT_PROJECTS } from '@/data/defaults';
 import { toProjectMedia } from '@/types/portfolio';
-import type { ProjectImage } from '@/types/portfolio';
+import type { Project, ProjectImage } from '@/types/portfolio';
+import { gsap, useGSAP } from '@/lib/gsap';
+import { useScrollTriggerRefresh } from '@/hooks/useScrollTriggerRefresh';
+import { setTunnelProgress } from '@/three/sceneBus';
 
 const categories = ['All', 'Web Apps', 'Mobile', 'Games', 'Content'];
-
-const PROJECTS_PER_PAGE = 6;
 
 const isPhone = (device: string) => device === 'mobile' || device === 'app';
 const cssAspect = (a: string) => a.replace('/', ' / ');
@@ -131,10 +130,142 @@ const Slideshow = ({
   );
 };
 
+// ── Card (trigger + detail dialog) ────────────────────────────────────────────
+
+const ProjectCard = ({ project, index }: { project: Project; index: number }) => {
+  const media = toProjectMedia(project);
+
+  return (
+    <div className="project-card w-full md:w-[42vw] xl:w-[36vw] shrink-0">
+      <Dialog>
+        <DialogTrigger asChild>
+          <div className="glass-card rounded-xl overflow-hidden group transition-smooth hover:scale-[1.02] hover:glow-accent cursor-pointer flex flex-col">
+            {/* Image slideshow */}
+            <div className="relative overflow-hidden bg-secondary/30 shrink-0" style={{ aspectRatio: cardAspect(media[0]) }}>
+              <Slideshow media={media} alt={project.title} autoPlay />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <Button size="sm" className="bg-accent text-accent-foreground">
+                  View Details
+                </Button>
+              </div>
+              <span className="pointer-events-none absolute top-3 left-3 font-title text-sm text-foreground/50 bg-background/50 backdrop-blur rounded px-2 py-0.5">
+                {String(index + 1).padStart(2, '0')}
+              </span>
+            </div>
+
+            {/* Card body */}
+            <div className="p-4 sm:p-5 flex flex-col flex-1 gap-3">
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-foreground mb-1 group-hover:text-accent transition-colors">{project.title}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+              </div>
+
+              {/* Languages / tags */}
+              {project.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {project.tags.map((tag, i) => (
+                    <span
+                      key={i}
+                      className="text-[10px] uppercase tracking-wider px-2 py-0.5 bg-accent/5 text-accent/80 rounded border border-accent/10"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* GitHub + Demo links */}
+              <div className="flex items-center gap-2 mt-auto pt-1" onClick={e => e.stopPropagation()}>
+                {project.github && (
+                  <a
+                    href={project.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 hover:border-accent/40 rounded-md px-2.5 py-1.5"
+                  >
+                    <Github className="w-3.5 h-3.5" /> GitHub
+                  </a>
+                )}
+                {project.demo && (
+                  <a
+                    href={project.demo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 hover:border-accent/40 rounded-md px-2.5 py-1.5"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Live Demo
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogTrigger>
+
+        <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-xl border-accent/20">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold gradient-text">{project.title}</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Detailed Project Breakdown
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 pt-4">
+            {media.length > 0 && (
+              <div className="mx-auto rounded-lg overflow-hidden border border-accent/10 bg-secondary/30" style={modalStyle(media[0])}>
+                <Slideshow media={media} alt={project.title} autoPlay interval={4500} showArrows="always" />
+              </div>
+            )}
+            <div className="space-y-2">
+              <h4 className="text-lg font-semibold text-foreground">Overview</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed">{project.longDescription}</p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <h4 className="text-lg font-semibold text-foreground">Tech Stack</h4>
+                <div className="flex flex-wrap gap-2">
+                  {project.techStack.map((tech) => (
+                    <span key={tech} className="text-xs px-2 py-1 bg-accent/10 text-accent rounded-md border border-accent/20">
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-lg font-semibold text-foreground">The Challenge</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed italic">
+                  "{project.challenges}"
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4 pt-4">
+              {project.github && (
+                <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                  <a href={project.github} target="_blank" rel="noopener noreferrer">
+                    <Github className="w-4 h-4 mr-2" /> View Source Code
+                  </a>
+                </Button>
+              )}
+              {project.demo && (
+                <Button variant="outline" className="flex-1 border-accent text-accent hover:bg-accent" asChild>
+                  <a href={project.demo} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-4 h-4 mr-2" /> Live Demo
+                  </a>
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
 export const Projects = () => {
-  const { ref, isVisible } = useScrollAnimation();
+  const sectionRef = useRef<HTMLElement>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
   const [activeCategory, setActiveCategory] = useState('All');
-  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: firestoreProjects, isError, error } = useQuery({
     queryKey: ['projects'],
@@ -172,28 +303,84 @@ export const Projects = () => {
       (activeCategory === 'All' || project.category.includes(activeCategory))
   );
 
-  const totalPages = Math.max(1, Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE));
-  // Clamp the page in case the filtered count shrank below the current page
-  const safePage = Math.min(currentPage, totalPages);
-  const paginatedProjects = filteredProjects.slice(
-    (safePage - 1) * PROJECTS_PER_PAGE,
-    safePage * PROJECTS_PER_PAGE
+  useScrollTriggerRefresh(activeCategory, filteredProjects.length);
+
+  useGSAP(
+    () => {
+      const track = trackRef.current;
+      const gallery = galleryRef.current;
+      if (!track || !gallery || filteredProjects.length === 0) return;
+
+      const mm = gsap.matchMedia();
+
+      // Desktop: pin the gallery and scrub the track sideways; the scene's
+      // tunnel rings ride the same progress.
+      mm.add('(min-width: 768px) and (prefers-reduced-motion: no-preference)', () => {
+        const getDistance = () => Math.max(0, track.scrollWidth - window.innerWidth);
+
+        const horizontal = gsap.to(track, {
+          x: () => -getDistance(),
+          ease: 'none',
+          scrollTrigger: {
+            trigger: gallery,
+            pin: true,
+            scrub: 1,
+            start: 'top top',
+            end: () => '+=' + getDistance(),
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              setTunnelProgress(self.progress);
+              if (progressRef.current) {
+                progressRef.current.style.transform = `scaleX(${self.progress})`;
+              }
+            },
+          },
+        });
+
+        const cards = gsap.utils.toArray<HTMLElement>('.project-card', track);
+        cards.forEach((card) => {
+          gsap.from(card, {
+            opacity: 0.2,
+            scale: 0.92,
+            duration: 0.6,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              containerAnimation: horizontal,
+              start: 'left 95%',
+              toggleActions: 'play none none reverse',
+            },
+          });
+        });
+
+        return () => setTunnelProgress(0);
+      });
+
+      // Mobile: plain vertical stack with fade-up reveals.
+      mm.add('(max-width: 767.98px) and (prefers-reduced-motion: no-preference)', () => {
+        const cards = gsap.utils.toArray<HTMLElement>('.project-card', track);
+        cards.forEach((card) => {
+          gsap.from(card, {
+            opacity: 0,
+            y: 40,
+            duration: 0.7,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 88%',
+              toggleActions: 'play none none reverse',
+            },
+          });
+        });
+      });
+    },
+    { scope: sectionRef, dependencies: [activeCategory, filteredProjects.length], revertOnUpdate: true }
   );
 
-  const handleCategoryChange = (category: string) => {
-    setActiveCategory(category);
-    setCurrentPage(1);
-  };
-
   return (
-    <section id="projects" ref={ref} className="min-h-screen flex items-center justify-center relative py-24">
+    <section id="projects" ref={sectionRef} className="relative py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={isVisible ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12 sm:mb-16"
-        >
+        <div className="text-center mb-8 sm:mb-12">
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4">Featured Projects</h2>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             A showcase of my recent work and side projects
@@ -210,20 +397,15 @@ export const Projects = () => {
                   : 'Firestore returned no projects.'}
             </p>
           )}
-        </motion.div>
+        </div>
 
         {/* Filter Buttons */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isVisible ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-8 sm:mb-12"
-        >
+        <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-8 sm:mb-12">
           {categories.map((category) => (
             <Button
               key={category}
               variant={activeCategory === category ? 'default' : 'outline'}
-              onClick={() => handleCategoryChange(category)}
+              onClick={() => setActiveCategory(category)}
               className={
                 activeCategory === category
                   ? 'bg-accent text-accent-foreground hover:bg-accent/90'
@@ -233,217 +415,46 @@ export const Projects = () => {
               {category}
             </Button>
           ))}
-        </motion.div>
+        </div>
+      </div>
 
-        {/* Projects Grid */}
-        <motion.div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
-          <AnimatePresence mode='popLayout'>
-            {paginatedProjects
-              .map((project) => {
-                const media = toProjectMedia(project);
-                return (
-                // motion.div must be the direct child of AnimatePresence so Framer Motion
-                // can forward a ref to a real DOM element (Dialog is a function component
-                // without forwardRef and would throw a ref warning otherwise).
-                <motion.div
-                  key={project.title}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <Dialog>
-                  <DialogTrigger asChild>
-                    <div className="glass-card rounded-xl overflow-hidden group transition-smooth hover:scale-[1.02] hover:glow-accent cursor-pointer flex flex-col">
-                      {/* Image slideshow */}
-                      <div className="relative overflow-hidden bg-secondary/30 shrink-0" style={{ aspectRatio: cardAspect(media[0]) }}>
-                        <Slideshow media={media} alt={project.title} autoPlay />
-                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <Button size="sm" className="bg-accent text-accent-foreground">
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Card body */}
-                      <div className="p-4 sm:p-5 flex flex-col flex-1 gap-3">
-                        <div>
-                          <h3 className="text-lg sm:text-xl font-bold text-foreground mb-1 group-hover:text-accent transition-colors">{project.title}</h3>
-                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{project.description}</p>
-                        </div>
-
-                        {/* Languages / tags */}
-                        {project.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {project.tags.map((tag, i) => (
-                              <span
-                                key={i}
-                                className="text-[10px] uppercase tracking-wider px-2 py-0.5 bg-accent/5 text-accent/80 rounded border border-accent/10"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* GitHub + Demo links */}
-                        <div className="flex items-center gap-2 mt-auto pt-1" onClick={e => e.stopPropagation()}>
-                          {project.github && (
-                            <a
-                              href={project.github}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 hover:border-accent/40 rounded-md px-2.5 py-1.5"
-                            >
-                              <Github className="w-3.5 h-3.5" /> GitHub
-                            </a>
-                          )}
-                          {project.demo && (
-                            <a
-                              href={project.demo}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 hover:border-accent/40 rounded-md px-2.5 py-1.5"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" /> Live Demo
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </DialogTrigger>
-
-                  <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-xl border-accent/20">
-                    <DialogHeader>
-                      <DialogTitle className="text-2xl font-bold gradient-text">{project.title}</DialogTitle>
-                      <DialogDescription className="text-muted-foreground">
-                        Detailed Project Breakdown
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-6 pt-4">
-                      {media.length > 0 && (
-                        <div className="mx-auto rounded-lg overflow-hidden border border-accent/10 bg-secondary/30" style={modalStyle(media[0])}>
-                          <Slideshow media={media} alt={project.title} autoPlay interval={4500} showArrows="always" />
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        <h4 className="text-lg font-semibold text-foreground">Overview</h4>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{project.longDescription}</p>
-                      </div>
-                      <div className="grid sm:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <h4 className="text-lg font-semibold text-foreground">Tech Stack</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {project.techStack.map((tech) => (
-                              <span key={tech} className="text-xs px-2 py-1 bg-accent/10 text-accent rounded-md border border-accent/20">
-                                {tech}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <h4 className="text-lg font-semibold text-foreground">The Challenge</h4>
-                          <p className="text-xs text-muted-foreground leading-relaxed italic">
-                            "{project.challenges}"
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-4 pt-4">
-                        {project.github && (
-                          <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                            <a href={project.github} target="_blank" rel="noopener noreferrer">
-                              <Github className="w-4 h-4 mr-2" /> View Source Code
-                            </a>
-                          </Button>
-                        )}
-                        {project.demo && (
-                          <Button variant="outline" className="flex-1 border-accent text-accent hover:bg-accent" asChild>
-                            <a href={project.demo} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="w-4 h-4 mr-2" /> Live Demo
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-                </motion.div>
-                );
-              })}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={isVisible ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex items-center justify-center gap-2 mb-8 sm:mb-12"
-          >
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={safePage === 1}
-              aria-label="Previous page"
-              className="border-accent text-accent hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <Button
-                key={page}
-                variant={safePage === page ? 'default' : 'outline'}
-                size="icon"
-                onClick={() => setCurrentPage(page)}
-                aria-label={`Page ${page}`}
-                aria-current={safePage === page ? 'page' : undefined}
-                className={
-                  safePage === page
-                    ? 'bg-accent text-accent-foreground hover:bg-accent/90'
-                    : 'border-accent text-accent hover:bg-accent hover:text-accent-foreground'
-                }
-              >
-                {page}
-              </Button>
-            ))}
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={safePage === totalPages}
-              aria-label="Next page"
-              className="border-accent text-accent hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </motion.div>
-        )}
-
-        {/* View More */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isVisible ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-center"
+      {/* Gallery: pinned horizontal scrub on desktop, vertical stack on mobile */}
+      <div
+        ref={galleryRef}
+        className="relative md:h-screen md:flex md:flex-col md:justify-center md:overflow-hidden"
+      >
+        <div
+          ref={trackRef}
+          className="flex flex-col md:flex-row md:items-center gap-8 md:gap-[4vw] px-4 sm:px-6 md:px-[8vw] md:w-max"
         >
-          <Button
-            size="lg"
-            variant="outline"
-            className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
-            asChild
-          >
-            <a href="https://github.com/Mattathiasa" target="_blank" rel="noopener noreferrer">
-              <Github className="mr-2 h-5 w-5" />
-              View All Projects on GitHub
-            </a>
-          </Button>
-        </motion.div>
+          {filteredProjects.map((project, i) => (
+            <ProjectCard key={project.title} project={project} index={i} />
+          ))}
+        </div>
+
+        {/* Scrub progress (desktop only, visible while pinned) */}
+        <div className="hidden md:block absolute bottom-10 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-border/60 rounded-full overflow-hidden">
+          <div
+            ref={progressRef}
+            className="h-full w-full origin-left bg-accent"
+            style={{ transform: 'scaleX(0)' }}
+          />
+        </div>
+      </div>
+
+      {/* View More */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center mt-12">
+        <Button
+          size="lg"
+          variant="outline"
+          className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+          asChild
+        >
+          <a href="https://github.com/Mattathiasa" target="_blank" rel="noopener noreferrer">
+            <Github className="mr-2 h-5 w-5" />
+            View All Projects on GitHub
+          </a>
+        </Button>
       </div>
     </section>
   );

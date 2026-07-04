@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Menu, X } from 'lucide-react';
-import { motion, AnimatePresence, useScroll as useScrollProgress } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ScrollTrigger, useGSAP } from '@/lib/gsap';
 import { useQuery } from '@tanstack/react-query';
 import { getContent } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
@@ -20,7 +21,20 @@ export const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
-  const { scrollYProgress } = useScrollProgress();
+  const progressRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    const st = ScrollTrigger.create({
+      start: 0,
+      end: 'max',
+      onUpdate: (self) => {
+        if (progressRef.current) {
+          progressRef.current.style.transform = `scaleX(${self.progress})`;
+        }
+      },
+    });
+    return () => st.kill();
+  });
 
   const { data: content } = useQuery({
     queryKey: ['content'],
@@ -54,7 +68,11 @@ export const Navigation = () => {
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'glass shadow-elegant py-3' : 'py-6'}`}>
-      <motion.div className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent origin-left z-50" style={{ scaleX: scrollYProgress }} />
+      <div
+        ref={progressRef}
+        className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent origin-left z-50"
+        style={{ transform: 'scaleX(0)' }}
+      />
 
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">

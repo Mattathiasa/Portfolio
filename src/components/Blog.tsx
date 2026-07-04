@@ -1,5 +1,4 @@
-import { motion } from 'framer-motion';
-import { useScrollAnimation } from '@/hooks/useScrollAnimation';
+import { useRef } from 'react';
 import { Calendar, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
@@ -10,12 +9,14 @@ import type { BlogPost } from '@/types/portfolio';
 import reactImage from '@/assets/blog-react.jpg';
 import analyticsImage from '@/assets/blog-analytics.jpg';
 import careerImage from '@/assets/blog-career.jpg';
+import { SplitReveal } from '@/components/SplitReveal';
+import { gsap, useGSAP } from '@/lib/gsap';
 
 // Fallback images for the 3 default posts (matched by order index)
 const FALLBACK_IMAGES = [reactImage, analyticsImage, careerImage];
 
 export const Blog = () => {
-  const { ref, isVisible } = useScrollAnimation();
+  const sectionRef = useRef<HTMLElement>(null);
 
   const { data: firestorePosts } = useQuery({
     queryKey: ['blog'],
@@ -33,29 +34,92 @@ export const Blog = () => {
     image: p.image || FALLBACK_IMAGES[i] || '',
   }));
 
+  useGSAP(
+    () => {
+      const section = sectionRef.current;
+      if (!section) return;
+
+      const mm = gsap.matchMedia();
+      mm.add(
+        {
+          motionOk: '(prefers-reduced-motion: no-preference)',
+          reduced: '(prefers-reduced-motion: reduce)',
+        },
+        (ctx) => {
+          const cards = gsap.utils.toArray<HTMLElement>('.blog-card', section);
+
+          if (ctx.conditions?.reduced) {
+            gsap.set([cards, '.blog-cta'], { opacity: 1, y: 0 });
+            return;
+          }
+
+          // Alternating editorial stagger: odd cards start lower.
+          cards.forEach((card, i) => {
+            gsap.from(card, {
+              opacity: 0,
+              y: i % 2 === 0 ? 40 : 90,
+              duration: 0.8,
+              ease: 'power3.out',
+              scrollTrigger: { trigger: card, start: 'top 88%', once: true },
+            });
+
+            const img = card.querySelector('.blog-image');
+            if (img) {
+              gsap.fromTo(
+                img,
+                { yPercent: -8 },
+                {
+                  yPercent: 8,
+                  ease: 'none',
+                  scrollTrigger: {
+                    trigger: card,
+                    start: 'top bottom',
+                    end: 'bottom top',
+                    scrub: true,
+                  },
+                }
+              );
+            }
+          });
+
+          gsap.from('.blog-cta', {
+            opacity: 0,
+            y: 24,
+            duration: 0.7,
+            ease: 'power2.out',
+            scrollTrigger: { trigger: '.blog-cta', start: 'top 92%', once: true },
+          });
+        }
+      );
+    },
+    { scope: sectionRef, dependencies: [posts.length], revertOnUpdate: true }
+  );
+
   return (
-    <section id="blog" ref={ref} className="min-h-screen flex items-center justify-center relative bg-gradient-to-b from-[hsl(var(--gradient-mid))] to-background py-24">
+    <section
+      id="blog"
+      ref={sectionRef}
+      className="min-h-screen flex items-center justify-center relative bg-gradient-to-b from-[hsl(var(--gradient-mid))] to-background py-24"
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={isVisible ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12 sm:mb-16"
-        >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4">Latest Insights</h2>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
+        <div className="text-center mb-12 sm:mb-16">
+          <SplitReveal
+            as="h2"
+            type="chars"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4"
+          >
+            Latest Insights
+          </SplitReveal>
+          <SplitReveal as="p" className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             Thoughts on development, football, and technology
-          </p>
-        </motion.div>
+          </SplitReveal>
+        </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
           {posts.map((post, index) => (
-            <motion.article
+            <article
               key={post.id ?? index}
-              initial={{ opacity: 0, y: 30 }}
-              animate={isVisible ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              className="glass-card rounded-xl overflow-hidden group transition-smooth hover:scale-105 hover:glow-accent"
+              className="blog-card glass-card rounded-xl overflow-hidden group transition-smooth hover:scale-105 hover:glow-accent"
             >
               <div className="relative overflow-hidden aspect-video bg-secondary/30">
                 {post.image ? (
@@ -63,7 +127,7 @@ export const Blog = () => {
                     src={post.image}
                     alt={post.title}
                     loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="blog-image w-full h-full object-cover scale-110 transition-transform duration-500 group-hover:scale-125"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground/20 text-5xl font-bold">
@@ -106,20 +170,15 @@ export const Blog = () => {
                   </span>
                 )}
               </div>
-            </motion.article>
+            </article>
           ))}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isVisible ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-center"
-        >
+        <div className="blog-cta text-center">
           <Button size="lg" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground" asChild>
             <a href="#">View All Posts</a>
           </Button>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

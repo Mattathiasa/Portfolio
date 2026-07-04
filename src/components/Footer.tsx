@@ -1,8 +1,10 @@
+import { useRef } from 'react';
 import { Mail, Phone, MapPin, Github, Linkedin, Instagram } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getContent, getContactData } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { DEFAULT_CONTENT, DEFAULT_CONTACT } from '@/data/defaults';
+import { gsap, useGSAP } from '@/lib/gsap';
 
 const QUICK_LINKS = [
   { name: 'Home',     href: '#home' },
@@ -14,6 +16,8 @@ const QUICK_LINKS = [
 ];
 
 export const Footer = () => {
+  const footerRef = useRef<HTMLElement>(null);
+
   const { data: content } = useQuery({
     queryKey: ['content'],
     queryFn: getContent,
@@ -47,8 +51,42 @@ export const Footer = () => {
     { icon: Instagram, href: c.instagram, label: 'Instagram' },
   ];
 
+  useGSAP(
+    () => {
+      const footer = footerRef.current;
+      if (!footer) return;
+
+      const mm = gsap.matchMedia();
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        gsap.fromTo(
+          '.footer-wordmark',
+          { yPercent: 45, opacity: 0.15 },
+          {
+            yPercent: 0,
+            opacity: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: footer,
+              start: 'top bottom',
+              end: 'top 55%',
+              scrub: true,
+            },
+          }
+        );
+      });
+    },
+    { scope: footerRef }
+  );
+
   return (
-    <footer className="relative bg-gradient-to-b from-background to-[hsl(var(--gradient-end))] border-t border-border">
+    <footer ref={footerRef} className="relative overflow-hidden bg-gradient-to-b from-background to-[hsl(var(--gradient-end))] border-t border-border">
+      {/* Oversized wordmark rising out of the footer as it enters */}
+      <div className="overflow-hidden pt-10 pb-2 px-2" aria-hidden="true">
+        <div className="footer-wordmark font-title text-[11vw] leading-none text-center text-stroke whitespace-nowrap select-none">
+          {name}
+        </div>
+      </div>
+
       <div className="container mx-auto px-4 py-12">
         <div className="grid md:grid-cols-3 gap-8 lg:gap-12 mb-8">
 
