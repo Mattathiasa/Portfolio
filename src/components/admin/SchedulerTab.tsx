@@ -66,11 +66,14 @@ export function SchedulerTab() {
   });
 
   // Merge remote items with local fallback state
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
+
   const items = useMemo(() => {
     if (remoteItems.length > 0) return remoteItems;
     return getLocalItems();
   }, [remoteItems]);
 
+  const usingLocalFallback = remoteItems.length === 0 && getLocalItems().length > 0;
   // Current month state
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -94,9 +97,13 @@ export function SchedulerTab() {
     mutationFn: async (newItem: Omit<SchedulerItem, 'id'>) => {
       try {
         const id = await fb.addSchedulerItem(newItem);
+        setFirebaseError(null);
         return { ...newItem, id };
       } catch (err) {
-        // Local fallback
+        const msg = (err as Error).message ?? 'Firebase write failed';
+        setFirebaseError(msg);
+        toast.error(`Firebase error — saving locally only: ${msg}`);
+        // Local fallback so work is not lost
         const local = getLocalItems();
         const item: SchedulerItem = { ...newItem, id: 'local-' + Date.now() };
         saveLocalItems([item, ...local]);
@@ -105,7 +112,7 @@ export function SchedulerTab() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['scheduler'] });
-      toast.success('Task scheduled successfully');
+      toast.success('Task saved!');
       resetForm();
     },
   });
@@ -119,7 +126,11 @@ export function SchedulerTab() {
       }
       try {
         await fb.updateSchedulerItem(id, data);
-      } catch {
+        setFirebaseError(null);
+      } catch (err) {
+        const msg = (err as Error).message ?? 'Firebase write failed';
+        setFirebaseError(msg);
+        toast.error(`Firebase error — change saved locally only`);
         const local = getLocalItems().map(i => (i.id === id ? { ...i, ...data } : i));
         saveLocalItems(local);
       }
@@ -319,6 +330,24 @@ export function SchedulerTab() {
           </Button>
         </div>
       </div>
+
+      {/* Firebase warning banner */}
+      {firebaseError && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-400">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">Firebase not saving — items stored locally only</p>
+            <p className="text-amber-400/70 mt-0.5">Error: {firebaseError}</p>
+            <p className="text-amber-400/70 mt-0.5">Check your Firebase config, Firestore security rules, and that the <code className="bg-amber-500/20 px-1 rounded">scheduler</code> collection is allowed.</p>
+          </div>
+        </div>
+      )}
+      {usingLocalFallback && !firebaseError && (
+        <div className="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs text-blue-400">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          Items are currently stored locally (Firebase returned 0 items). They will sync once Firebase is connected.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* ── Left Column: "Things To Do" Backlog (Unscheduled / Quick Add) ── */}

@@ -217,14 +217,19 @@ export type SchedulerPriority = 'high' | 'medium' | 'low';
 export interface SchedulerItem {
   id: string;
   title: string;
-  description?: string;
   type: SchedulerItemType;
   priority: SchedulerPriority;
   /** ISO date string 'YYYY-MM-DD' — undefined means unscheduled (in backlog) */
   date?: string;
   /** 'HH:mm' optional time */
   time?: string;
-  done: boolean;
+  /** Duration string e.g. '30m', '1h' */
+  duration?: string;
+  /** Optional linked project ID */
+  projectId?: string;
+  /** Freeform notes / agenda */
+  notes?: string;
+  completed: boolean;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
