@@ -33,11 +33,13 @@ import {
   FolderOpen, Layers, Wrench, FileText, ChevronRight, ChevronLeft, Loader2,
   Download, BookOpen, Users, Mail, Sparkles, ListChecks, MessageSquarePlus, KanbanSquare,
   ImagePlus, Star, Check, Monitor, Smartphone, AppWindow, Crop,
+  GripVertical, ArrowUp, ArrowDown, LayoutGrid, List, CalendarDays,
 } from 'lucide-react';
 import * as fb from '@/lib/firestore';
 import type { Project, Skill, PortfolioContent, AboutStat, CVData, CVExperience, CVProject, CVEducation, CVLanguage, BlogPost, ProjectDev, DevItem, ProjectImage, ImageDevice } from '@/types/portfolio';
 import { LIFECYCLE_STAGES, emptyProjectDev, DEVICE_DEFAULTS, ASPECT_PRESETS, toProjectMedia } from '@/types/portfolio';
 import { DEFAULT_PROJECTS, DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT, DEFAULT_CV, DEFAULT_HIGHLIGHTS, DEFAULT_CONTACT, DEFAULT_BLOG_POSTS } from '@/data/defaults';
+import { SchedulerTab } from '@/components/admin/SchedulerTab';
 
 const CATEGORIES = ['Web Apps', 'Mobile', 'Games', 'Content'];
 const SESSION_KEY = 'portfolio_admin_auth';
@@ -541,7 +543,22 @@ function ProjectFormDialog({
   const [imgUploading, setImgUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Auto-suggest next untaken order number when adding a new project
+  const allProjects = useQueryClient().getQueryData<Project[]>(['projects']) ?? [];
+  const nextOrder = (() => {
+    if (isEdit) return form.order;
+    const taken = new Set(allProjects.map(p => p.order));
+    let n = 0;
+    while (taken.has(n)) n++;
+    return n;
+  })();
+
   useEffect(() => { setForm(normalize(project)); }, [project, open]);
+  // On open of new-project dialog, auto-set order to next untaken value
+  useEffect(() => {
+    if (open && !isEdit) setForm(prev => ({ ...prev, order: nextOrder }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
@@ -594,9 +611,17 @@ function ProjectFormDialog({
                 <Label>Title *</Label>
                 <Input placeholder="My Awesome Project" value={form.title} onChange={e => set('title', e.target.value)} />
               </div>
-              <div className="w-20 shrink-0 space-y-1.5">
+              <div className="w-24 shrink-0 space-y-1.5">
                 <Label>Order</Label>
-                <Input type="number" value={form.order} onChange={e => set('order', Number(e.target.value))} />
+                <Input
+                  type="number"
+                  value={form.order}
+                  onChange={e => set('order', Number(e.target.value))}
+                  placeholder={isEdit ? String(form.order) : `#${nextOrder} free`}
+                />
+                {!isEdit && (
+                  <p className="text-[10px] text-muted-foreground">#{nextOrder} is next free</p>
+                )}
               </div>
             </div>
 
@@ -713,11 +738,20 @@ function ProjectsTab() {
   const [formOpen, setFormOpen] = useState(false);
   const [editProject, setEditProject] = useState<Project | undefined>();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'reorder'>('grid');
+  const [reorderList, setReorderList] = useState<Project[]>([]);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [reorderSaving, setReorderSaving] = useState(false);
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: fb.getProjects,
   });
+
+  // Keep reorderList in sync when projects load/change
+  useEffect(() => {
+    if (viewMode === 'reorder') setReorderList([...projects].sort((a, b) => a.order - b.order));
+  }, [projects, viewMode]);
 
   // Seed all default projects into Firestore so they become editable
   const seedMut = useMutation({
@@ -745,6 +779,28 @@ function ProjectsTab() {
     onError: (err) => toast.error(`Failed: ${(err as Error).message}`),
   });
 
+  const saveOrder = async () => {
+    setReorderSaving(true);
+    try {
+      await fb.updateProjectsOrder(reorderList.map((p, i) => ({ id: p.id!, order: i })));
+      qc.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Order saved!');
+      setViewMode('grid');
+    } catch (err) {
+      toast.error(`Failed to save order: ${(err as Error).message}`);
+    } finally {
+      setReorderSaving(false);
+    }
+  };
+
+  const moveProject = (from: number, to: number) => {
+    if (to < 0 || to >= reorderList.length) return;
+    const next = [...reorderList];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    setReorderList(next);
+  };
+
   const openAdd  = () => { setEditProject(undefined); setFormOpen(true); };
   const openEdit = (p: Project) => { setEditProject(p); setFormOpen(true); };
 
@@ -758,9 +814,35 @@ function ProjectsTab() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-muted-foreground">{projects.length} project{projects.length !== 1 ? 's' : ''} in Firestore</p>
-        <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0" onClick={openAdd}>
-          <Plus className="w-4 h-4 mr-2" /> Add Project
-        </Button>
+        <div className="flex items-center gap-2">
+          {projects.length > 0 && (
+            <>
+              <Button
+                size="sm"
+                variant={viewMode === 'reorder' ? 'default' : 'outline'}
+                className={viewMode === 'reorder' ? 'bg-accent text-accent-foreground' : 'border-accent/30 text-accent'}
+                onClick={() => setViewMode(v => v === 'reorder' ? 'grid' : 'reorder')}
+              >
+                {viewMode === 'reorder' ? <LayoutGrid className="w-4 h-4 mr-1.5" /> : <List className="w-4 h-4 mr-1.5" />}
+                {viewMode === 'reorder' ? 'Grid View' : 'Drag & Reorder'}
+              </Button>
+              {viewMode === 'reorder' && (
+                <Button
+                  size="sm"
+                  className="bg-accent text-accent-foreground hover:bg-accent/90"
+                  onClick={saveOrder}
+                  disabled={reorderSaving}
+                >
+                  {reorderSaving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Check className="w-4 h-4 mr-1.5" />}
+                  Save Order
+                </Button>
+              )}
+            </>
+          )}
+          <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0" onClick={openAdd}>
+            <Plus className="w-4 h-4 mr-2" /> Add Project
+          </Button>
+        </div>
       </div>
 
       {/* Seed banner — shown when Firestore is empty */}
@@ -790,6 +872,47 @@ function ProjectsTab() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-accent" />
         </div>
+      ) : viewMode === 'reorder' ? (
+        /* ── Drag & Reorder list ── */
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground mb-3">Drag rows or use arrows to change order. Click <strong>Save Order</strong> when done.</p>
+          {reorderList.map((project, i) => {
+            const img = resolveImage(project);
+            return (
+              <div
+                key={project.id}
+                draggable
+                onDragStart={() => setDragIdx(i)}
+                onDragOver={e => { e.preventDefault(); }}
+                onDrop={() => {
+                  if (dragIdx !== null && dragIdx !== i) moveProject(dragIdx, i);
+                  setDragIdx(null);
+                }}
+                onDragEnd={() => setDragIdx(null)}
+                className={`flex items-center gap-3 rounded-lg border p-3 transition-all cursor-grab active:cursor-grabbing ${
+                  dragIdx === i
+                    ? 'opacity-40 border-accent bg-accent/5'
+                    : 'border-border/40 bg-secondary/20 hover:border-accent/40'
+                }`}
+              >
+                <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="font-mono text-xs text-accent/70 w-6 shrink-0 text-center">#{i}</span>
+                {img && (
+                  <img src={img} alt={project.title} className="w-12 h-8 rounded object-cover shrink-0 border border-border/30" />
+                )}
+                <span className="flex-1 text-sm font-medium text-foreground truncate">{project.title}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button size="icon" variant="ghost" className="w-7 h-7" onClick={() => moveProject(i, i - 1)} disabled={i === 0}>
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="w-7 h-7" onClick={() => moveProject(i, i + 1)} disabled={i === reorderList.length - 1}>
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {projects.map(project => {
@@ -806,6 +929,10 @@ function ProjectsTab() {
                       {project.title[0]}
                     </div>
                   )}
+                  {/* Order badge */}
+                  <span className="absolute top-2 right-2 bg-background/80 text-accent text-[10px] font-mono px-1.5 py-0.5 rounded border border-accent/20">
+                    Order #{project.order}
+                  </span>
                   {hidden && (
                     <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-semibold bg-background/85 text-muted-foreground px-1.5 py-0.5 rounded">
                       <EyeOff className="w-3 h-3" /> Hidden
@@ -2261,14 +2388,15 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           <div className="w-full mb-6 sm:mb-8 overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-0.5 [&::-webkit-scrollbar-thumb]:bg-border/50 [&::-webkit-scrollbar-thumb]:rounded-full">
             <TabsList className="bg-secondary/50 border border-border/50 inline-flex h-auto gap-0.5 p-1 w-max min-w-full sm:w-auto sm:flex-wrap">
               {[
-                { value: 'projects', icon: FolderOpen,  label: 'Projects' },
-                { value: 'develop',  icon: KanbanSquare, label: 'Develop' },
-                { value: 'skills',   icon: Layers,       label: 'Skills' },
-                { value: 'blog',     icon: BookOpen,     label: 'Blog' },
-                { value: 'about',    icon: Users,        label: 'About Cards' },
-                { value: 'contact',  icon: Mail,         label: 'Contact' },
-                { value: 'content',  icon: FileText,     label: 'Hero/About' },
-                { value: 'cv',       icon: FileText,     label: 'CV Editor' },
+                { value: 'projects',  icon: FolderOpen,    label: 'Projects' },
+                { value: 'develop',   icon: KanbanSquare,  label: 'Develop' },
+                { value: 'skills',    icon: Layers,        label: 'Skills' },
+                { value: 'blog',      icon: BookOpen,      label: 'Blog' },
+                { value: 'about',     icon: Users,         label: 'About Cards' },
+                { value: 'contact',   icon: Mail,          label: 'Contact' },
+                { value: 'content',   icon: FileText,      label: 'Hero/About' },
+                { value: 'cv',        icon: FileText,      label: 'CV Editor' },
+                { value: 'scheduler', icon: CalendarDays,  label: 'Scheduler' },
               ].map(({ value, icon: Icon, label }) => (
                 <TabsTrigger
                   key={value}
@@ -2290,6 +2418,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           <TabsContent value="contact"><ContactTab /></TabsContent>
           <TabsContent value="content"><ContentTab /></TabsContent>
           <TabsContent value="cv"><CVTab /></TabsContent>
+          <TabsContent value="scheduler"><SchedulerTab /></TabsContent>
         </Tabs>
       </div>
     </div>

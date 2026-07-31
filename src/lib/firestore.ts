@@ -1,10 +1,10 @@
 import {
   collection, doc, getDocs, addDoc, updateDoc, deleteDoc,
-  setDoc, getDoc, orderBy, query, serverTimestamp,
+  setDoc, getDoc, orderBy, query, serverTimestamp, writeBatch,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebase';
-import type { Project, Skill, PortfolioContent, CVData, AboutHighlight, ContactData, BlogPost, ProjectDev } from '@/types/portfolio';
+import type { Project, Skill, PortfolioContent, CVData, AboutHighlight, ContactData, BlogPost, ProjectDev, SchedulerItem } from '@/types/portfolio';
 
 // ── Projects ────────────────────────────────────────────────────────────────
 
@@ -172,4 +172,39 @@ export async function seedSkills(skills: Omit<Skill, 'id'>[]): Promise<void> {
 
 export async function seedTools(tools: string[]): Promise<void> {
   await setTools(tools);
+}
+
+// ── Batch project order update ─────────────────────────────────────────────────
+
+export async function updateProjectsOrder(ordered: { id: string; order: number }[]): Promise<void> {
+  const batch = writeBatch(db);
+  ordered.forEach(({ id, order }) => {
+    batch.update(doc(db, 'projects', id), { order, updatedAt: serverTimestamp() });
+  });
+  await batch.commit();
+}
+
+// ── Scheduler ─────────────────────────────────────────────────────────────────
+
+export async function getSchedulerItems(): Promise<SchedulerItem[]> {
+  const q = query(collection(db, 'scheduler'), orderBy('createdAt'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as SchedulerItem));
+}
+
+export async function addSchedulerItem(item: Omit<SchedulerItem, 'id'>): Promise<string> {
+  const ref = await addDoc(collection(db, 'scheduler'), {
+    ...item,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function updateSchedulerItem(id: string, data: Partial<SchedulerItem>): Promise<void> {
+  await updateDoc(doc(db, 'scheduler', id), { ...data, updatedAt: serverTimestamp() });
+}
+
+export async function deleteSchedulerItem(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'scheduler', id));
 }

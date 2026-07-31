@@ -208,3 +208,23 @@ export interface CVData {
   education: CVEducation[];
   languages: CVLanguage[];
 }
+
+// ── Scheduler ─────────────────────────────────────────────────────────────────
+
+export type SchedulerItemType = 'meeting' | 'deadline' | 'todo' | 'project';
+export type SchedulerPriority = 'high' | 'medium' | 'low';
+
+export interface SchedulerItem {
+  id: string;
+  title: string;
+  description?: string;
+  type: SchedulerItemType;
+  priority: SchedulerPriority;
+  /** ISO date string 'YYYY-MM-DD' — undefined means unscheduled (in backlog) */
+  date?: string;
+  /** 'HH:mm' optional time */
+  time?: string;
+  done: boolean;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}

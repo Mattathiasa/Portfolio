@@ -21,17 +21,17 @@ const categories = ['All', 'Web Apps', 'Mobile', 'Games', 'Content'];
 const isPhone = (device: string) => device === 'mobile' || device === 'app';
 const cssAspect = (a: string) => a.replace('/', ' / ');
 
-// Container proportion derived from the cover image — keeps the gallery dynamic
-// in width/height instead of forcing every image into a 16:9 desktop frame.
-const cardAspect = (cover?: ProjectImage): string =>
-  !cover ? '16 / 9'
-    : isPhone(cover.device) ? '4 / 5'
-    : cover.aspect !== 'auto' ? cssAspect(cover.aspect) : '16 / 9';
+// Standardized card aspect — always 16:9 on desktop so cards are uniform height;
+// on mobile the phone mockup frame fits naturally inside flex-col layout.
+const cardAspect = (_cover?: ProjectImage): string => '16 / 9';
 
-const modalStyle = (cover?: ProjectImage): React.CSSProperties =>
-  cover && isPhone(cover.device)
-    ? { aspectRatio: '9 / 16', height: 'min(60vh, 32rem)', maxWidth: '100%' }
-    : { aspectRatio: cover && cover.aspect !== 'auto' ? cssAspect(cover.aspect) : '16 / 9' };
+// Modal container: phone projects get a constrained portrait box; desktop stays 16:9
+const modalContainerStyle = (cover?: ProjectImage): React.CSSProperties => {
+  if (cover && isPhone(cover.device)) {
+    return { height: 'min(48vh, 26rem)', width: '100%', maxWidth: '220px', margin: '0 auto' };
+  }
+  return { aspectRatio: cover && cover.aspect !== 'auto' ? cssAspect(cover.aspect) : '16 / 9', width: '100%', maxHeight: '50vh' };
+};
 
 // ── A single slide (desktop image, or a phone-framed mobile/app screenshot) ────
 
@@ -41,10 +41,25 @@ const MediaSlide = ({ image, alt, active }: { image: ProjectImage; alt: string; 
 
   if (isPhone(image.device)) {
     return (
-      <div className={`${base} flex items-center justify-center p-3 bg-gradient-to-br from-accent/5 to-secondary/30`}>
-        <div className="relative h-full aspect-[9/19] max-w-full rounded-[1.6rem] border-[5px] border-foreground/85 bg-black shadow-xl overflow-hidden">
-          <img src={image.url} alt={alt} loading="lazy" className={`w-full h-full ${fit}`} />
-          <span className="absolute top-1.5 left-1/2 -translate-x-1/2 w-10 h-1.5 rounded-full bg-white/30" />
+      <div className={`${base} flex items-center justify-center bg-gradient-to-br from-accent/5 to-secondary/30 p-2`}>
+        {/* iPhone-style phone frame */}
+        <div className="relative flex flex-col h-full max-h-full" style={{ aspectRatio: '9/19.5' }}>
+          {/* Outer shell */}
+          <div className="relative flex flex-col h-full w-full rounded-[2rem] border-[3px] border-foreground/80 bg-black shadow-2xl overflow-hidden">
+            {/* Dynamic island / notch */}
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 w-[28%] h-[3.5%] bg-black rounded-full" />
+            {/* Screen glass sheen */}
+            <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/5 to-transparent pointer-events-none z-10" />
+            {/* Screenshot */}
+            <img
+              src={image.url}
+              alt={alt}
+              loading="lazy"
+              className={`w-full h-full ${fit}`}
+            />
+            {/* Home bar */}
+            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 z-20 w-[35%] h-[0.9%] bg-white/60 rounded-full" />
+          </div>
         </div>
       </div>
     );
@@ -229,7 +244,7 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
         </DialogTrigger>
 
         {/* ── Detail dialog ── */}
-        <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-xl border-accent/20">
+        <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-xl border-accent/20 max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-2">
             <p className="font-title text-[10px] tracking-[0.25em] text-accent/60 mb-1">
               Project {String(index + 1).padStart(2, '0')}
@@ -244,7 +259,7 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
 
           <div className="space-y-6 pt-2">
             {media.length > 0 && (
-              <div className="mx-auto rounded-lg overflow-hidden border border-accent/10 bg-secondary/30" style={modalStyle(media[0])}>
+              <div className="mx-auto rounded-lg overflow-hidden border border-accent/10 bg-secondary/30" style={modalContainerStyle(media[0])}>
                 <Slideshow media={media} alt={project.title} autoPlay interval={4500} showArrows="always" />
               </div>
             )}
