@@ -213,20 +213,33 @@ export interface CVData {
 
 export type SchedulerItemType = 'meeting' | 'deadline' | 'todo' | 'project';
 export type SchedulerPriority = 'high' | 'medium' | 'low';
+export type SchedulerStatus = 'backlog' | 'scheduled' | 'in_progress' | 'review' | 'completed';
+export type SchedulerRecurring = 'none' | 'daily' | 'weekly' | 'monthly';
 
 export interface SchedulerItem {
   id: string;
   title: string;
   type: SchedulerItemType;
   priority: SchedulerPriority;
+  status?: SchedulerStatus;
   /** ISO date string 'YYYY-MM-DD' — undefined means unscheduled (in backlog) */
   date?: string;
-  /** 'HH:mm' optional time */
+  /** 'HH:mm' optional time e.g. '09:00' */
   time?: string;
   /** Duration string e.g. '30m', '1h' */
   duration?: string;
+  /** Estimated time in minutes */
+  estMinutes?: number;
+  /** Actual logged dev time in minutes */
+  actualMinutes?: number;
   /** Optional linked project ID */
   projectId?: string;
+  /** GitHub / PR / Zoom / Figma link */
+  link?: string;
+  /** Custom tags e.g. ['frontend', 'bug'] */
+  tags?: string[];
+  /** Recurring rule */
+  recurring?: SchedulerRecurring;
   /** Freeform notes / agenda */
   notes?: string;
   completed: boolean;

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -6,6 +6,8 @@ import {
   Calendar as CalendarIcon, Clock, Plus, Trash2, CheckCircle2,
   Circle, AlertCircle, Video, Briefcase, FileText, ChevronLeft, ChevronRight,
   GripVertical, Filter, Tag, Check, CalendarDays, Sparkles, AlertTriangle, Wifi, WifiOff,
+  Kanban, LayoutGrid, Play, Pause, RotateCcw, ExternalLink, Github, Search, Command,
+  Download, ListTodo, Flame, BarChart2, Layers, CheckSquare, Zap, Target
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,11 +19,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as fb from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import type { SchedulerItem, SchedulerItemType, SchedulerPriority } from '@/types/portfolio';
+import type { SchedulerItem, SchedulerItemType, SchedulerPriority, SchedulerStatus, SchedulerRecurring } from '@/types/portfolio';
 
-// ── Config ────────────────────────────────────────────────────────────────────
+// ── Storage Keys & Config ──────────────────────────────────────────────────────
 
-const LOCAL_STORAGE_KEY = 'portfolio_scheduler_v2';
+const LOCAL_STORAGE_KEY = 'portfolio_scheduler_v3';
 
 const TYPE_CONFIG: Record<SchedulerItemType, { label: string; icon: typeof CalendarIcon; color: string; bg: string }> = {
   meeting:  { label: 'Meeting',  icon: Video,       color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/30' },
@@ -31,12 +33,30 @@ const TYPE_CONFIG: Record<SchedulerItemType, { label: string; icon: typeof Calen
 };
 
 const PRIORITY_CONFIG: Record<SchedulerPriority, { label: string; color: string; dotBg: string }> = {
-  high:   { label: 'High',   color: 'text-rose-400',   dotBg: 'bg-rose-500' },
-  medium: { label: 'Medium', color: 'text-amber-400',  dotBg: 'bg-amber-500' },
-  low:    { label: 'Low',    color: 'text-blue-400',   dotBg: 'bg-blue-500' },
+  high:   { label: 'High',   color: 'text-rose-400 border-rose-500/30',   dotBg: 'bg-rose-500' },
+  medium: { label: 'Medium', color: 'text-amber-400 border-amber-500/30', dotBg: 'bg-amber-500' },
+  low:    { label: 'Low',    color: 'text-blue-400 border-blue-500/30',   dotBg: 'bg-blue-500' },
 };
 
-// ── Local storage helpers ─────────────────────────────────────────────────────
+const STATUS_CONFIG: Record<SchedulerStatus, { label: string; color: string; bg: string }> = {
+  backlog:     { label: 'Backlog',     color: 'text-muted-foreground', bg: 'bg-secondary/40 border-border/40' },
+  scheduled:   { label: 'Scheduled',   color: 'text-blue-400',          bg: 'bg-blue-500/10 border-blue-500/30' },
+  in_progress: { label: 'In Progress', color: 'text-amber-400',         bg: 'bg-amber-500/10 border-amber-500/30' },
+  review:      { label: 'Code Review', color: 'text-purple-400',        bg: 'bg-purple-500/10 border-purple-500/30' },
+  completed:   { label: 'Completed',   color: 'text-emerald-400',       bg: 'bg-emerald-500/10 border-emerald-500/30' },
+};
+
+const DEV_PRESETS = [
+  { label: '🐛 Bug Fix', type: 'todo' as SchedulerItemType, priority: 'high' as SchedulerPriority, est: 45, tag: 'bug' },
+  { label: '⚡ Feature Dev', type: 'project' as SchedulerItemType, priority: 'high' as SchedulerPriority, est: 120, tag: 'feature' },
+  { label: '🔍 PR Review', type: 'todo' as SchedulerItemType, priority: 'medium' as SchedulerPriority, est: 30, tag: 'review' },
+  { label: '🚀 Staging Deploy', type: 'deadline' as SchedulerItemType, priority: 'high' as SchedulerPriority, est: 30, tag: 'devops' },
+  { label: '☕ Standup Sync', type: 'meeting' as SchedulerItemType, priority: 'low' as SchedulerPriority, est: 15, tag: 'meeting' },
+];
+
+const PRESET_TAGS = ['frontend', 'backend', 'bug', 'feature', 'refactor', 'api', 'devops', 'meeting', 'design'];
+
+// ── Persistence Helpers ───────────────────────────────────────────────────────
 
 function loadLocal(): SchedulerItem[] {
   try { return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) ?? '[]'); } catch { return []; }
@@ -44,37 +64,53 @@ function loadLocal(): SchedulerItem[] {
 function saveLocal(items: SchedulerItem[]) {
   try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items)); } catch { /**/ }
 }
-
-/** Firestore rejects undefined field values — strip them before every write */
 function clean<T extends object>(obj: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, v]) => v !== undefined)
-  ) as Partial<T>;
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
-// ── Empty form state ──────────────────────────────────────────────────────────
+// ── Empty Form Factory ────────────────────────────────────────────────────────
 
 const emptyForm = () => ({
   title: '', type: 'todo' as SchedulerItemType, priority: 'medium' as SchedulerPriority,
-  date: '', time: '', duration: '', notes: '', projectId: 'none',
+  status: 'backlog' as SchedulerStatus, date: '', time: '', duration: '',
+  estMinutes: 30, actualMinutes: 0, notes: '', projectId: 'none',
+  link: '', tags: [] as string[], recurring: 'none' as SchedulerRecurring,
 });
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────────────────
 
 export function SchedulerTab() {
-  // ── Projects query ───────────────────────────────────────────────────────
-  const { data: projects = [] } = useQuery({
-    queryKey: ['projects'],
-    queryFn: fb.getProjects,
-  });
+  const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: fb.getProjects });
 
-  // ── Items state (single source of truth) ─────────────────────────────────
+  // Single Source of Truth for Scheduler items
   const [items, setItems] = useState<SchedulerItem[]>(loadLocal);
   const [fbStatus, setFbStatus] = useState<'loading' | 'ok' | 'error'>('loading');
   const [fbError, setFbError] = useState('');
   const [syncing, setSyncing] = useState(false);
 
-  // ── Load from Firebase on mount ───────────────────────────────────────────
+  // View state
+  const [viewMode, setViewMode] = useState<'month' | 'sprint' | 'timeblock' | 'kanban'>('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+
+  // Command Palette
+  const [cmdOpen, setCmdOpen] = useState(false);
+
+  // Form Dialog
+  const [formOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm());
+  const [editingItem, setEditingItem] = useState<SchedulerItem | null>(null);
+
+  // Active Focus Timer
+  const [activeTimerId, setActiveTimerId] = useState<string | null>(null);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+
+  // Sync Firebase on Mount
   const loadFromFirebase = useCallback(async () => {
     if (!isFirebaseConfigured) {
       setFbStatus('error');
@@ -87,53 +123,37 @@ export function SchedulerTab() {
       saveLocal(remote);
       setFbStatus('ok');
     } catch (err) {
-      const msg = (err as Error).message ?? 'Unknown error';
       setFbStatus('error');
-      setFbError(msg);
-      // Keep whatever was in localStorage
+      setFbError((err as Error).message ?? 'Firebase load error');
       setItems(loadLocal());
     }
   }, []);
 
   useEffect(() => { loadFromFirebase(); }, [loadFromFirebase]);
 
-  // ── Calendar ──────────────────────────────────────────────────────────────
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [draggedId, setDraggedId] = useState<string | null>(null);
+  // Global Keyboard Shortcuts (Cmd+K / Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCmdOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
-  // ── Form ──────────────────────────────────────────────────────────────────
-  const [formOpen, setFormOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm());
-  const [editingItem, setEditingItem] = useState<SchedulerItem | null>(null);
-
-  const setF = <K extends keyof ReturnType<typeof emptyForm>>(k: K, v: ReturnType<typeof emptyForm>[K]) =>
-    setForm(prev => ({ ...prev, [k]: v }));
-
-  const openForm = (presetDate?: string, item?: SchedulerItem) => {
-    if (item) {
-      setEditingItem(item);
-      setForm({
-        title: item.title, type: item.type, priority: item.priority,
-        date: item.date ?? '', time: item.time ?? '', duration: item.duration ?? '',
-        notes: item.notes ?? '', projectId: item.projectId ?? 'none',
-      });
-    } else {
-      setEditingItem(null);
-      setForm({ ...emptyForm(), date: presetDate ?? '' });
+  // Timer Tick
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (timerRunning) {
+      interval = setInterval(() => setTimerSeconds(s => s + 1), 1000);
     }
-    setFormOpen(true);
-  };
+    return () => clearInterval(interval);
+  }, [timerRunning]);
 
-  const closeForm = () => { setFormOpen(false); setEditingItem(null); setForm(emptyForm()); };
-
-  // ── Optimistic helpers ───────────────────────────────────────────────────
-
-  const applyAndSync = async (
-    optimistic: SchedulerItem[],
-    firestoreOp: () => Promise<void>,
-  ) => {
+  // Sync Helper
+  const applyAndSync = async (optimistic: SchedulerItem[], firestoreOp: () => Promise<void>) => {
     setItems(optimistic);
     saveLocal(optimistic);
     if (!isFirebaseConfigured || fbStatus === 'error') return;
@@ -145,27 +165,77 @@ export function SchedulerTab() {
       const msg = (err as Error).message ?? 'Firestore error';
       setFbError(msg);
       setFbStatus('error');
-      toast.error(`Firebase error — saved locally only: ${msg}`);
+      toast.error(`Saved locally — Firebase error: ${msg}`);
     } finally {
       setSyncing(false);
     }
   };
 
-  // ── CRUD ──────────────────────────────────────────────────────────────────
+  // ── Form Helpers ──────────────────────────────────────────────────────────────
+
+  const setF = <K extends keyof ReturnType<typeof emptyForm>>(k: K, v: ReturnType<typeof emptyForm>[K]) =>
+    setForm(prev => ({ ...prev, [k]: v }));
+
+  const openForm = (presetDate?: string, item?: SchedulerItem) => {
+    if (item) {
+      setEditingItem(item);
+      setForm({
+        title: item.title, type: item.type, priority: item.priority,
+        status: item.status ?? (item.completed ? 'completed' : item.date ? 'scheduled' : 'backlog'),
+        date: item.date ?? '', time: item.time ?? '', duration: item.duration ?? '',
+        estMinutes: item.estMinutes ?? 30, actualMinutes: item.actualMinutes ?? 0,
+        notes: item.notes ?? '', projectId: item.projectId ?? 'none',
+        link: item.link ?? '', tags: item.tags ?? [], recurring: item.recurring ?? 'none',
+      });
+    } else {
+      setEditingItem(null);
+      setForm({ ...emptyForm(), date: presetDate ?? '' });
+    }
+    setFormOpen(true);
+  };
+
+  const closeForm = () => { setFormOpen(false); setEditingItem(null); setForm(emptyForm()); };
+
+  const applyPreset = (preset: typeof DEV_PRESETS[0]) => {
+    setForm(prev => ({
+      ...prev,
+      title: preset.label.replace(/^.\s*/, ''),
+      type: preset.type,
+      priority: preset.priority,
+      estMinutes: preset.est,
+      tags: Array.from(new Set([...prev.tags, preset.tag])),
+    }));
+  };
+
+  const toggleTagInForm = (tag: string) => {
+    setForm(prev => ({
+      ...prev,
+      tags: prev.tags.includes(tag) ? prev.tags.filter(t => t !== tag) : [...prev.tags, tag],
+    }));
+  };
+
+  // ── CRUD Actions ─────────────────────────────────────────────────────────────
 
   const handleSave = async () => {
     if (!form.title.trim()) { toast.error('Please enter a title'); return; }
 
+    const isDone = form.status === 'completed';
     const payload: Omit<SchedulerItem, 'id'> = {
       title: form.title.trim(),
       type: form.type,
       priority: form.priority,
+      status: form.status,
       date: form.date || undefined,
       time: form.time || undefined,
       duration: form.duration || undefined,
+      estMinutes: Number(form.estMinutes) || 30,
+      actualMinutes: Number(form.actualMinutes) || 0,
       notes: form.notes.trim() || undefined,
       projectId: form.projectId !== 'none' ? form.projectId : undefined,
-      completed: editingItem?.completed ?? false,
+      link: form.link.trim() || undefined,
+      tags: form.tags.length ? form.tags : undefined,
+      recurring: form.recurring !== 'none' ? form.recurring : undefined,
+      completed: isDone,
     };
 
     if (editingItem) {
@@ -173,7 +243,6 @@ export function SchedulerTab() {
       await applyAndSync(updated, () => fb.updateSchedulerItem(editingItem.id, clean(payload)));
       toast.success('Task updated!');
     } else {
-      // Optimistic insert with temp ID
       const tempId = 'local-' + Date.now();
       const newItem: SchedulerItem = { ...payload, id: tempId };
       const optimistic = [newItem, ...items];
@@ -184,17 +253,15 @@ export function SchedulerTab() {
         setSyncing(true);
         try {
           const realId = await fb.addSchedulerItem(clean(payload) as Omit<SchedulerItem, 'id'>);
-          // Replace temp ID with real Firestore ID
           const synced = optimistic.map(i => i.id === tempId ? { ...i, id: realId } : i);
           setItems(synced);
           saveLocal(synced);
           setFbStatus('ok');
           toast.success('Task saved to Firebase ✓');
         } catch (err) {
-          const msg = (err as Error).message ?? 'Firestore error';
-          setFbError(msg);
+          setFbError((err as Error).message);
           setFbStatus('error');
-          toast.error(`Firebase error — saved locally: ${msg}`);
+          toast.error('Saved locally (Firebase error)');
         } finally {
           setSyncing(false);
         }
@@ -206,17 +273,27 @@ export function SchedulerTab() {
     closeForm();
   };
 
-  const toggleDone = async (item: SchedulerItem) => {
-    const updated = items.map(i => i.id === item.id ? { ...i, completed: !i.completed } : i);
-    await applyAndSync(updated, () => fb.updateSchedulerItem(item.id, { completed: !item.completed }));
+  const updateItemStatus = async (item: SchedulerItem, newStatus: SchedulerStatus) => {
+    const isCompleted = newStatus === 'completed';
+    const patch: Partial<SchedulerItem> = {
+      status: newStatus,
+      completed: isCompleted,
+      date: newStatus === 'backlog' ? undefined : item.date ?? new Date().toISOString().split('T')[0],
+    };
+    const updated = items.map(i => i.id === item.id ? { ...i, ...patch } : i);
+    await applyAndSync(updated, () => fb.updateSchedulerItem(item.id, clean(patch)));
   };
 
-  const scheduleOn = async (itemId: string, date: string | undefined) => {
-    const updated = items.map(i => i.id === itemId ? { ...i, date } : i);
-    // When un-scheduling (date=undefined), omit the field rather than sending undefined
-    const patch = date !== undefined ? { date } : {};
-    await applyAndSync(updated, () => fb.updateSchedulerItem(itemId, patch));
-    toast.success(date ? `Scheduled for ${date}` : 'Moved to backlog');
+  const scheduleOnDate = async (itemId: string, date: string | undefined, time?: string) => {
+    const updated = items.map(i => i.id === itemId ? {
+      ...i,
+      date,
+      time: time ?? i.time,
+      status: date ? (i.status === 'backlog' ? 'scheduled' : i.status) : 'backlog'
+    } : i);
+    const patch = date !== undefined ? { date, time: time ?? null } : { date: null, time: null, status: 'backlog' };
+    await applyAndSync(updated, () => fb.updateSchedulerItem(itemId, clean(patch as Record<string, unknown>)));
+    toast.success(date ? `Scheduled for ${date}${time ? ` at ${time}` : ''}` : 'Moved to backlog');
     setDraggedId(null);
   };
 
@@ -226,16 +303,67 @@ export function SchedulerTab() {
     toast.success('Item deleted');
   };
 
-  // ── Calendar math ─────────────────────────────────────────────────────────
+  // ── Focus Timer Actions ──────────────────────────────────────────────────────
 
+  const startFocusTimer = (item: SchedulerItem) => {
+    setActiveTimerId(item.id);
+    setTimerSeconds(0);
+    setTimerRunning(true);
+    toast.info(`Focus Timer started: ${item.title}`);
+  };
+
+  const saveFocusTimer = async () => {
+    if (!activeTimerId) return;
+    const minutesSpent = Math.max(1, Math.round(timerSeconds / 60));
+    const target = items.find(i => i.id === activeTimerId);
+    if (target) {
+      const newActual = (target.actualMinutes ?? 0) + minutesSpent;
+      const updated = items.map(i => i.id === activeTimerId ? { ...i, actualMinutes: newActual } : i);
+      await applyAndSync(updated, () => fb.updateSchedulerItem(activeTimerId, { actualMinutes: newActual }));
+      toast.success(`Logged +${minutesSpent} mins to "${target.title}"!`);
+    }
+    setTimerRunning(false);
+    setActiveTimerId(null);
+    setTimerSeconds(0);
+  };
+
+  // ── .ics Calendar Export ─────────────────────────────────────────────────────
+
+  const exportIcsCalendar = () => {
+    const scheduled = items.filter(i => i.date);
+    if (scheduled.length === 0) { toast.error('No scheduled tasks to export'); return; }
+
+    let ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Portfolio Developer Scheduler//EN'];
+    scheduled.forEach(item => {
+      const dtStart = item.date?.replace(/-/g, '') + (item.time ? 'T' + item.time.replace(':', '') + '00' : 'T090000');
+      ics.push('BEGIN:VEVENT');
+      ics.push(`SUMMARY:${item.title}`);
+      ics.push(`DESCRIPTION:${item.notes ?? item.type.toUpperCase()}`);
+      ics.push(`DTSTART:${dtStart}`);
+      ics.push('END:VEVENT');
+    });
+    ics.push('END:VCALENDAR');
+
+    const blob = new Blob([ics.join('\n')], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `developer_schedule_${new Date().toISOString().split('T')[0]}.ics`;
+    link.click();
+    toast.success('Downloaded .ics calendar file!');
+  };
+
+  // ── Date Math ────────────────────────────────────────────────────────────────
+
+  const todayStr = new Date().toISOString().split('T')[0];
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const todayStr = new Date().toISOString().split('T')[0];
 
-  const calendarCells = useMemo(() => {
+  // Month Calendar Matrix
+  const monthCells = useMemo(() => {
     const cells: { dateStr: string; dayNum: number | null }[] = [];
     for (let i = 0; i < firstDayOfWeek; i++) cells.push({ dateStr: '', dayNum: null });
     for (let d = 1; d <= daysInMonth; d++) {
@@ -246,59 +374,193 @@ export function SchedulerTab() {
     return cells;
   }, [year, month, firstDayOfWeek, daysInMonth]);
 
-  const filtered = useMemo(() =>
-    typeFilter === 'all' ? items : items.filter(i => i.type === typeFilter),
-  [items, typeFilter]);
+  // 7-Day Sprint View Dates (Mon-Sun of current week)
+  const sprintDays = useMemo(() => {
+    const curr = new Date(currentDate);
+    const day = curr.getDay();
+    const diff = curr.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(curr.setDate(diff));
 
-  const unscheduled = useMemo(() => filtered.filter(i => !i.date), [filtered]);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const dayNum = d.getDate();
+      return { dateStr, dayName, dayNum };
+    });
+  }, [currentDate]);
+
+  // Filtered items
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      if (typeFilter !== 'all' && item.type !== typeFilter) return false;
+      if (tagFilter && (!item.tags || !item.tags.includes(tagFilter))) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return item.title.toLowerCase().includes(q) || (item.notes && item.notes.toLowerCase().includes(q));
+      }
+      return true;
+    });
+  }, [items, typeFilter, tagFilter, searchQuery]);
 
   const scheduledMap = useMemo(() => {
     const map: Record<string, SchedulerItem[]> = {};
-    filtered.forEach(i => { if (i.date) { (map[i.date] ??= []).push(i); } });
+    filteredItems.forEach(i => { if (i.date) (map[i.date] ??= []).push(i); });
     return map;
-  }, [filtered]);
+  }, [filteredItems]);
 
-  // ── Drag & drop ───────────────────────────────────────────────────────────
+  const unscheduled = useMemo(() => filteredItems.filter(i => !i.date || i.status === 'backlog'), [filteredItems]);
 
+  // Analytics Metrics
+  const metrics = useMemo(() => {
+    const completed = items.filter(i => i.completed || i.status === 'completed');
+    const totalEst = items.reduce((acc, i) => acc + (i.estMinutes ?? 0), 0);
+    const totalActual = items.reduce((acc, i) => acc + (i.actualMinutes ?? 0), 0);
+    const todayTasks = items.filter(i => i.date === todayStr);
+
+    return {
+      completedCount: completed.length,
+      totalCount: items.length,
+      completionRate: items.length ? Math.round((completed.length / items.length) * 100) : 0,
+      totalEstHours: (totalEst / 60).toFixed(1),
+      totalActualHours: (totalActual / 60).toFixed(1),
+      todayCount: todayTasks.length,
+    };
+  }, [items, todayStr]);
+
+  const activeTimerTask = items.find(i => i.id === activeTimerId);
+
+  // Drag & Drop
   const onDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData('text/plain', id);
     setDraggedId(id);
   };
-  const onDrop = (e: React.DragEvent, date: string | undefined) => {
+  const onDropDate = (e: React.DragEvent, date: string | undefined, time?: string) => {
     e.preventDefault();
     const id = e.dataTransfer.getData('text/plain') || draggedId;
-    if (id) scheduleOn(id, date);
+    if (id) scheduleOnDate(id, date, time);
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 glass-card p-4 rounded-xl border border-accent/15">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-accent" />
-            <h2 className="text-xl font-bold gradient-text">Project & Daily Scheduler</h2>
-            {/* Sync indicator */}
-            <span className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${
-              fbStatus === 'ok' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
-              : fbStatus === 'error' ? 'text-amber-400 border-amber-500/30 bg-amber-500/10'
-              : 'text-muted-foreground border-border/40'
-            }`}>
-              {fbStatus === 'ok' ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-              {fbStatus === 'ok' ? 'Firebase' : fbStatus === 'error' ? 'Local only' : 'Connecting…'}
-            </span>
-            {syncing && <span className="text-[10px] text-muted-foreground animate-pulse">Syncing…</span>}
+    <div className="space-y-5">
+
+      {/* ── Active Focus Timer Bar ── */}
+      {activeTimerId && activeTimerTask && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between p-3 sm:p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 backdrop-blur-xl shadow-lg"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
+              <Flame className="w-5 h-5 text-amber-400 animate-pulse" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-amber-400 font-mono tracking-widest uppercase">Active Focus Session</p>
+              <p className="text-sm font-semibold text-foreground truncate">{activeTimerTask.title}</p>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Schedule meetings, deadlines, and daily tasks. Drag & drop items onto calendar dates.
-          </p>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="font-mono text-xl sm:text-2xl font-bold text-amber-400">
+              {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:
+              {String(timerSeconds % 60).padStart(2, '0')}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-500/40 text-amber-400 hover:bg-amber-500 hover:text-black h-8 px-2.5"
+              onClick={() => setTimerRunning(!timerRunning)}
+            >
+              {timerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            </Button>
+            <Button
+              size="sm"
+              className="bg-amber-500 text-black hover:bg-amber-400 font-semibold h-8 text-xs px-3"
+              onClick={saveFocusTimer}
+            >
+              <Check className="w-3.5 h-3.5 mr-1" /> Log Time
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Daily Standup & Velocity Summary Card ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="glass-card border-accent/15 p-3 sm:p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Today's Focus</p>
+            <Target className="w-4 h-4 text-accent" />
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{metrics.todayCount} <span className="text-xs font-normal text-muted-foreground">tasks</span></p>
+        </Card>
+        <Card className="glass-card border-accent/15 p-3 sm:p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Completion Velocity</p>
+            <CheckSquare className="w-4 h-4 text-emerald-400" />
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{metrics.completionRate}% <span className="text-xs font-normal text-muted-foreground">({metrics.completedCount}/{metrics.totalCount})</span></p>
+        </Card>
+        <Card className="glass-card border-accent/15 p-3 sm:p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Est. Dev Time</p>
+            <Clock className="w-4 h-4 text-blue-400" />
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{metrics.totalEstHours} <span className="text-xs font-normal text-muted-foreground">hrs</span></p>
+        </Card>
+        <Card className="glass-card border-accent/15 p-3 sm:p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Actual Dev Time</p>
+            <Flame className="w-4 h-4 text-amber-400" />
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{metrics.totalActualHours} <span className="text-xs font-normal text-muted-foreground">hrs logged</span></p>
+        </Card>
+      </div>
+
+      {/* ── Top Bar: Search, Filters & View Switcher ── */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 glass-card p-4 rounded-xl border border-accent/15">
+        
+        {/* Left: View Mode Switcher */}
+        <div className="flex items-center gap-1 bg-secondary/50 p-1 rounded-lg border border-border/50 overflow-x-auto">
+          {[
+            { id: 'month', label: 'Month', icon: CalendarIcon },
+            { id: 'sprint', label: '7-Day Sprint', icon: Layers },
+            { id: 'timeblock', label: 'Timeblock', icon: Clock },
+            { id: 'kanban', label: 'Kanban Board', icon: Kanban },
+          ].map(v => (
+            <button
+              key={v.id}
+              onClick={() => setViewMode(v.id as any)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
+                viewMode === v.id
+                  ? 'bg-accent text-accent-foreground shadow-sm font-semibold'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+              }`}
+            >
+              <v.icon className="w-3.5 h-3.5" /> {v.label}
+            </button>
+          ))}
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap">
+        {/* Right: Search, Filter, Add, Command Palette & ICS */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Quick Search */}
+          <div className="relative flex-1 sm:w-44">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-8 h-9 text-xs bg-background/50 border-border/60"
+            />
+          </div>
+
+          {/* Type Filter */}
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-32 h-9 text-xs">
+            <SelectTrigger className="w-28 h-9 text-xs">
               <Filter className="w-3.5 h-3.5 mr-1" />
               <SelectValue placeholder="All types" />
             </SelectTrigger>
@@ -310,220 +572,347 @@ export function SchedulerTab() {
               <SelectItem value="project">Project Tasks</SelectItem>
             </SelectContent>
           </Select>
-          <Button className="bg-accent text-accent-foreground hover:bg-accent/90 h-9 text-xs flex-1 sm:flex-none" onClick={() => openForm()}>
-            <Plus className="w-4 h-4 mr-1.5" /> Add Task / Meeting
+
+          {/* Export ICS */}
+          <Button variant="outline" size="sm" className="h-9 text-xs border-accent/30" onClick={exportIcsCalendar} title="Export to Google/Apple Calendar (.ics)">
+            <Download className="w-3.5 h-3.5 sm:mr-1" /><span className="hidden sm:inline">Export .ics</span>
+          </Button>
+
+          {/* Command Palette Trigger */}
+          <Button variant="outline" size="sm" className="h-9 text-xs border-border/60 text-muted-foreground hover:text-foreground" onClick={() => setCmdOpen(true)}>
+            <Command className="w-3.5 h-3.5 mr-1" /> <kbd className="text-[10px] font-mono bg-secondary px-1 rounded">⌘K</kbd>
+          </Button>
+
+          {/* Add Task Button */}
+          <Button className="bg-accent text-accent-foreground hover:bg-accent/90 h-9 text-xs shrink-0" onClick={() => openForm()}>
+            <Plus className="w-4 h-4 mr-1.5" /> Add Task
           </Button>
         </div>
       </div>
 
-      {/* Firebase error banner */}
+      {/* Tags Filter Bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+        <span className="text-muted-foreground text-[11px] font-medium mr-1">Tags:</span>
+        <button
+          onClick={() => setTagFilter(null)}
+          className={`px-2 py-0.5 rounded-full border text-[10px] transition-all ${
+            tagFilter === null ? 'bg-accent text-accent-foreground border-accent' : 'border-border/40 text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          All
+        </button>
+        {PRESET_TAGS.map(t => (
+          <button
+            key={t}
+            onClick={() => setTagFilter(tagFilter === t ? null : t)}
+            className={`px-2 py-0.5 rounded-full border text-[10px] transition-all ${
+              tagFilter === t ? 'bg-accent text-accent-foreground border-accent' : 'border-border/40 text-muted-foreground hover:text-accent'
+            }`}
+          >
+            #{t}
+          </button>
+        ))}
+      </div>
+
+      {/* Firebase Warning Banner */}
       {fbStatus === 'error' && (
         <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-400">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">Firebase unavailable — items stored locally only</p>
             <p className="text-amber-400/70 mt-0.5">{fbError}</p>
-            <p className="text-amber-400/70 mt-0.5">
-              Check your Firebase config env vars and Firestore security rules. Items in local storage will not persist across devices or browsers.
-            </p>
-            <Button size="sm" variant="ghost" className="mt-1.5 h-7 text-xs text-amber-400 hover:text-amber-300 px-2" onClick={loadFromFirebase}>
-              Retry connection
-            </Button>
           </div>
         </div>
       )}
 
-      {/* Main grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Backlog column */}
-        <Card
-          className="lg:col-span-1 glass-card border-accent/15 flex flex-col min-h-[480px]"
-          onDragOver={e => e.preventDefault()}
-          onDrop={e => onDrop(e, undefined)}
-        >
-          <CardHeader className="p-4 border-b border-border/40 pb-3 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-accent" /> Things To Do
-              </CardTitle>
-              <p className="text-[11px] text-muted-foreground">Unscheduled backlog · Drag to calendar</p>
-            </div>
-            <Badge variant="secondary" className="text-xs">{unscheduled.length}</Badge>
-          </CardHeader>
+      {/* ──────────────────────────────────────────────────────────────────────────
+          MAIN VIEW SWITCHER CONTENT
+         ────────────────────────────────────────────────────────────────────────── */}
 
-          <CardContent className="p-3 flex-1 flex flex-col space-y-2 overflow-y-auto max-h-[600px] [&::-webkit-scrollbar]:w-1">
-            {unscheduled.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/50 rounded-lg">
-                <Sparkles className="w-8 h-8 text-muted-foreground/30 mb-2" />
-                <p className="text-xs text-muted-foreground font-medium">No unscheduled tasks</p>
-                <p className="text-[11px] text-muted-foreground/70 mt-1">Click "Add Task" or drag calendar items here</p>
-                <Button size="sm" variant="outline" className="mt-3 text-xs border-accent/30" onClick={() => openForm()}>
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Create Task
-                </Button>
+      {/* ── 1. MONTH VIEW ── */}
+      {viewMode === 'month' && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Backlog Column */}
+          <Card
+            className="lg:col-span-1 glass-card border-accent/15 flex flex-col min-h-[480px]"
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => onDropDate(e, undefined)}
+          >
+            <CardHeader className="p-4 border-b border-border/40 pb-3 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-accent" /> Things To Do
+                </CardTitle>
+                <p className="text-[11px] text-muted-foreground">Unscheduled backlog · Drag to calendar</p>
               </div>
-            ) : (
-              <AnimatePresence initial={false}>
-                {unscheduled.map(item => {
-                  const cfg = TYPE_CONFIG[item.type];
-                  const prio = PRIORITY_CONFIG[item.priority];
-                  const Icon = cfg.icon;
-                  return (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      draggable
-                      onDragStart={e => onDragStart(e, item.id)}
-                      className="group relative p-3 rounded-lg border border-border/60 bg-background/60 hover:border-accent/40 transition-all cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md space-y-2"
-                    >
-                      <div className="flex items-start gap-2">
-                        <GripVertical className="w-4 h-4 text-muted-foreground/40 shrink-0 mt-0.5 group-hover:text-accent transition-colors" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">{item.title}</p>
-                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${cfg.bg} ${cfg.color}`}>
-                              <Icon className="w-3 h-3" /> {cfg.label}
-                            </span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded border-border/40 border flex items-center gap-1 ${prio.color}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${prio.dotBg}`} /> {prio.label}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+              <Badge variant="secondary" className="text-xs">{unscheduled.length}</Badge>
+            </CardHeader>
 
-                      <div className="flex items-center justify-between pt-1 border-t border-border/30 text-[11px]">
-                        <button
-                          onClick={() => openForm(todayStr, item)}
-                          className="text-muted-foreground hover:text-accent transition-colors flex items-center gap-1"
-                        >
-                          <CalendarIcon className="w-3 h-3" /> Schedule
-                        </button>
-                        <button
-                          onClick={() => deleteItem(item.id)}
-                          className="text-muted-foreground hover:text-destructive transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
+            <CardContent className="p-3 flex-1 flex flex-col space-y-2 overflow-y-auto max-h-[600px]">
+              {unscheduled.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/50 rounded-lg">
+                  <Sparkles className="w-8 h-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-xs text-muted-foreground font-medium">No unscheduled tasks</p>
+                </div>
+              ) : (
+                unscheduled.map(item => (
+                  <TaskCard
+                    key={item.id}
+                    item={item}
+                    onDragStart={onDragStart}
+                    onOpenForm={openForm}
+                    onDelete={deleteItem}
+                    onStartFocus={startFocusTimer}
+                    onToggleDone={updateItemStatus}
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Month Calendar Column */}
+          <Card className="lg:col-span-3 glass-card border-accent/15 flex flex-col">
+            <CardHeader className="p-4 border-b border-border/40 pb-3 flex flex-row items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="h-8 w-8 border-border/60" onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <h3 className="text-base font-bold text-foreground w-36 text-center">{MONTHS[month]} {year}</h3>
+                <Button variant="outline" size="icon" className="h-8 w-8 border-border/60" onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-accent" onClick={() => setCurrentDate(new Date())}>Today</Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-3 sm:p-4 flex-1">
+              <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
+                  <div key={d} className="text-xs font-semibold text-muted-foreground py-1">{d}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 auto-rows-fr">
+                {monthCells.map((cell, idx) => {
+                  if (!cell.dayNum) return <div key={idx} className="min-h-[85px] sm:min-h-[105px] rounded-lg bg-secondary/10 opacity-30 pointer-events-none" />;
+                  const dayItems = scheduledMap[cell.dateStr] ?? [];
+                  const isToday = cell.dateStr === todayStr;
+                  return (
+                    <div
+                      key={cell.dateStr}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={e => onDropDate(e, cell.dateStr)}
+                      onClick={() => setSelectedDay(cell.dateStr)}
+                      className={`group relative min-h-[85px] sm:min-h-[105px] p-1.5 rounded-lg border transition-all flex flex-col cursor-pointer ${
+                        isToday ? 'border-accent bg-accent/10 shadow-sm' : 'border-border/40 bg-background/50 hover:border-accent/50 hover:bg-secondary/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${isToday ? 'bg-accent text-accent-foreground' : 'text-foreground'}`}>
+                          {cell.dayNum}
+                        </span>
+                        <button type="button" onClick={e => { e.stopPropagation(); openForm(cell.dateStr); }} className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-muted-foreground hover:text-accent">
+                          <Plus className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </motion.div>
+                      <div className="space-y-1 my-1 flex-1 overflow-y-auto max-h-[65px]">
+                        {dayItems.slice(0, 3).map(item => {
+                          const cfg = TYPE_CONFIG[item.type];
+                          return (
+                            <div
+                              key={item.id}
+                              draggable
+                              onDragStart={e => { e.stopPropagation(); onDragStart(e, item.id); }}
+                              onClick={e => { e.stopPropagation(); openForm(cell.dateStr, item); }}
+                              className={`text-[10px] px-1.5 py-0.5 rounded border truncate flex items-center gap-1 hover:scale-[1.02] ${item.completed ? 'opacity-50 line-through bg-secondary/40' : `${cfg.bg} ${cfg.color}`}`}
+                            >
+                              <cfg.icon className="w-2.5 h-2.5 shrink-0" />
+                              <span className="truncate">{item.time ? `${item.time} ${item.title}` : item.title}</span>
+                            </div>
+                          );
+                        })}
+                        {dayItems.length > 3 && <p className="text-[9px] text-muted-foreground font-semibold text-center">+{dayItems.length - 3} more</p>}
+                      </div>
+                    </div>
                   );
                 })}
-              </AnimatePresence>
-            )}
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-        {/* Calendar column */}
-        <Card className="lg:col-span-3 glass-card border-accent/15 flex flex-col">
-          <CardHeader className="p-4 border-b border-border/40 pb-3 flex flex-row items-center justify-between gap-2 flex-wrap">
+      {/* ── 2. 7-DAY SPRINT VIEW ── */}
+      {viewMode === 'sprint' && (
+        <Card className="glass-card border-accent/15 p-4 space-y-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" className="h-8 w-8 border-border/60"
-                onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); }}>
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <h3 className="text-base font-bold text-foreground w-36 text-center">{MONTHS[month]} {year}</h3>
-              <Button variant="outline" size="icon" className="h-8 w-8 border-border/60"
-                onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>
+              <h3 className="text-sm font-bold text-foreground">Week of {sprintDays[0].dateStr} — {sprintDays[6].dateStr}</h3>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); }}>
                 <ChevronRight className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-accent ml-1"
-                onClick={() => setCurrentDate(new Date())}>
-                Today
-              </Button>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {Object.entries(TYPE_CONFIG).map(([k, cfg]) => (
-                <span key={k} className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${cfg.bg} ${cfg.color}`}>
-                  <cfg.icon className="w-2.5 h-2.5" /> {cfg.label}
-                </span>
-              ))}
-            </div>
-          </CardHeader>
+            <Button variant="ghost" size="sm" className="text-xs" onClick={() => setCurrentDate(new Date())}>Current Week</Button>
+          </div>
 
-          <CardContent className="p-3 sm:p-4 flex-1">
-            {/* Day headers */}
-            <div className="grid grid-cols-7 gap-1 text-center mb-2">
-              {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
-                <div key={d} className="text-xs font-semibold text-muted-foreground py-1">{d}</div>
-              ))}
-            </div>
-
-            {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-1.5 sm:gap-2 auto-rows-fr">
-              {calendarCells.map((cell, idx) => {
-                if (!cell.dayNum) return <div key={idx} className="min-h-[85px] sm:min-h-[105px] rounded-lg bg-secondary/10 opacity-30 pointer-events-none" />;
-
-                const dayItems = scheduledMap[cell.dateStr] ?? [];
-                const isToday = cell.dateStr === todayStr;
-
-                return (
-                  <div
-                    key={cell.dateStr}
-                    onDragOver={e => e.preventDefault()}
-                    onDrop={e => onDrop(e, cell.dateStr)}
-                    onClick={() => setSelectedDay(cell.dateStr)}
-                    className={`group relative min-h-[85px] sm:min-h-[105px] p-1.5 rounded-lg border transition-all flex flex-col cursor-pointer ${
-                      isToday
-                        ? 'border-accent bg-accent/10 shadow-sm'
-                        : 'border-border/40 bg-background/50 hover:border-accent/50 hover:bg-secondary/20'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${
-                        isToday ? 'bg-accent text-accent-foreground' : 'text-foreground'
-                      }`}>{cell.dayNum}</span>
-                      <button
-                        type="button"
-                        onClick={e => { e.stopPropagation(); openForm(cell.dateStr); }}
-                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-muted-foreground hover:text-accent hover:bg-accent/10 transition-all"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="space-y-1 my-1 flex-1 overflow-y-auto max-h-[65px] [&::-webkit-scrollbar]:w-0.5">
-                      {dayItems.slice(0, 3).map(item => {
-                        const cfg = TYPE_CONFIG[item.type];
-                        const Icon = cfg.icon;
-                        return (
-                          <div
-                            key={item.id}
-                            draggable
-                            onDragStart={e => { e.stopPropagation(); onDragStart(e, item.id); }}
-                            onClick={e => { e.stopPropagation(); openForm(cell.dateStr, item); }}
-                            className={`text-[10px] px-1.5 py-0.5 rounded border truncate flex items-center gap-1 hover:scale-[1.02] transition-transform ${
-                              item.completed ? 'opacity-50 line-through bg-secondary/40 border-border/40' : `${cfg.bg} ${cfg.color}`
-                            }`}
-                          >
-                            <Icon className="w-2.5 h-2.5 shrink-0" />
-                            <span className="truncate">{item.time ? `${item.time} ${item.title}` : item.title}</span>
-                          </div>
-                        );
-                      })}
-                      {dayItems.length > 3 && (
-                        <p className="text-[9px] text-muted-foreground font-semibold text-center">+{dayItems.length - 3} more</p>
-                      )}
-                    </div>
+          <div className="grid grid-cols-7 gap-2">
+            {sprintDays.map(day => {
+              const dayItems = scheduledMap[day.dateStr] ?? [];
+              const isToday = day.dateStr === todayStr;
+              return (
+                <div
+                  key={day.dateStr}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => onDropDate(e, day.dateStr)}
+                  className={`min-h-[400px] p-2 rounded-xl border flex flex-col ${
+                    isToday ? 'border-accent bg-accent/5' : 'border-border/40 bg-secondary/10'
+                  }`}
+                >
+                  <div className="text-center pb-2 mb-2 border-b border-border/30">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">{day.dayName}</p>
+                    <p className={`text-base font-bold rounded-full w-7 h-7 mx-auto flex items-center justify-center mt-0.5 ${isToday ? 'bg-accent text-accent-foreground' : 'text-foreground'}`}>
+                      {day.dayNum}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Day detail dialog */}
+                  <div className="space-y-2 flex-1 overflow-y-auto">
+                    {dayItems.map(item => (
+                      <TaskCard
+                        key={item.id}
+                        item={item}
+                        compact
+                        onDragStart={onDragStart}
+                        onOpenForm={openForm}
+                        onDelete={deleteItem}
+                        onStartFocus={startFocusTimer}
+                        onToggleDone={updateItemStatus}
+                      />
+                    ))}
+                  </div>
+
+                  <Button size="sm" variant="ghost" className="w-full text-xs text-muted-foreground hover:text-accent mt-2 h-7" onClick={() => openForm(day.dateStr)}>
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* ── 3. TIMEBLOCK DAY VIEW ── */}
+      {viewMode === 'timeblock' && (
+        <Card className="glass-card border-accent/15 p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Clock className="w-4 h-4 text-accent" /> 24-Hour Timeblock Schedule for {todayStr}
+            </h3>
+            <Input type="date" value={todayStr} className="w-36 h-8 text-xs" />
+          </div>
+
+          <div className="space-y-1 max-h-[600px] overflow-y-auto pr-2">
+            {Array.from({ length: 14 }, (_, i) => i + 8).map(hour => {
+              const timeSlot = `${String(hour).padStart(2, '0')}:00`;
+              const slotItems = (scheduledMap[todayStr] ?? []).filter(i => i.time && i.time.startsWith(String(hour).padStart(2, '0')));
+
+              return (
+                <div
+                  key={hour}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => onDropDate(e, todayStr, timeSlot)}
+                  className="flex items-start gap-3 p-2 rounded-lg border border-border/30 bg-secondary/10 hover:border-accent/30 min-h-[50px]"
+                >
+                  <span className="font-mono text-xs text-muted-foreground w-14 shrink-0 pt-1">{timeSlot}</span>
+                  <div className="flex-1 flex flex-wrap gap-2">
+                    {slotItems.map(item => (
+                      <TaskCard
+                        key={item.id}
+                        item={item}
+                        compact
+                        onDragStart={onDragStart}
+                        onOpenForm={openForm}
+                        onDelete={deleteItem}
+                        onStartFocus={startFocusTimer}
+                        onToggleDone={updateItemStatus}
+                      />
+                    ))}
+                    {slotItems.length === 0 && (
+                      <button
+                        onClick={() => openForm(todayStr, { title: '', type: 'todo', priority: 'medium', time: timeSlot, completed: false } as any)}
+                        className="text-xs text-muted-foreground/40 hover:text-accent pt-1"
+                      >
+                        + Click or drag to timeblock {timeSlot}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* ── 4. KANBAN WORKFLOW BOARD ── */}
+      {viewMode === 'kanban' && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {(['backlog', 'scheduled', 'in_progress', 'review', 'completed'] as SchedulerStatus[]).map(statusKey => {
+            const statusCfg = STATUS_CONFIG[statusKey];
+            const colItems = filteredItems.filter(i => {
+              if (statusKey === 'backlog') return i.status === 'backlog' || (!i.date && !i.completed);
+              if (statusKey === 'completed') return i.completed || i.status === 'completed';
+              return i.status === statusKey;
+            });
+
+            return (
+              <div
+                key={statusKey}
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => {
+                  e.preventDefault();
+                  if (draggedId) {
+                    const target = items.find(i => i.id === draggedId);
+                    if (target) updateItemStatus(target, statusKey);
+                  }
+                }}
+                className="glass-card border-accent/15 p-3 rounded-xl flex flex-col min-h-[500px]"
+              >
+                <div className="flex items-center justify-between pb-2 mb-3 border-b border-border/40">
+                  <span className={`text-xs font-bold uppercase tracking-wider ${statusCfg.color}`}>{statusCfg.label}</span>
+                  <Badge variant="secondary" className="text-xs">{colItems.length}</Badge>
+                </div>
+
+                <div className="space-y-2 flex-1 overflow-y-auto">
+                  {colItems.map(item => (
+                    <TaskCard
+                      key={item.id}
+                      item={item}
+                      onDragStart={onDragStart}
+                      onOpenForm={openForm}
+                      onDelete={deleteItem}
+                      onStartFocus={startFocusTimer}
+                      onToggleDone={updateItemStatus}
+                    />
+                  ))}
+                </div>
+
+                <Button size="sm" variant="ghost" className="w-full text-xs text-muted-foreground hover:text-accent mt-2 h-7" onClick={() => openForm(undefined, { status: statusKey } as any)}>
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Day Detail Modal ── */}
       <Dialog open={!!selectedDay} onOpenChange={v => !v && setSelectedDay(null)}>
         <DialogContent className="w-full sm:max-w-lg bg-background/95 backdrop-blur-xl border-accent/20 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="gradient-text text-lg flex items-center justify-between flex-wrap gap-2">
-              <span className="flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-accent" /> {selectedDay}
-              </span>
-              <Button size="sm" className="bg-accent text-accent-foreground text-xs"
-                onClick={() => { const d = selectedDay; setSelectedDay(null); openForm(d ?? undefined); }}>
+            <DialogTitle className="gradient-text text-lg flex items-center justify-between">
+              <span className="flex items-center gap-2"><CalendarIcon className="w-5 h-5 text-accent" /> Schedule for {selectedDay}</span>
+              <Button size="sm" className="bg-accent text-accent-foreground text-xs" onClick={() => { const d = selectedDay; setSelectedDay(null); openForm(d ?? undefined); }}>
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Task
               </Button>
             </DialogTitle>
@@ -531,86 +920,67 @@ export function SchedulerTab() {
 
           <div className="space-y-3 pt-2">
             {selectedDay && (scheduledMap[selectedDay] ?? []).length === 0 ? (
-              <div className="text-center py-8 border border-dashed border-border/40 rounded-lg space-y-2">
-                <CalendarDays className="w-8 h-8 mx-auto text-muted-foreground/30" />
+              <div className="text-center py-8 border border-dashed border-border/40 rounded-lg">
                 <p className="text-xs text-muted-foreground">Nothing scheduled for this day yet.</p>
-                <Button size="sm" variant="outline" className="border-accent/30 text-xs"
-                  onClick={() => { const d = selectedDay; setSelectedDay(null); openForm(d ?? undefined); }}>
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Add something
-                </Button>
               </div>
             ) : (
-              selectedDay && (scheduledMap[selectedDay] ?? []).map(item => {
-                const cfg = TYPE_CONFIG[item.type];
-                const prio = PRIORITY_CONFIG[item.priority];
-                const Icon = cfg.icon;
-                return (
-                  <div key={item.id} className="p-3 rounded-lg border border-border/50 bg-secondary/20 flex items-start gap-3 justify-between">
-                    <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                      <button onClick={() => toggleDone(item)} className="mt-0.5 hover:opacity-80 transition-opacity">
-                        {item.completed
-                          ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          : <Circle className="w-4 h-4 text-muted-foreground" />}
-                      </button>
-                      <div className="space-y-1 min-w-0 flex-1">
-                        <p className={`text-xs font-semibold ${item.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                          {item.title}
-                        </p>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${cfg.bg} ${cfg.color}`}>
-                            <Icon className="w-3 h-3" /> {cfg.label}
-                          </span>
-                          {item.time && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> {item.time}{item.duration ? ` (${item.duration})` : ''}
-                            </span>
-                          )}
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded border border-border/40 flex items-center gap-1 ${prio.color}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${prio.dotBg}`} /> {prio.label}
-                          </span>
-                        </div>
-                        {item.notes && <p className="text-[11px] text-muted-foreground/80 pt-1 italic">{item.notes}</p>}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-accent"
-                        onClick={() => { setSelectedDay(null); openForm(selectedDay, item); }}>
-                        <Tag className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        onClick={() => deleteItem(item.id)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
+              selectedDay && (scheduledMap[selectedDay] ?? []).map(item => (
+                <TaskCard
+                  key={item.id}
+                  item={item}
+                  onDragStart={onDragStart}
+                  onOpenForm={openForm}
+                  onDelete={deleteItem}
+                  onStartFocus={startFocusTimer}
+                  onToggleDone={updateItemStatus}
+                />
+              ))
             )}
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Create / Edit dialog */}
+      {/* ── Create / Edit Form Dialog ── */}
       <Dialog open={formOpen} onOpenChange={v => !v && closeForm()}>
         <DialogContent className="w-full sm:max-w-md bg-background/95 backdrop-blur-xl border-accent/20">
           <DialogHeader>
             <DialogTitle className="gradient-text text-base sm:text-lg">
-              {editingItem ? 'Edit Task / Meeting' : 'Add New Task / Meeting'}
+              {editingItem ? 'Edit Dev Task / Meeting' : 'Add New Dev Task / Meeting'}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
+            {/* Quick Presets */}
+            {!editingItem && (
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Quick Presets:</Label>
+                <div className="flex flex-wrap gap-1">
+                  {DEV_PRESETS.map(p => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => applyPreset(p)}
+                      className="text-[10px] px-2 py-0.5 rounded-full border border-accent/20 bg-accent/5 hover:bg-accent/20 text-accent transition-colors"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Title */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Title *</Label>
+              <Label className="text-xs">Task Title *</Label>
               <Input
-                placeholder="e.g. Team sync / Fix login bug"
+                placeholder="e.g. Fix auth token refresh / Deploy Vercel release"
                 value={form.title}
                 onChange={e => setF('title', e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSave()}
                 autoFocus
               />
             </div>
 
+            {/* Type & Priority */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Type</Label>
@@ -637,6 +1007,7 @@ export function SchedulerTab() {
               </div>
             </div>
 
+            {/* Date, Time & Estimated Minutes */}
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Date</Label>
@@ -647,29 +1018,63 @@ export function SchedulerTab() {
                 <Input type="time" className="h-9 text-xs px-2" value={form.time} onChange={e => setF('time', e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Duration</Label>
-                <Input placeholder="30m / 1h" className="h-9 text-xs" value={form.duration} onChange={e => setF('duration', e.target.value)} />
+                <Label className="text-xs">Est. Mins</Label>
+                <Input type="number" className="h-9 text-xs" value={form.estMinutes} onChange={e => setF('estMinutes', Number(e.target.value))} />
               </div>
             </div>
 
+            {/* GitHub / PR / Zoom / Figma Link */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Related Project (Optional)</Label>
-              <Select value={form.projectId} onValueChange={v => setF('projectId', v)}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select a project" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {projects.map(p => (
-                    <SelectItem key={p.id ?? p.title} value={p.id ?? p.title}>{p.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">Dev Link (PR, Issue, Zoom, Figma URL)</Label>
+              <Input
+                placeholder="https://github.com/..."
+                value={form.link}
+                onChange={e => setF('link', e.target.value)}
+                className="text-xs"
+              />
             </div>
 
+            {/* Related Project */}
+            {projects.length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Related Project (Optional)</Label>
+                <Select value={form.projectId} onValueChange={v => setF('projectId', v)}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select a project" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {projects.map(p => (
+                      <SelectItem key={p.id ?? p.title} value={p.id ?? p.title}>{p.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Custom Tags */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Notes / Details</Label>
+              <Label className="text-xs">Tags</Label>
+              <div className="flex flex-wrap gap-1">
+                {PRESET_TAGS.map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => toggleTagInForm(t)}
+                    className={`text-[10px] px-2 py-0.5 rounded border transition-all ${
+                      form.tags.includes(t) ? 'bg-accent text-accent-foreground border-accent' : 'border-border/40 text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    #{t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Notes / Scratchpad</Label>
               <Textarea
                 rows={2}
-                placeholder="Agenda, link, or scratchpad notes…"
+                placeholder="Agenda, PR link notes, or implementation thoughts..."
                 value={form.notes}
                 onChange={e => setF('notes', e.target.value)}
                 className="text-xs"
@@ -680,12 +1085,124 @@ export function SchedulerTab() {
           <DialogFooter className="flex gap-2 pt-2">
             <Button variant="outline" size="sm" onClick={closeForm}>Cancel</Button>
             <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleSave}>
-              <Check className="w-3.5 h-3.5 mr-1.5" />
-              {editingItem ? 'Save Changes' : 'Add Task'}
+              <Check className="w-3.5 h-3.5 mr-1.5" /> {editingItem ? 'Save Changes' : 'Add Task'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Command Palette Dialog ── */}
+      <Dialog open={cmdOpen} onOpenChange={setCmdOpen}>
+        <DialogContent className="w-full sm:max-w-lg bg-background/95 backdrop-blur-xl border-accent/20 p-4">
+          <div className="flex items-center gap-2 border-b border-border/40 pb-3">
+            <Search className="w-4 h-4 text-accent" />
+            <input
+              placeholder="Search or type a task to quick-add..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="flex-1 bg-transparent text-sm focus:outline-none"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1 max-h-60 overflow-y-auto pt-2">
+            {filteredItems.slice(0, 5).map(item => (
+              <div
+                key={item.id}
+                onClick={() => { setCmdOpen(false); openForm(undefined, item); }}
+                className="p-2 rounded-lg hover:bg-secondary/40 cursor-pointer flex items-center justify-between text-xs"
+              >
+                <span className="font-semibold text-foreground">{item.title}</span>
+                <Badge variant="outline" className="text-[10px]">{item.type}</Badge>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ── Reusable Task Card Component ──────────────────────────────────────────────
+
+function TaskCard({
+  item,
+  compact = false,
+  onDragStart,
+  onOpenForm,
+  onDelete,
+  onStartFocus,
+  onToggleDone,
+}: {
+  item: SchedulerItem;
+  compact?: boolean;
+  onDragStart: (e: React.DragEvent, id: string) => void;
+  onOpenForm: (presetDate?: string, item?: SchedulerItem) => void;
+  onDelete: (id: string) => void;
+  onStartFocus: (item: SchedulerItem) => void;
+  onToggleDone: (item: SchedulerItem, status: SchedulerStatus) => void;
+}) {
+  const cfg = TYPE_CONFIG[item.type];
+  const prio = PRIORITY_CONFIG[item.priority];
+  const Icon = cfg.icon;
+
+  return (
+    <div
+      draggable
+      onDragStart={e => onDragStart(e, item.id)}
+      className={`group relative p-2.5 rounded-lg border border-border/60 bg-background/60 hover:border-accent/40 transition-all cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md space-y-1.5 ${
+        item.completed ? 'opacity-50 line-through bg-secondary/30' : ''
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        <GripVertical className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0 mt-0.5 group-hover:text-accent transition-colors" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">{item.title}</p>
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            <span className={`text-[9px] px-1.5 py-0.2 rounded border flex items-center gap-0.5 ${cfg.bg} ${cfg.color}`}>
+              <Icon className="w-2.5 h-2.5" /> {cfg.label}
+            </span>
+            <span className={`text-[9px] px-1 py-0.2 rounded border ${prio.color}`}>
+              {prio.label}
+            </span>
+            {item.link && (
+              <a href={item.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[9px] text-accent hover:underline flex items-center gap-0.5">
+                <ExternalLink className="w-2.5 h-2.5" /> Link
+              </a>
+            )}
+          </div>
+          {item.tags && item.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {item.tags.map(t => (
+                <span key={t} className="text-[8px] px-1 py-0.2 rounded bg-accent/10 text-accent font-mono">#{t}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {!compact && (
+        <div className="flex items-center justify-between pt-1 border-t border-border/30 text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onToggleDone(item, item.completed ? 'scheduled' : 'completed')}
+              className="hover:text-accent flex items-center gap-1"
+            >
+              <CheckCircle2 className={`w-3 h-3 ${item.completed ? 'text-emerald-400' : ''}`} /> {item.completed ? 'Done' : 'Mark Done'}
+            </button>
+            <button
+              onClick={() => onStartFocus(item)}
+              className="hover:text-amber-400 flex items-center gap-0.5"
+              title="Start Focus Timer"
+            >
+              <Flame className="w-3 h-3" /> Focus
+            </button>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => onOpenForm(undefined, item)} className="hover:text-accent"><FileText className="w-3 h-3" /></button>
+            <button onClick={() => onDelete(item.id)} className="hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
