@@ -44,6 +44,13 @@ function saveLocal(items: SchedulerItem[]) {
   try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items)); } catch { /**/ }
 }
 
+/** Firestore rejects undefined field values — strip them before every write */
+function clean<T extends object>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  ) as Partial<T>;
+}
+
 // ── Empty form state ──────────────────────────────────────────────────────────
 
 const emptyForm = () => ({
@@ -156,7 +163,7 @@ export function SchedulerTab() {
 
     if (editingItem) {
       const updated = items.map(i => i.id === editingItem.id ? { ...i, ...payload } : i);
-      await applyAndSync(updated, () => fb.updateSchedulerItem(editingItem.id, payload));
+      await applyAndSync(updated, () => fb.updateSchedulerItem(editingItem.id, clean(payload)));
       toast.success('Task updated!');
     } else {
       // Optimistic insert with temp ID
@@ -169,7 +176,7 @@ export function SchedulerTab() {
       if (isFirebaseConfigured && fbStatus !== 'error') {
         setSyncing(true);
         try {
-          const realId = await fb.addSchedulerItem(payload);
+          const realId = await fb.addSchedulerItem(clean(payload) as Omit<SchedulerItem, 'id'>);
           // Replace temp ID with real Firestore ID
           const synced = optimistic.map(i => i.id === tempId ? { ...i, id: realId } : i);
           setItems(synced);
@@ -199,7 +206,9 @@ export function SchedulerTab() {
 
   const scheduleOn = async (itemId: string, date: string | undefined) => {
     const updated = items.map(i => i.id === itemId ? { ...i, date } : i);
-    await applyAndSync(updated, () => fb.updateSchedulerItem(itemId, { date }));
+    // When un-scheduling (date=undefined), omit the field rather than sending undefined
+    const patch = date !== undefined ? { date } : {};
+    await applyAndSync(updated, () => fb.updateSchedulerItem(itemId, patch));
     toast.success(date ? `Scheduled for ${date}` : 'Moved to backlog');
     setDraggedId(null);
   };
