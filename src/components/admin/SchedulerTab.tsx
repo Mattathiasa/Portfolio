@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
@@ -61,6 +62,12 @@ const emptyForm = () => ({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function SchedulerTab() {
+  // ── Projects query ───────────────────────────────────────────────────────
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects'],
+    queryFn: fb.getProjects,
+  });
+
   // ── Items state (single source of truth) ─────────────────────────────────
   const [items, setItems] = useState<SchedulerItem[]>(loadLocal);
   const [fbStatus, setFbStatus] = useState<'loading' | 'ok' | 'error'>('loading');
@@ -643,6 +650,19 @@ export function SchedulerTab() {
                 <Label className="text-xs">Duration</Label>
                 <Input placeholder="30m / 1h" className="h-9 text-xs" value={form.duration} onChange={e => setF('duration', e.target.value)} />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Related Project (Optional)</Label>
+              <Select value={form.projectId} onValueChange={v => setF('projectId', v)}>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select a project" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {projects.map(p => (
+                    <SelectItem key={p.id ?? p.title} value={p.id ?? p.title}>{p.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">
