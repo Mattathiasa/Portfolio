@@ -1,0 +1,38 @@
+<!doctype html>
+<!--
+  Editable Open Graph image template (1200×630).
+  The live meta tags point at /og-image.png (a generated branded placeholder).
+  To make a richer version: open this file, screenshot the .card element at exactly
+  1200×630, and save it over public/og-image.png.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; box-sizing: border-box; }
+    body { background: #111; display: grid; place-items: center; min-height: 100vh; }
+    .card {
+      width: 1200px; height: 630px; position: relative; overflow: hidden;
+      background: radial-gradient(600px 420px at 26% 33%, hsl(72 72% 73% / 0.16), transparent 60%),
+                  linear-gradient(160deg, hsl(192 26% 18%), hsl(192 30% 25%) 50%, hsl(192 26% 18%));
+      color: hsl(45 54% 95%); font-family: 'Inter', sans-serif;
+      padding: 80px; display: flex; flex-direction: column; justify-content: center; gap: 18px;
+    }
+    .name { font-family: 'Anton', sans-serif; font-size: 96px; letter-spacing: 1px; line-height: 1; }
+    .role { font-size: 40px; font-weight: 800; color: hsl(72 72% 73%); }
+    .tag { font-size: 24px; font-weight: 600; color: hsl(45 54% 95% / 0.7); max-width: 820px; }
+    .bar { width: 220px; height: 8px; background: hsl(72 72% 73%); border-radius: 4px; margin-top: 8px; }
+    .url { position: absolute; bottom: 60px; right: 80px; font-size: 22px; font-weight: 600; color: hsl(72 72% 73%); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="name">MATTATHIAS ABRAHAM</div>
+    <div class="role">Flutter &amp; React Native Developer</div>
+    <div class="tag">Building scalable mobile systems with real-time data and role-based architecture.</div>
+    <div class="bar"></div>
+    <div class="url">mattathiasportfolio.vercel.app</div>
+  </div>
+</body>
+</html>

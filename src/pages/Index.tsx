@@ -9,6 +9,7 @@ import { Blog } from '@/components/Blog';
 import { Contact } from '@/components/Contact';
 import { Footer } from '@/components/Footer';
 import { PortfolioChat } from '@/components/PortfolioChat';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SmoothScrollProvider } from '@/providers/SmoothScrollProvider';
 
 // Separate chunk (~150 KB gz of three.js) warmed by the preloader.
@@ -20,9 +21,13 @@ const Index = () => {
   return (
     <SmoothScrollProvider>
       <div className="relative min-h-screen">
-        <Suspense fallback={null}>
-          <SceneCanvas />
-        </Suspense>
+        {/* Decorative 3D backdrop — if WebGL/Three.js fails, fail silently
+            rather than taking down the whole page. */}
+        <ErrorBoundary name="SceneCanvas" fallback={null}>
+          <Suspense fallback={null}>
+            <SceneCanvas />
+          </Suspense>
+        </ErrorBoundary>
 
         {/* Content mounts behind the preloader so the scene and layout are
             warm when the wipe reveals them. */}

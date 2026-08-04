@@ -226,6 +226,40 @@ function ImageCropper({
     if (drag.current) { boxRef.current?.releasePointerCapture(e.pointerId); drag.current = null; }
   };
 
+  // Keyboard control: arrows move the crop box, Alt+arrows resize it, Shift = fine (1px) steps.
+  const onRectKeyDown = (e: React.KeyboardEvent) => {
+    if (!rect) return;
+    const step = e.shiftKey ? 1 : 8;
+    const r = ratioOf(lock);
+    const locked = !!r && lock !== 'free';
+    let { x, y, w, h } = rect;
+    let handled = true;
+
+    if (e.altKey) {
+      if (e.key === 'ArrowRight') w += step;
+      else if (e.key === 'ArrowLeft') w -= step;
+      else if (e.key === 'ArrowDown') h += step;
+      else if (e.key === 'ArrowUp') h -= step;
+      else handled = false;
+      if (handled && locked && r) {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') w = h * r; else h = w / r;
+      }
+      w = clamp(w, MIN, disp.w - x);
+      h = clamp(h, MIN, disp.h - y);
+      if (locked && r) { if (w / r <= disp.h - y) h = w / r; else { h = disp.h - y; w = h * r; } }
+    } else {
+      if (e.key === 'ArrowRight') x += step;
+      else if (e.key === 'ArrowLeft') x -= step;
+      else if (e.key === 'ArrowDown') y += step;
+      else if (e.key === 'ArrowUp') y -= step;
+      else handled = false;
+      x = clamp(x, 0, disp.w - w);
+      y = clamp(y, 0, disp.h - h);
+    }
+
+    if (handled) { e.preventDefault(); setRect({ x, y, w, h }); }
+  };
+
   const apply = async () => {
     const img = imgRef.current;
     if (!img || !rect || !disp.w) return;
@@ -280,9 +314,13 @@ function ImageCropper({
               />
               {rect && (
                 <div
-                  className="absolute border-2 border-accent cursor-move"
+                  role="group"
+                  tabIndex={0}
+                  aria-label="Crop region. Use arrow keys to move, Alt with arrow keys to resize, hold Shift for fine steps."
+                  className="absolute border-2 border-accent cursor-move focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h, boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)' }}
                   onPointerDown={start('move')}
+                  onKeyDown={onRectKeyDown}
                 >
                   <div className={`${handle} -left-1.5 -top-1.5 cursor-nwse-resize`} onPointerDown={start('nw')} />
                   <div className={`${handle} -right-1.5 -top-1.5 cursor-nesw-resize`} onPointerDown={start('ne')} />
@@ -2012,7 +2050,15 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
               </div>
               <AnimatePresence>
                 {error && (
-                  <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-xs text-destructive">
+                  <motion.p
+                    role="alert"
+                    aria-live="assertive"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-1.5 text-xs text-destructive"
+                  >
+                    <X className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                     Incorrect password. Please try again.
                   </motion.p>
                 )}
@@ -2430,5 +2476,13 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 export default function Admin() {
   const [authed, setAuthed] = useState(() => sessionStorage.getItem(SESSION_KEY) === 'true');
   const logout = () => { sessionStorage.removeItem(SESSION_KEY); setAuthed(false); };
+
+  // Per-route title (base meta lives in index.html; this SPA route inherits it otherwise).
+  useEffect(() => {
+    const prev = document.title;
+    document.title = 'Admin · Mattathias Abraham';
+    return () => { document.title = prev; };
+  }, []);
+
   return authed ? <AdminDashboard onLogout={logout} /> : <LoginScreen onSuccess={() => setAuthed(true)} />;
 }

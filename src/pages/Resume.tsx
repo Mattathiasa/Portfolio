@@ -15,6 +15,13 @@ export default function Resume() {
     retry: false,
   });
 
+  // Per-route title (base meta lives in index.html).
+  useEffect(() => {
+    const prev = document.title;
+    document.title = 'Résumé · Mattathias Abraham';
+    return () => { document.title = prev; };
+  }, []);
+
   // Auto-trigger print dialog when opened from "Download CV" button
   useEffect(() => {
     const autoPrint = new URLSearchParams(window.location.search).get('print') === '1';

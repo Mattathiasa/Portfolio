@@ -3,7 +3,7 @@ import { Mail, Phone, MapPin, Send, Github, Linkedin, Instagram } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import emailjs from '@emailjs/browser';
 import { useQuery } from '@tanstack/react-query';
 import { getContactData } from '@/lib/firestore';
@@ -15,7 +15,6 @@ import { gsap, ScrollTrigger, useGSAP } from '@/lib/gsap';
 export const Contact = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const magneticRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
 
   const { data: contactData } = useQuery({
     queryKey: ['contact'],
@@ -45,10 +44,13 @@ export const Contact = () => {
     message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Screen-reader status for the submit result (toasts alone aren't reliably announced).
+  const [status, setStatus] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setStatus('Sending your message…');
 
     try {
       // Send email using EmailJS
@@ -65,18 +67,17 @@ export const Contact = () => {
         import.meta.env.VITE_EMAILJS_PUBLIC_KEY
       );
 
-      toast({
-        title: 'Message sent!',
+      toast.success('Message sent!', {
         description: "Thanks for reaching out. I'll get back to you soon!",
       });
+      setStatus("Message sent! Thanks for reaching out — I'll get back to you soon.");
 
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
-      toast({
-        title: 'Error sending message',
+      toast.error('Error sending message', {
         description: 'Please try again or contact me directly via email.',
-        variant: 'destructive',
       });
+      setStatus('Message failed to send. Please try again or email me directly.');
     } finally {
       setIsSubmitting(false);
     }
@@ -248,6 +249,10 @@ export const Contact = () => {
                   )}
                 </Button>
               </div>
+              {/* Screen-reader announcement of the submit outcome. */}
+              <p role="status" aria-live="polite" className="sr-only">
+                {status}
+              </p>
             </form>
           </div>
 
@@ -259,21 +264,34 @@ export const Contact = () => {
                 <span className="text-xs sm:text-sm font-medium text-accent">{c.availabilityText}</span>
               </div>
               <div className="space-y-4 sm:space-y-6">
-                {contactInfo.map((info, index) => (
-                  <a
-                    key={index}
-                    href={info.link}
-                    className="flex items-start gap-4 group transition-smooth hover:translate-x-2"
-                  >
-                    <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors">
-                      <info.icon className="w-6 h-6 text-accent" />
+                {contactInfo.map((info, index) => {
+                  const content = (
+                    <>
+                      <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors">
+                        <info.icon className="w-6 h-6 text-accent" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">{info.label}</p>
+                        <p className="text-foreground font-medium">{info.value}</p>
+                      </div>
+                    </>
+                  );
+                  // Guard against a missing link (e.g. locationUrl not configured).
+                  return info.link ? (
+                    <a
+                      key={index}
+                      href={info.link}
+                      aria-label={`${info.label}: ${info.value}`}
+                      className="flex items-start gap-4 group transition-smooth hover:translate-x-2"
+                    >
+                      {content}
+                    </a>
+                  ) : (
+                    <div key={index} className="flex items-start gap-4 group">
+                      {content}
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{info.label}</p>
-                      <p className="text-foreground font-medium">{info.value}</p>
-                    </div>
-                  </a>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
