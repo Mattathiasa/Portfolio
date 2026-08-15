@@ -14,9 +14,14 @@ import { toProjectMedia } from '@/types/portfolio';
 import type { Project, ProjectImage } from '@/types/portfolio';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { useScrollTriggerRefresh } from '@/hooks/useScrollTriggerRefresh';
+import { useLenis } from '@/providers/SmoothScrollProvider';
 import { setTunnelProgress } from '@/three/sceneBus';
 
 const categories = ['All', 'Web Apps', 'Mobile', 'Games', 'Content'];
+
+// Cards per page. Three keeps the mobile stack short and still leaves the
+// desktop track wide enough for the pinned horizontal scrub to feel intentional.
+const PAGE_SIZE = 3;
 
 const isPhone = (device: string) => device === 'mobile' || device === 'app';
 const cssAspect = (a: string) => a.replace('/', ' / ');
@@ -146,10 +151,24 @@ const Slideshow = ({
   );
 };
 
+// ── Small shared bits ─────────────────────────────────────────────────────────
+
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <p className="font-title text-[10px] tracking-[0.2em] text-accent/60 uppercase">{children}</p>
+);
+
 // ── Card (trigger + detail dialog) ────────────────────────────────────────────
 
 const ProjectCard = ({ project, index }: { project: Project; index: number }) => {
   const media = toProjectMedia(project);
+  // Firestore documents can omit array fields, so never index into them blindly.
+  const tags = project.tags ?? [];
+  const techStack = project.techStack ?? [];
+  const projectCategories = Array.isArray(project.category)
+    ? project.category
+    : project.category
+      ? [project.category as unknown as string]
+      : [];
 
   return (
     <div className="project-card w-full md:w-[42vw] xl:w-[36vw] shrink-0">
@@ -172,9 +191,11 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
               </div>
 
               {/* Category badge — top right */}
-              <span className="pointer-events-none absolute top-3 right-3 font-title text-[10px] tracking-widest text-foreground/60 bg-background/60 backdrop-blur rounded px-2.5 py-1">
-                {project.category}
-              </span>
+              {projectCategories.length > 0 && (
+                <span className="pointer-events-none absolute top-3 right-3 font-title text-[10px] tracking-widest text-foreground/60 bg-background/60 backdrop-blur rounded px-2.5 py-1">
+                  {projectCategories[0]}
+                </span>
+              )}
             </div>
 
             {/* Card body */}
@@ -201,9 +222,9 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
               </div>
 
               {/* Tags */}
-              {project.tags.length > 0 && (
+              {tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {project.tags.map((tag, i) => (
+                  {tags.map((tag, i) => (
                     <span
                       key={i}
                       className="glass-card text-[10px] tracking-wider px-2.5 py-1 text-accent/80 rounded-lg border border-accent/10"
@@ -244,64 +265,116 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
         </DialogTrigger>
 
         {/* ── Detail dialog ── */}
-        <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-xl border-accent/20 max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="pb-2">
-            <p className="font-title text-[10px] tracking-[0.25em] text-accent/60 mb-1">
-              Project {String(index + 1).padStart(2, '0')}
-            </p>
-            <DialogTitle className="font-title text-3xl sm:text-4xl gradient-text leading-tight">
-              {project.title}
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground text-sm">
-              Detailed Project Breakdown
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent
+          className="w-[calc(100vw-1.5rem)] sm:w-full max-w-3xl p-0 gap-0 bg-background/95 backdrop-blur-xl border-accent/20 max-h-[88dvh] overflow-hidden"
+        >
+          {/* Inner scroller keeps the close button pinned while the body scrolls */}
+          <div className="max-h-[88dvh] overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
 
-          <div className="space-y-6 pt-2">
-            {media.length > 0 && (
-              <div className="mx-auto rounded-lg overflow-hidden border border-accent/10 bg-secondary/30" style={modalContainerStyle(media[0])}>
-                <Slideshow media={media} alt={project.title} autoPlay interval={4500} showArrows="always" />
+            <DialogHeader className="pb-5 pr-8 text-left space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-title text-[10px] tracking-[0.25em] text-accent/60">
+                  PROJECT {String(index + 1).padStart(2, '0')}
+                </span>
+                {projectCategories.map((cat) => (
+                  <span
+                    key={cat}
+                    className="font-title text-[10px] tracking-widest text-foreground/60 bg-secondary/60 rounded px-2 py-0.5"
+                  >
+                    {cat}
+                  </span>
+                ))}
               </div>
-            )}
 
-            <div className="space-y-2">
-              <p className="font-title text-[10px] tracking-[0.2em] text-accent/60">Overview</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">{project.longDescription}</p>
-            </div>
+              <DialogTitle className="font-title text-2xl sm:text-4xl gradient-text leading-tight">
+                {project.title}
+              </DialogTitle>
 
-            <div className="grid sm:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <p className="font-title text-[10px] tracking-[0.2em] text-accent/60">Tech Stack</p>
-                <div className="flex flex-wrap gap-2">
-                  {project.techStack.map((tech) => (
-                    <span key={tech} className="glass-card text-xs px-3 py-1.5 text-foreground/90 rounded-xl border border-accent/10">
-                      {tech}
-                    </span>
-                  ))}
+              {/* Short description */}
+              <DialogDescription className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                {project.description}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6 sm:space-y-7">
+              {media.length > 0 && (
+                <div className="mx-auto rounded-lg overflow-hidden border border-accent/10 bg-secondary/30" style={modalContainerStyle(media[0])}>
+                  <Slideshow media={media} alt={project.title} autoPlay interval={4500} showArrows="always" />
                 </div>
-              </div>
-              <div className="space-y-3">
-                <p className="font-title text-[10px] tracking-[0.2em] text-accent/60">The Challenge</p>
-                <p className="text-sm text-muted-foreground leading-relaxed italic">
-                  &ldquo;{project.challenges}&rdquo;
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              {project.github && (
-                <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                  <a href={project.github} target="_blank" rel="noopener noreferrer">
-                    <Github className="w-4 h-4 mr-2" /> View Source Code
-                  </a>
-                </Button>
               )}
-              {project.demo && (
-                <Button variant="outline" className="flex-1 border-accent/40 text-accent hover:bg-accent hover:text-accent-foreground" asChild>
-                  <a href={project.demo} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-4 h-4 mr-2" /> Live Demo
-                  </a>
-                </Button>
+
+              {/* Languages / tags */}
+              {tags.length > 0 && (
+                <section className="space-y-2.5">
+                  <SectionLabel>Languages &amp; Tags</SectionLabel>
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                    {tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="glass-card text-[11px] tracking-wider px-2.5 py-1 text-accent/90 rounded-lg border border-accent/15"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Long description */}
+              {project.longDescription && (
+                <section className="space-y-2.5">
+                  <SectionLabel>Overview</SectionLabel>
+                  <p className="text-sm sm:text-[0.95rem] text-muted-foreground leading-relaxed whitespace-pre-line">
+                    {project.longDescription}
+                  </p>
+                </section>
+              )}
+
+              {/* Full tech stack */}
+              {techStack.length > 0 && (
+                <section className="space-y-2.5">
+                  <SectionLabel>Full Tech Stack</SectionLabel>
+                  <div className="flex flex-wrap gap-2">
+                    {techStack.map((tech) => (
+                      <span
+                        key={tech}
+                        className="glass-card text-xs px-3 py-1.5 text-foreground/90 rounded-xl border border-accent/10"
+                      >
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Challenges */}
+              {project.challenges && (
+                <section className="space-y-2.5">
+                  <SectionLabel>The Challenge</SectionLabel>
+                  <blockquote className="border-l-2 border-accent/40 pl-4 text-sm sm:text-[0.95rem] text-muted-foreground leading-relaxed italic whitespace-pre-line">
+                    {project.challenges}
+                  </blockquote>
+                </section>
+              )}
+
+              {/* Links */}
+              {(project.github || project.demo) && (
+                <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                  {project.github && (
+                    <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                      <a href={project.github} target="_blank" rel="noopener noreferrer">
+                        <Github className="w-4 h-4 mr-2" /> View Source Code
+                      </a>
+                    </Button>
+                  )}
+                  {project.demo && (
+                    <Button variant="outline" className="flex-1 border-accent/40 text-accent hover:bg-accent hover:text-accent-foreground" asChild>
+                      <a href={project.demo} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-4 h-4 mr-2" /> Live Demo
+                      </a>
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -311,12 +384,104 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
   );
 };
 
+// ── Pagination ────────────────────────────────────────────────────────────────
+
+/** Page numbers to render, collapsing long runs into ellipses. */
+const pageWindow = (current: number, total: number): (number | 'gap')[] => {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+
+  const items: (number | 'gap')[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+
+  if (start > 2) items.push('gap');
+  for (let i = start; i <= end; i++) items.push(i);
+  if (end < total - 1) items.push('gap');
+
+  items.push(total);
+  return items;
+};
+
+const ProjectsPagination = ({
+  page, totalPages, total, from, to, onChange,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  from: number;
+  to: number;
+  onChange: (page: number) => void;
+}) => {
+  const navBtn =
+    'flex items-center justify-center h-9 w-9 sm:h-10 sm:w-auto sm:px-4 gap-1.5 rounded-full border text-[11px] font-title tracking-widest transition-all duration-300 disabled:opacity-30 disabled:pointer-events-none border-accent/30 text-accent/70 hover:border-accent hover:text-accent';
+
+  return (
+    <nav aria-label="Projects pagination" className="flex flex-col items-center gap-4">
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={() => onChange(page - 1)}
+            disabled={page === 1}
+            aria-label="Previous page"
+            className={navBtn}
+          >
+            <ChevronLeft className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">PREV</span>
+          </button>
+
+          {pageWindow(page, totalPages).map((item, i) =>
+            item === 'gap' ? (
+              <span key={`gap-${i}`} aria-hidden className="px-1 text-accent/40 select-none">
+                &hellip;
+              </span>
+            ) : (
+              <button
+                key={item}
+                type="button"
+                onClick={() => onChange(item)}
+                aria-label={`Go to page ${item}`}
+                aria-current={item === page ? 'page' : undefined}
+                className={`font-title text-[11px] tracking-widest h-9 w-9 sm:h-10 sm:w-10 rounded-full border transition-all duration-300 ${
+                  item === page
+                    ? 'bg-accent text-accent-foreground border-accent'
+                    : 'border-accent/30 text-accent/70 hover:border-accent hover:text-accent bg-transparent'
+                }`}
+              >
+                {item}
+              </button>
+            ),
+          )}
+
+          <button
+            type="button"
+            onClick={() => onChange(page + 1)}
+            disabled={page === totalPages}
+            aria-label="Next page"
+            className={navBtn}
+          >
+            <span className="hidden sm:inline">NEXT</span>
+            <ChevronRight className="w-4 h-4 shrink-0" />
+          </button>
+        </div>
+      )}
+
+      <p aria-live="polite" className="font-title text-[10px] sm:text-[11px] tracking-[0.2em] text-muted-foreground">
+        SHOWING {from}&ndash;{to} OF {total} PROJECT{total === 1 ? '' : 'S'}
+      </p>
+    </nav>
+  );
+};
+
 export const Projects = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
+  const progressTrackRef = useRef<HTMLDivElement>(null);
   const [activeCategory, setActiveCategory] = useState('All');
+  const [page, setPage] = useState(1);
+  const { scrollTo } = useLenis();
 
   const { data: firestoreProjects, isError, error } = useQuery({
     queryKey: ['projects'],
@@ -339,7 +504,7 @@ export const Projects = () => {
   }
 
   // Use Firestore data when available; fall back to bundled defaults
-  const rawProjects = usingDefaults ? DEFAULT_PROJECTS : firestoreProjects;
+  const rawProjects: Project[] = usingDefaults ? DEFAULT_PROJECTS : firestoreProjects;
 
   // If a Firestore project has no image(s) yet, resolve them from the local defaults
   const projects = rawProjects.map(p => {
@@ -348,19 +513,48 @@ export const Projects = () => {
     return match ? { ...p, image: match.image } : p;
   });
 
-  const filteredProjects = projects.filter(
-    (project) =>
-      project.visible !== false &&
-      (activeCategory === 'All' || project.category.includes(activeCategory))
-  );
+  const filteredProjects = projects.filter((project) => {
+    if (project.visible === false) return false;
+    if (activeCategory === 'All') return true;
+    return Array.isArray(project.category)
+      ? project.category.includes(activeCategory)
+      : project.category === activeCategory;
+  });
 
-  useScrollTriggerRefresh(activeCategory, filteredProjects.length);
+  // ── Paging ──────────────────────────────────────────────────────────────────
+  const total = filteredProjects.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // Render from a clamped page so a shrinking list never blanks the gallery
+  // for a frame before the sync effect below catches up.
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * PAGE_SIZE;
+  const pageProjects = filteredProjects.slice(startIndex, startIndex + PAGE_SIZE);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const goToPage = (next: number) => {
+    const clamped = Math.min(Math.max(1, next), totalPages);
+    if (clamped === safePage) return;
+    setPage(clamped);
+    // Desktop pins the gallery over a long scroll range, so send the reader
+    // back to the top of the section instead of leaving them mid-pin.
+    if (sectionRef.current) scrollTo(sectionRef.current);
+  };
+
+  const selectCategory = (category: string) => {
+    setActiveCategory(category);
+    setPage(1);
+  };
+
+  useScrollTriggerRefresh(activeCategory, safePage, pageProjects.length);
 
   useGSAP(
     () => {
       const track = trackRef.current;
       const gallery = galleryRef.current;
-      if (!track || !gallery || filteredProjects.length === 0) return;
+      if (!track || !gallery || pageProjects.length === 0) return;
 
       const mm = gsap.matchMedia();
 
@@ -368,6 +562,25 @@ export const Projects = () => {
       // tunnel rings ride the same progress.
       mm.add('(min-width: 768px) and (prefers-reduced-motion: no-preference)', () => {
         const getDistance = () => Math.max(0, track.scrollWidth - window.innerWidth);
+
+        // A short page — the last one often holds a single card — already fits
+        // on screen. Pinning it would make the section stick with nothing to
+        // scrub, so fall back to the same fade-up reveal mobile uses.
+        if (getDistance() === 0) {
+          if (progressTrackRef.current) progressTrackRef.current.style.opacity = '0';
+          gsap.utils.toArray<HTMLElement>('.project-card', track).forEach((card) => {
+            gsap.from(card, {
+              opacity: 0,
+              y: 40,
+              duration: 0.7,
+              ease: 'power2.out',
+              scrollTrigger: { trigger: card, start: 'top 88%', toggleActions: 'play none none reverse' },
+            });
+          });
+          return () => setTunnelProgress(0);
+        }
+
+        if (progressTrackRef.current) progressTrackRef.current.style.opacity = '1';
 
         const horizontal = gsap.to(track, {
           x: () => -getDistance(),
@@ -425,7 +638,7 @@ export const Projects = () => {
         });
       });
     },
-    { scope: sectionRef, dependencies: [activeCategory, filteredProjects.length], revertOnUpdate: true }
+    { scope: sectionRef, dependencies: [activeCategory, safePage, pageProjects.length], revertOnUpdate: true }
   );
 
   return (
@@ -470,7 +683,7 @@ export const Projects = () => {
           {categories.map((category) => (
             <button
               key={category}
-              onClick={() => setActiveCategory(category)}
+              onClick={() => selectCategory(category)}
               className={`font-title text-[11px] tracking-widest px-5 py-2 rounded-full border transition-all duration-300 ${
                 activeCategory === category
                   ? 'bg-accent text-accent-foreground border-accent'
@@ -484,28 +697,55 @@ export const Projects = () => {
       </div>
 
       {/* Gallery: pinned horizontal scrub on desktop, vertical stack on mobile */}
-      <div
-        ref={galleryRef}
-        className="relative md:h-screen md:flex md:flex-col md:justify-center md:overflow-hidden"
-      >
+      {pageProjects.length > 0 ? (
         <div
-          ref={trackRef}
-          className="flex flex-col md:flex-row md:items-center gap-8 md:gap-[4vw] px-4 sm:px-6 md:px-[8vw] md:w-max"
+          ref={galleryRef}
+          className="relative md:h-screen md:flex md:flex-col md:justify-center md:overflow-hidden"
         >
-          {filteredProjects.map((project, i) => (
-            <ProjectCard key={project.title} project={project} index={i} />
-          ))}
-        </div>
-
-        {/* Scrub progress (desktop only, visible while pinned) */}
-        <div className="hidden md:block absolute bottom-10 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-border/60 rounded-full overflow-hidden">
           <div
-            ref={progressRef}
-            className="h-full w-full origin-left bg-accent"
-            style={{ transform: 'scaleX(0)' }}
+            ref={trackRef}
+            className="flex flex-col md:flex-row md:items-center gap-8 md:gap-[4vw] px-4 sm:px-6 md:px-[8vw] md:w-max"
+          >
+            {pageProjects.map((project, i) => (
+              <ProjectCard
+                key={project.id ?? project.title}
+                project={project}
+                index={startIndex + i}
+              />
+            ))}
+          </div>
+
+          {/* Scrub progress (desktop only, visible while pinned) */}
+          <div
+            ref={progressTrackRef}
+            className="hidden md:block absolute bottom-10 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-border/60 rounded-full overflow-hidden transition-opacity duration-300"
+          >
+            <div
+              ref={progressRef}
+              className="h-full w-full origin-left bg-accent"
+              style={{ transform: 'scaleX(0)' }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center py-16">
+          <p className="text-muted-foreground">No projects in this category yet.</p>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {total > 0 && (
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 mt-10 sm:mt-14">
+          <ProjectsPagination
+            page={safePage}
+            totalPages={totalPages}
+            total={total}
+            from={startIndex + 1}
+            to={startIndex + pageProjects.length}
+            onChange={goToPage}
           />
         </div>
-      </div>
+      )}
 
       {/* View More */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center mt-12">
