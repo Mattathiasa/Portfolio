@@ -128,38 +128,7 @@ export const DEFAULT_CONTACT: ContactData = {
   availabilityText: 'Available for new projects',
 };
 
-export const DEFAULT_BLOG_POSTS: Omit<BlogPost, 'id'>[] = [
-  {
-    title:    'Building Scalable React Applications',
-    excerpt:  'Learn best practices for structuring large-scale React applications with TypeScript, state management, and performance optimization.',
-    image:    '',
-    category: 'Development',
-    date:     '2024-11-05',
-    readTime: '8 min read',
-    link:     '#',
-    order:    0,
-  },
-  {
-    title:    'Football Analytics: Data-Driven Insights',
-    excerpt:  'How data analytics is revolutionizing football strategy, player performance tracking, and match prediction using modern technologies.',
-    image:    '',
-    category: 'Analytics',
-    date:     '2024-10-28',
-    readTime: '6 min read',
-    link:     '#',
-    order:    1,
-  },
-  {
-    title:    'My Journey into Software Engineering',
-    excerpt:  'From choosing computer science to graduating as a software engineer — lessons learned, challenges faced, and advice for aspiring developers.',
-    image:    '',
-    category: 'Career',
-    date:     '2024-10-15',
-    readTime: '10 min read',
-    link:     '#',
-    order:    2,
-  },
-];
+export const DEFAULT_BLOG_POSTS: Omit<BlogPost, 'id'>[] = [];
 
 export const DEFAULT_CV: CVData = {
   header: {

@@ -6,14 +6,8 @@ import { getBlogPosts, getContent } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { DEFAULT_BLOG_POSTS, DEFAULT_CONTENT } from '@/data/defaults';
 import type { BlogPost } from '@/types/portfolio';
-import reactImage from '@/assets/blog-react.jpg';
-import analyticsImage from '@/assets/blog-analytics.jpg';
-import careerImage from '@/assets/blog-career.jpg';
 import { SplitReveal } from '@/components/SplitReveal';
 import { gsap, useGSAP } from '@/lib/gsap';
-
-// Fallback images for the 3 default posts (matched by order index)
-const FALLBACK_IMAGES = [reactImage, analyticsImage, careerImage];
 
 export const Blog = () => {
   const sectionRef = useRef<HTMLElement>(null);
@@ -26,7 +20,9 @@ export const Blog = () => {
     retry: false,
   });
 
-  const rawPosts: BlogPost[] = (firestorePosts && firestorePosts.length > 0) ? firestorePosts : DEFAULT_BLOG_POSTS;
+  const rawPosts: BlogPost[] = (firestorePosts && firestorePosts.length > 0)
+    ? firestorePosts
+    : DEFAULT_BLOG_POSTS;
 
   const { data: content } = useQuery({
     queryKey: ['content'],
@@ -40,11 +36,7 @@ export const Blog = () => {
   const blogSubtitle = content?.blogSubtitle ?? DEFAULT_CONTENT.blogSubtitle;
   const blogViewAllText = content?.blogViewAllText ?? DEFAULT_CONTENT.blogViewAllText;
 
-  // Resolve empty images: use local fallback by order index
-  const posts = rawPosts.map((p, i) => ({
-    ...p,
-    image: p.image || FALLBACK_IMAGES[i] || '',
-  }));
+  const posts = rawPosts;
 
   useGSAP(
     () => {
@@ -127,6 +119,12 @@ export const Blog = () => {
           </SplitReveal>
         </div>
 
+        {posts.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-lg text-muted-foreground mb-2">Blog coming soon</p>
+            <p className="text-sm text-muted-foreground/60">I will be sharing insights on mobile development, Flutter, React Native, and building scalable systems.</p>
+          </div>
+        ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
           {posts.map((post, index) => (
             <article
@@ -185,12 +183,15 @@ export const Blog = () => {
             </article>
           ))}
         </div>
+        )}
 
-        <div className="blog-cta text-center">
-          <Button size="lg" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground" asChild>
-            <a href="#">{blogViewAllText}</a>
-          </Button>
-        </div>
+        {posts.length > 0 && (
+          <div className="blog-cta text-center">
+            <Button size="lg" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground" asChild>
+              <a href="#">{blogViewAllText}</a>
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );
