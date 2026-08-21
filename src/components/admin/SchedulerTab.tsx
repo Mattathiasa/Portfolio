@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as fb from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import type { SchedulerItem, SchedulerItemType, SchedulerPriority, SchedulerStatus, SchedulerRecurring } from '@/types/portfolio';
+import type { SchedulerItem, SchedulerItemType, SchedulerPriority, SchedulerStatus, SchedulerRecurring, SchedulerSubtask, SchedulerSortBy } from '@/types/portfolio';
 
 // ── Storage Keys & Config ──────────────────────────────────────────────────────
 
@@ -52,7 +52,19 @@ const DEV_PRESETS = [
   { label: '🔍 PR Review', type: 'todo' as SchedulerItemType, priority: 'medium' as SchedulerPriority, est: 30, tag: 'review' },
   { label: '🚀 Staging Deploy', type: 'deadline' as SchedulerItemType, priority: 'high' as SchedulerPriority, est: 30, tag: 'devops' },
   { label: '☕ Standup Sync', type: 'meeting' as SchedulerItemType, priority: 'low' as SchedulerPriority, est: 15, tag: 'meeting' },
+  { label: '📝 Code Refactor', type: 'project' as SchedulerItemType, priority: 'medium' as SchedulerPriority, est: 90, tag: 'refactor' },
+  { label: '🧪 Write Tests', type: 'todo' as SchedulerItemType, priority: 'medium' as SchedulerPriority, est: 60, tag: 'feature' },
+  { label: '📦 Release Prep', type: 'deadline' as SchedulerItemType, priority: 'high' as SchedulerPriority, est: 45, tag: 'devops' },
 ];
+
+const SORT_OPTIONS: { value: SchedulerSortBy; label: string }[] = [
+  { value: 'priority', label: 'Priority' },
+  { value: 'date', label: 'Date' },
+  { value: 'title', label: 'Title' },
+  { value: 'created', label: 'Created' },
+];
+
+const PRIORITY_ORDER: Record<SchedulerPriority, number> = { high: 0, medium: 1, low: 2 };
 
 const PRESET_TAGS = ['frontend', 'backend', 'bug', 'feature', 'refactor', 'api', 'devops', 'meeting', 'design'];
 
@@ -75,6 +87,7 @@ const emptyForm = () => ({
   status: 'backlog' as SchedulerStatus, date: '', time: '', duration: '',
   estMinutes: 30, actualMinutes: 0, notes: '', projectId: 'none',
   link: '', tags: [] as string[], recurring: 'none' as SchedulerRecurring,
+  subtasks: [] as SchedulerSubtask[],
 });
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -96,6 +109,9 @@ export function SchedulerTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SchedulerSortBy>('priority');
+  const [showCompleted, setShowCompleted] = useState(true);
+  const [importExportOpen, setImportExportOpen] = useState(false);
 
   // Command Palette
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -186,6 +202,7 @@ export function SchedulerTab() {
         estMinutes: item.estMinutes ?? 30, actualMinutes: item.actualMinutes ?? 0,
         notes: item.notes ?? '', projectId: item.projectId ?? 'none',
         link: item.link ?? '', tags: item.tags ?? [], recurring: item.recurring ?? 'none',
+        subtasks: item.subtasks ?? [],
       });
     } else {
       setEditingItem(null);
@@ -214,6 +231,119 @@ export function SchedulerTab() {
     }));
   };
 
+  // ── Date / Helpers ───────────────────────────────────────────────────────
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const isOverdue = (item: SchedulerItem) => {
+    if (!item.date || item.completed || item.status === 'completed') return false;
+    return item.date < todayStr;
+  };
+
+  const sortItems = (list: SchedulerItem[]) => {
+    const sorted = [...list];
+    switch (sortBy) {
+      case 'priority':
+        sorted.sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1));
+        break;
+      case 'date':
+        sorted.sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999'));
+        break;
+      case 'title':
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'created':
+        sorted.sort((a, b) => {
+          const ta = a.createdAt && typeof a.createdAt === 'object' && 'seconds' in a.createdAt ? (a.createdAt as any).seconds : 0;
+          const tb = b.createdAt && typeof b.createdAt === 'object' && 'seconds' in b.createdAt ? (b.createdAt as any).seconds : 0;
+          return tb - ta;
+        });
+        break;
+    }
+    return sorted;
+  };
+
+  const nextRecurringDate = (dateStr: string, rule: SchedulerRecurring): string => {
+    const d = new Date(dateStr + 'T00:00:00');
+    if (rule === 'daily') d.setDate(d.getDate() + 1);
+    else if (rule === 'weekly') d.setDate(d.getDate() + 7);
+    else if (rule === 'monthly') d.setMonth(d.getMonth() + 1);
+    return d.toISOString().split('T')[0];
+  };
+
+  const toggleSubtask = async (item: SchedulerItem, subtaskId: string) => {
+    if (!item.subtasks) return;
+    const updated = items.map(i => {
+      if (i.id !== item.id) return i;
+      const subtasks = i.subtasks!.map(s => s.id === subtaskId ? { ...s, done: !s.done } : s);
+      return { ...i, subtasks };
+    });
+    const patch = { subtasks: updated.find(i => i.id === item.id)!.subtasks };
+    await applyAndSync(updated, () => fb.updateSchedulerItem(item.id, clean(patch as Record<string, unknown>)));
+  };
+
+  const addSubtask = async (item: SchedulerItem, text: string) => {
+    if (!text.trim()) return;
+    const newSub: SchedulerSubtask = { id: 'sub-' + Date.now(), text: text.trim(), done: false };
+    const updated = items.map(i => i.id === item.id ? { ...i, subtasks: [...(i.subtasks ?? []), newSub] } : i);
+    const patch = { subtasks: updated.find(i => i.id === item.id)!.subtasks };
+    await applyAndSync(updated, () => fb.updateSchedulerItem(item.id, clean(patch as Record<string, unknown>)));
+  };
+
+  const deleteSubtask = async (item: SchedulerItem, subtaskId: string) => {
+    if (!item.subtasks) return;
+    const updated = items.map(i => i.id === item.id ? { ...i, subtasks: i.subtasks!.filter(s => s.id !== subtaskId) } : i);
+    const patch = { subtasks: updated.find(i => i.id === item.id)!.subtasks };
+    await applyAndSync(updated, () => fb.updateSchedulerItem(item.id, clean(patch as Record<string, unknown>)));
+  };
+
+  const duplicateItem = async (item: SchedulerItem) => {
+    const { id: _id, createdAt: _ca, updatedAt: _ua, ...rest } = item;
+    const dup: Omit<SchedulerItem, 'id'> = { ...rest, title: item.title + ' (copy)', completed: false, status: 'backlog', date: undefined, completedAt: undefined };
+    const tempId = 'local-' + Date.now();
+    const newItem: SchedulerItem = { ...dup, id: tempId };
+    const optimistic = [newItem, ...items];
+    setItems(optimistic);
+    saveLocal(optimistic);
+    if (isFirebaseConfigured && fbStatus !== 'error') {
+      setSyncing(true);
+      try {
+        const realId = await fb.addSchedulerItem(dup as Omit<SchedulerItem, 'id'>);
+        const synced = optimistic.map(i => i.id === tempId ? { ...i, id: realId } : i);
+        setItems(synced); saveLocal(synced);
+        toast.success('Task duplicated');
+      } catch { toast.success('Duplicated locally'); }
+      finally { setSyncing(false); }
+    } else { toast.success('Duplicated locally'); }
+  };
+
+  // Export / Import JSON
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `scheduler_backup_${todayStr}.json`;
+    a.click();
+    toast.success('Exported scheduler data');
+  };
+
+  const importJson = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string) as SchedulerItem[];
+        if (!Array.isArray(data)) throw new Error('Invalid format');
+        await applyAndSync([...data, ...items], () => {
+          return Promise.all(data.map(item => {
+            const { id, ...rest } = item;
+            return fb.addSchedulerItem(rest as Omit<SchedulerItem, 'id'>);
+          })).then(() => {});
+        });
+        toast.success(`Imported ${data.length} tasks`);
+      } catch { toast.error('Invalid JSON file'); }
+    };
+    reader.readAsText(file);
+  };
+
   // ── CRUD Actions ─────────────────────────────────────────────────────────────
 
   const handleSave = async () => {
@@ -235,7 +365,9 @@ export function SchedulerTab() {
       link: form.link.trim() || undefined,
       tags: form.tags.length ? form.tags : undefined,
       recurring: form.recurring !== 'none' ? form.recurring : undefined,
+      subtasks: form.subtasks.length ? form.subtasks : undefined,
       completed: isDone,
+      completedAt: isDone ? new Date().toISOString() : undefined,
     };
 
     if (editingItem) {
@@ -279,9 +411,36 @@ export function SchedulerTab() {
       status: newStatus,
       completed: isCompleted,
       date: newStatus === 'backlog' ? undefined : item.date ?? new Date().toISOString().split('T')[0],
+      completedAt: isCompleted ? new Date().toISOString() : undefined,
     };
-    const updated = items.map(i => i.id === item.id ? { ...i, ...patch } : i);
+    let updated = items.map(i => i.id === item.id ? { ...i, ...patch } : i);
     await applyAndSync(updated, () => fb.updateSchedulerItem(item.id, clean(patch)));
+
+    // Auto-generate next occurrence for recurring tasks
+    if (isCompleted && item.recurring && item.recurring !== 'none' && item.date) {
+      const nextDate = nextRecurringDate(item.date, item.recurring);
+      const { id: _id, createdAt: _ca, updatedAt: _ua, completedAt: _cat, ...rest } = item;
+      const nextItem: Omit<SchedulerItem, 'id'> = {
+        ...rest,
+        date: nextDate,
+        status: 'scheduled',
+        completed: false,
+        completedAt: undefined,
+        subtasks: rest.subtasks?.map(s => ({ ...s, done: false })) ?? [],
+      };
+      const tempId = 'local-' + Date.now();
+      const optimisticNext: SchedulerItem = { ...nextItem, id: tempId };
+      updated = [optimisticNext, ...updated];
+      setItems(updated); saveLocal(updated);
+      if (isFirebaseConfigured && fbStatus !== 'error') {
+        try {
+          const realId = await fb.addSchedulerItem(nextItem as Omit<SchedulerItem, 'id'>);
+          const synced = updated.map(i => i.id === tempId ? { ...i, id: realId } : i);
+          setItems(synced); saveLocal(synced);
+        } catch { /* kept locally */ }
+      }
+      toast.success(`Recurring: next ${item.recurring} task created for ${nextDate}`);
+    }
   };
 
   const scheduleOnDate = async (itemId: string, date: string | undefined, time?: string) => {
@@ -289,7 +448,7 @@ export function SchedulerTab() {
       ...i,
       date,
       time: time ?? i.time,
-      status: date ? (i.status === 'backlog' ? 'scheduled' : i.status) : 'backlog'
+      status: (date ? (i.status === 'backlog' ? 'scheduled' : i.status) : 'backlog') as SchedulerStatus
     } : i);
     const patch = date !== undefined ? { date, time: time ?? null } : { date: null, time: null, status: 'backlog' };
     await applyAndSync(updated, () => fb.updateSchedulerItem(itemId, clean(patch as Record<string, unknown>)));
@@ -354,7 +513,6 @@ export function SchedulerTab() {
 
   // ── Date Math ────────────────────────────────────────────────────────────────
 
-  const todayStr = new Date().toISOString().split('T')[0];
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -410,7 +568,12 @@ export function SchedulerTab() {
     return map;
   }, [filteredItems]);
 
-  const unscheduled = useMemo(() => filteredItems.filter(i => !i.date || i.status === 'backlog'), [filteredItems]);
+  const unscheduled = useMemo(() => {
+    const backlog = filteredItems.filter(i => !i.date || i.status === 'backlog');
+    return showCompleted ? backlog : backlog.filter(i => !i.completed);
+  }, [filteredItems, showCompleted]);
+
+  const sortedUnscheduled = useMemo(() => sortItems(unscheduled), [unscheduled, sortBy]);
 
   // Analytics Metrics
   const metrics = useMemo(() => {
@@ -418,6 +581,7 @@ export function SchedulerTab() {
     const totalEst = items.reduce((acc, i) => acc + (i.estMinutes ?? 0), 0);
     const totalActual = items.reduce((acc, i) => acc + (i.actualMinutes ?? 0), 0);
     const todayTasks = items.filter(i => i.date === todayStr);
+    const overdueItems = items.filter(i => isOverdue(i));
 
     return {
       completedCount: completed.length,
@@ -426,6 +590,7 @@ export function SchedulerTab() {
       totalEstHours: (totalEst / 60).toFixed(1),
       totalActualHours: (totalActual / 60).toFixed(1),
       todayCount: todayTasks.length,
+      overdueCount: overdueItems.length,
     };
   }, [items, todayStr]);
 
@@ -489,7 +654,7 @@ export function SchedulerTab() {
       )}
 
       {/* ── Daily Standup & Velocity Summary Card ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Card className="glass-card border-accent/15 p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Today's Focus</p>
@@ -499,10 +664,17 @@ export function SchedulerTab() {
         </Card>
         <Card className="glass-card border-accent/15 p-3 sm:p-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Completion Velocity</p>
+            <p className="text-xs text-muted-foreground">Completion</p>
             <CheckSquare className="w-4 h-4 text-emerald-400" />
           </div>
           <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{metrics.completionRate}% <span className="text-xs font-normal text-muted-foreground">({metrics.completedCount}/{metrics.totalCount})</span></p>
+        </Card>
+        <Card className="glass-card border-accent/15 p-3 sm:p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Overdue</p>
+            <AlertTriangle className="w-4 h-4 text-rose-400" />
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{metrics.overdueCount} <span className="text-xs font-normal text-muted-foreground">tasks</span></p>
         </Card>
         <Card className="glass-card border-accent/15 p-3 sm:p-4">
           <div className="flex items-center justify-between">
@@ -578,6 +750,19 @@ export function SchedulerTab() {
             <Download className="w-3.5 h-3.5 sm:mr-1" /><span className="hidden sm:inline">Export .ics</span>
           </Button>
 
+          {/* Export JSON */}
+          <Button variant="outline" size="sm" className="h-9 text-xs border-accent/30" onClick={exportJson} title="Export all tasks as JSON backup">
+            <Download className="w-3.5 h-3.5 sm:mr-1" /><span className="hidden sm:inline">Backup</span>
+          </Button>
+
+          {/* Import JSON */}
+          <label className="inline-flex items-center">
+            <Button variant="outline" size="sm" className="h-9 text-xs border-accent/30" asChild title="Import tasks from JSON backup">
+              <span><Download className="w-3.5 h-3.5 sm:mr-1 rotate-180" /><span className="hidden sm:inline">Import</span></span>
+            </Button>
+            <input type="file" accept=".json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) importJson(f); e.target.value = ''; }} />
+          </label>
+
           {/* Command Palette Trigger */}
           <Button variant="outline" size="sm" className="h-9 text-xs border-border/60 text-muted-foreground hover:text-foreground" onClick={() => setCmdOpen(true)}>
             <Command className="w-3.5 h-3.5 mr-1" /> <kbd className="text-[10px] font-mono bg-secondary px-1 rounded">⌘K</kbd>
@@ -645,25 +830,38 @@ export function SchedulerTab() {
                 </CardTitle>
                 <p className="text-[11px] text-muted-foreground">Unscheduled backlog · Drag to calendar</p>
               </div>
-              <Badge variant="secondary" className="text-xs">{unscheduled.length}</Badge>
+              <div className="flex items-center gap-2">
+                <Select value={sortBy} onValueChange={v => setSortBy(v as SchedulerSortBy)}>
+                  <SelectTrigger className="w-24 h-7 text-[10px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Badge variant="secondary" className="text-xs">{unscheduled.length}</Badge>
+              </div>
             </CardHeader>
 
             <CardContent className="p-3 flex-1 flex flex-col space-y-2 overflow-y-auto max-h-[600px]">
-              {unscheduled.length === 0 ? (
+              {sortedUnscheduled.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/50 rounded-lg">
                   <Sparkles className="w-8 h-8 text-muted-foreground/30 mb-2" />
                   <p className="text-xs text-muted-foreground font-medium">No unscheduled tasks</p>
                 </div>
               ) : (
-                unscheduled.map(item => (
+                sortedUnscheduled.map(item => (
                   <TaskCard
                     key={item.id}
                     item={item}
+                    overdue={isOverdue(item)}
                     onDragStart={onDragStart}
                     onOpenForm={openForm}
                     onDelete={deleteItem}
+                    onDuplicate={duplicateItem}
                     onStartFocus={startFocusTimer}
                     onToggleDone={updateItemStatus}
+                    onToggleSubtask={toggleSubtask}
                   />
                 ))
               )}
@@ -717,13 +915,14 @@ export function SchedulerTab() {
                       <div className="space-y-1 my-1 flex-1 overflow-y-auto max-h-[65px]">
                         {dayItems.slice(0, 3).map(item => {
                           const cfg = TYPE_CONFIG[item.type];
+                          const itemOverdue = isOverdue(item);
                           return (
                             <div
                               key={item.id}
                               draggable
                               onDragStart={e => { e.stopPropagation(); onDragStart(e, item.id); }}
                               onClick={e => { e.stopPropagation(); openForm(cell.dateStr, item); }}
-                              className={`text-[10px] px-1.5 py-0.5 rounded border truncate flex items-center gap-1 hover:scale-[1.02] ${item.completed ? 'opacity-50 line-through bg-secondary/40' : `${cfg.bg} ${cfg.color}`}`}
+                              className={`text-[10px] px-1.5 py-0.5 rounded border truncate flex items-center gap-1 hover:scale-[1.02] ${item.completed ? 'opacity-50 line-through bg-secondary/40' : itemOverdue ? 'border-rose-500/50 bg-rose-500/10 text-rose-400' : `${cfg.bg} ${cfg.color}`}`}
                             >
                               <cfg.icon className="w-2.5 h-2.5 shrink-0" />
                               <span className="truncate">{item.time ? `${item.time} ${item.title}` : item.title}</span>
@@ -783,11 +982,14 @@ export function SchedulerTab() {
                         key={item.id}
                         item={item}
                         compact
+                        overdue={isOverdue(item)}
                         onDragStart={onDragStart}
                         onOpenForm={openForm}
                         onDelete={deleteItem}
+                        onDuplicate={duplicateItem}
                         onStartFocus={startFocusTimer}
                         onToggleDone={updateItemStatus}
+                        onToggleSubtask={toggleSubtask}
                       />
                     ))}
                   </div>
@@ -831,11 +1033,14 @@ export function SchedulerTab() {
                         key={item.id}
                         item={item}
                         compact
+                        overdue={isOverdue(item)}
                         onDragStart={onDragStart}
                         onOpenForm={openForm}
                         onDelete={deleteItem}
+                        onDuplicate={duplicateItem}
                         onStartFocus={startFocusTimer}
                         onToggleDone={updateItemStatus}
+                        onToggleSubtask={toggleSubtask}
                       />
                     ))}
                     {slotItems.length === 0 && (
@@ -888,11 +1093,14 @@ export function SchedulerTab() {
                     <TaskCard
                       key={item.id}
                       item={item}
+                      overdue={isOverdue(item)}
                       onDragStart={onDragStart}
                       onOpenForm={openForm}
                       onDelete={deleteItem}
+                      onDuplicate={duplicateItem}
                       onStartFocus={startFocusTimer}
                       onToggleDone={updateItemStatus}
+                      onToggleSubtask={toggleSubtask}
                     />
                   ))}
                 </div>
@@ -928,11 +1136,14 @@ export function SchedulerTab() {
                 <TaskCard
                   key={item.id}
                   item={item}
+                  overdue={isOverdue(item)}
                   onDragStart={onDragStart}
                   onOpenForm={openForm}
                   onDelete={deleteItem}
+                  onDuplicate={duplicateItem}
                   onStartFocus={startFocusTimer}
                   onToggleDone={updateItemStatus}
+                  onToggleSubtask={toggleSubtask}
                 />
               ))
             )}
@@ -1124,39 +1335,54 @@ export function SchedulerTab() {
 
 // ── Reusable Task Card Component ──────────────────────────────────────────────
 
+// ── Reusable Task Card Component ──────────────────────────────────────────────
+
 function TaskCard({
   item,
   compact = false,
+  overdue = false,
   onDragStart,
   onOpenForm,
   onDelete,
+  onDuplicate,
   onStartFocus,
   onToggleDone,
+  onToggleSubtask,
 }: {
   item: SchedulerItem;
   compact?: boolean;
+  overdue?: boolean;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onOpenForm: (presetDate?: string, item?: SchedulerItem) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (item: SchedulerItem) => void;
   onStartFocus: (item: SchedulerItem) => void;
   onToggleDone: (item: SchedulerItem, status: SchedulerStatus) => void;
+  onToggleSubtask: (item: SchedulerItem, subtaskId: string) => void;
 }) {
   const cfg = TYPE_CONFIG[item.type];
   const prio = PRIORITY_CONFIG[item.priority];
   const Icon = cfg.icon;
+  const subtasksDone = item.subtasks?.filter(s => s.done).length ?? 0;
+  const subtasksTotal = item.subtasks?.length ?? 0;
+  const progressPct = item.estMinutes && item.actualMinutes ? Math.min(100, Math.round((item.actualMinutes / item.estMinutes) * 100)) : 0;
 
   return (
     <div
       draggable
       onDragStart={e => onDragStart(e, item.id)}
-      className={`group relative p-2.5 rounded-lg border border-border/60 bg-background/60 hover:border-accent/40 transition-all cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md space-y-1.5 ${
-        item.completed ? 'opacity-50 line-through bg-secondary/30' : ''
+      className={`group relative p-2.5 rounded-lg border bg-background/60 hover:border-accent/40 transition-all cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md space-y-1.5 ${
+        overdue && !item.completed ? 'border-rose-500/50 bg-rose-500/5' : item.completed ? 'opacity-50 line-through bg-secondary/30 border-border/60' : 'border-border/60'
       }`}
     >
       <div className="flex items-start gap-2">
         <GripVertical className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0 mt-0.5 group-hover:text-accent transition-colors" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">{item.title}</p>
+          <div className="flex items-center gap-1">
+            {overdue && !item.completed && <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />}
+            {item.recurring && item.recurring !== 'none' && <RotateCcw className="w-3 h-3 text-blue-400 shrink-0" />}
+            <p className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">{item.title}</p>
+          </div>
           <div className="flex items-center gap-1 mt-1 flex-wrap">
             <span className={`text-[9px] px-1.5 py-0.2 rounded border flex items-center gap-0.5 ${cfg.bg} ${cfg.color}`}>
               <Icon className="w-2.5 h-2.5" /> {cfg.label}
@@ -1164,12 +1390,40 @@ function TaskCard({
             <span className={`text-[9px] px-1 py-0.2 rounded border ${prio.color}`}>
               {prio.label}
             </span>
+            {overdue && !item.completed && <span className="text-[9px] px-1 py-0.2 rounded border border-rose-500/30 text-rose-400">Overdue</span>}
             {item.link && (
               <a href={item.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[9px] text-accent hover:underline flex items-center gap-0.5">
                 <ExternalLink className="w-2.5 h-2.5" /> Link
               </a>
             )}
           </div>
+          {/* Progress bar (est vs actual) */}
+          {progressPct > 0 && !compact && (
+            <div className="mt-1.5">
+              <div className="flex items-center justify-between text-[8px] text-muted-foreground mb-0.5">
+                <span>{item.actualMinutes}m / {item.estMinutes}m</span>
+                <span>{progressPct}%</span>
+              </div>
+              <div className="h-1 bg-secondary/40 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${progressPct > 100 ? 'bg-rose-500' : progressPct > 75 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(100, progressPct)}%` }} />
+              </div>
+            </div>
+          )}
+          {/* Subtasks */}
+          {item.subtasks && item.subtasks.length > 0 && !compact && (
+            <div className="mt-1.5 space-y-0.5">
+              <div className="flex items-center gap-1 text-[8px] text-muted-foreground">
+                <CheckSquare className="w-2.5 h-2.5" /> {subtasksDone}/{subtasksTotal} subtasks
+              </div>
+              {item.subtasks.slice(0, 3).map(s => (
+                <label key={s.id} className="flex items-center gap-1.5 text-[9px] text-foreground/80 cursor-pointer">
+                  <input type="checkbox" checked={s.done} onChange={() => onToggleSubtask(item, s.id)} className="w-3 h-3 rounded border-border accent-accent" />
+                  <span className={s.done ? 'line-through text-muted-foreground' : ''}>{s.text}</span>
+                </label>
+              ))}
+              {item.subtasks.length > 3 && <p className="text-[8px] text-muted-foreground">+{item.subtasks.length - 3} more</p>}
+            </div>
+          )}
           {item.tags && item.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
               {item.tags.map(t => (
@@ -1180,7 +1434,7 @@ function TaskCard({
         </div>
       </div>
 
-      {!compact && (
+      {!compact ? (
         <div className="flex items-center justify-between pt-1 border-t border-border/30 text-[10px] text-muted-foreground">
           <div className="flex items-center gap-2">
             <button
@@ -1199,8 +1453,22 @@ function TaskCard({
           </div>
           <div className="flex items-center gap-1">
             <button onClick={() => onOpenForm(undefined, item)} className="hover:text-accent"><FileText className="w-3 h-3" /></button>
+            <button onClick={() => onDuplicate(item)} className="hover:text-accent" title="Duplicate task">
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            </button>
             <button onClick={() => onDelete(item.id)} className="hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
           </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1 pt-1 border-t border-border/30">
+          <button
+            onClick={() => onToggleDone(item, item.completed ? 'scheduled' : 'completed')}
+            className="hover:text-accent p-0.5"
+            title={item.completed ? 'Undo complete' : 'Mark Done'}
+          >
+            <CheckCircle2 className={`w-3 h-3 ${item.completed ? 'text-emerald-400' : ''}`} />
+          </button>
+          <button onClick={() => onOpenForm(undefined, item)} className="hover:text-accent p-0.5"><FileText className="w-3 h-3" /></button>
         </div>
       )}
     </div>

@@ -224,6 +224,13 @@ export type SchedulerItemType = 'meeting' | 'deadline' | 'todo' | 'project';
 export type SchedulerPriority = 'high' | 'medium' | 'low';
 export type SchedulerStatus = 'backlog' | 'scheduled' | 'in_progress' | 'review' | 'completed';
 export type SchedulerRecurring = 'none' | 'daily' | 'weekly' | 'monthly';
+export type SchedulerSortBy = 'priority' | 'date' | 'title' | 'created';
+
+export interface SchedulerSubtask {
+  id: string;
+  text: string;
+  done: boolean;
+}
 
 export interface SchedulerItem {
   id: string;
@@ -251,6 +258,12 @@ export interface SchedulerItem {
   recurring?: SchedulerRecurring;
   /** Freeform notes / agenda */
   notes?: string;
+  /** Subtasks / checklist */
+  subtasks?: SchedulerSubtask[];
+  /** When the task was completed */
+  completedAt?: string;
+  /** Task ID this item is blocked by */
+  blockedBy?: string;
   completed: boolean;
   createdAt?: unknown;
   updatedAt?: unknown;
