@@ -1,4 +1,4 @@
-import type { CVData, AboutHighlight, ContactData, BlogPost } from '@/types/portfolio';
+import type { CVData, AboutHighlight, ContactData, BlogPost, Testimonial, Certification } from '@/types/portfolio';
 import clashrollerImage from '@/assets/project-clashroller.png';
 import footballFreestyleImage from '@/assets/project-football-freestyle.png';
 import skzpyImage from '@/assets/project-skypy.png';
@@ -277,3 +277,47 @@ export const DEFAULT_CV: CVData = {
     { name: 'English', level: 'Professional' },
   ],
 };
+
+export const DEFAULT_TESTIMONIALS: Testimonial[] = [
+  {
+    id: 't1',
+    quote: 'Mattathias delivered an exceptional church management system that transformed how we organize our 300+ member community. His technical skill and reliability made the entire process seamless.',
+    author: 'Mahibere Ahaw Leadership',
+    role: 'Church Administration',
+    company: 'Mahibere Ahaw Church',
+    order: 0,
+  },
+  {
+    id: 't2',
+    quote: 'Working with Mattathias has been a pleasure. He quickly understood our complex role hierarchy and built a system that handles it flawlessly. His Flutter migration work has significantly reduced our maintenance costs.',
+    author: 'DAFTech Engineering Team',
+    role: 'Development Team Lead',
+    company: 'DAFTech Computer Engineering',
+    order: 1,
+  },
+  {
+    id: 't3',
+    quote: 'One of the most talented graduates I have worked with. Mattathias combines strong technical fundamentals with genuine passion for building things that matter.',
+    author: 'Academic Supervisor',
+    role: 'Professor of Software Engineering',
+    company: 'HiLCoE',
+    order: 2,
+  },
+];
+
+export const DEFAULT_CERTIFICATIONS: Certification[] = [
+  {
+    id: 'cert-1',
+    name: 'BSc Software Engineering',
+    issuer: 'HiLCoE — Higher Learning College of Engineering',
+    date: '2025',
+    order: 0,
+  },
+  {
+    id: 'cert-2',
+    name: 'Software Engineering Internship',
+    issuer: 'African Union',
+    date: '2024',
+    order: 1,
+  },
+];

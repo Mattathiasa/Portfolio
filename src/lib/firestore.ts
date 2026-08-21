@@ -4,7 +4,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebase';
-import type { Project, Skill, PortfolioContent, CVData, AboutHighlight, ContactData, BlogPost, ProjectDev, SchedulerItem } from '@/types/portfolio';
+import type { Project, Skill, PortfolioContent, CVData, AboutHighlight, ContactData, BlogPost, ProjectDev, SchedulerItem, Testimonial, Certification } from '@/types/portfolio';
 
 // ── Projects ────────────────────────────────────────────────────────────────
 
@@ -144,6 +144,30 @@ export async function getCV(): Promise<CVData | null> {
 
 export async function saveCV(data: CVData): Promise<void> {
   await setDoc(doc(db, 'content', 'cv'), data);
+}
+
+// ── Testimonials ─────────────────────────────────────────────────────────────
+
+export async function getTestimonials(): Promise<Testimonial[]> {
+  const snap = await getDoc(doc(db, 'content', 'testimonials'));
+  if (snap.exists()) return (snap.data().items as Testimonial[]) ?? [];
+  return [];
+}
+
+export async function saveTestimonials(items: Testimonial[]): Promise<void> {
+  await setDoc(doc(db, 'content', 'testimonials'), { items });
+}
+
+// ── Certifications ────────────────────────────────────────────────────────────
+
+export async function getCertifications(): Promise<Certification[]> {
+  const snap = await getDoc(doc(db, 'content', 'certifications'));
+  if (snap.exists()) return (snap.data().items as Certification[]) ?? [];
+  return [];
+}
+
+export async function saveCertifications(items: Certification[]): Promise<void> {
+  await setDoc(doc(db, 'content', 'certifications'), { items });
 }
 
 // ── File uploads ──────────────────────────────────────────────────────────────

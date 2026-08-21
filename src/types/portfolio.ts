@@ -101,6 +101,30 @@ export interface AboutHighlight {
   description: string;
 }
 
+// ── Testimonials ─────────────────────────────────────────────────────────────
+
+export interface Testimonial {
+  id?: string;
+  quote: string;
+  author: string;
+  role: string;
+  company?: string;
+  avatarUrl?: string;
+  order: number;
+}
+
+// ── Certifications ────────────────────────────────────────────────────────────
+
+export interface Certification {
+  id?: string;
+  name: string;
+  issuer: string;
+  date: string;
+  url?: string;
+  icon?: string;
+  order: number;
+}
+
 // ── Contact ───────────────────────────────────────────────────────────────────
 
 export interface ContactData {
