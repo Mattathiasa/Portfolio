@@ -6,6 +6,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogTrigger, DialogDescription,
 } from "@/components/ui/dialog";
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useQuery } from '@tanstack/react-query';
 import { getProjects } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
@@ -266,10 +267,11 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
 
         {/* ── Detail dialog ── */}
         <DialogContent
-          className="w-[calc(100vw-1.5rem)] sm:w-full max-w-3xl p-0 gap-0 bg-background/95 backdrop-blur-xl border-accent/20 max-h-[88dvh] overflow-hidden"
+          className="w-[calc(100vw-1.5rem)] sm:w-full max-w-3xl p-0 gap-0 bg-background/95 backdrop-blur-xl border-accent/20 max-h-[88dvh] overflow-hidden project-dialog"
         >
           {/* Inner scroller keeps the close button pinned while the body scrolls */}
-          <div className="max-h-[88dvh] overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+          <ScrollArea className="h-full max-h-[88dvh] project-dialog-scroll" type="auto">
+          <div className="px-4 py-5 sm:px-6 sm:py-6">
 
             <DialogHeader className="pb-5 pr-8 text-left space-y-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -378,6 +380,7 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
               )}
             </div>
           </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

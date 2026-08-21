@@ -244,3 +244,15 @@ All colors MUST be HSL.
     scrollbar-color: rgba(221, 235, 157, 0.2) transparent;
   }
 }
+
+/* Mobile touch scrolling for project dialog */
+.project-dialog {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.project-dialog-scroll {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
