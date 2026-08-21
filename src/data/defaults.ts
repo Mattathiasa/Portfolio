@@ -85,13 +85,13 @@ export const DEFAULT_CONTENT = {
   heroSubtitle: 'Software Engineer',
   currentlyWorking: 'Open to remote opportunities',
   heroDescription:
-    'Software engineering graduate passionate about building innovative applications and creating engaging football content. Combining technical expertise with creative storytelling.',
-  aboutHeading: 'Software Engineering Graduate with a Passion for Innovation',
+    'Building production mobile and web systems with Flutter, React Native, and Firebase. Currently migrating legacy apps and architecting role-based systems at DAFTech.',
+  aboutHeading: 'Software Engineer Who Ships Real Products',
   aboutBody1:
-    "I'm a Software Engineering graduate from Addis Ababa, with a strong passion for building innovative web and mobile applications that solve real-world problems. My journey in tech is complemented by my creative side — I love making football videos, combining my technical skills with storytelling and video editing.",
+    "I'm a Software Engineering graduate from Addis Ababa, currently building production mobile and web systems at DAFTech. I migrated a legacy Android Java app to Flutter, reducing maintenance overhead and enabling cross-platform deployment. I also architected a church management system serving 300+ users with 7-level hierarchical role-based access control.",
   aboutBody2:
-    "Whether it's developing full-stack applications, creating mobile experiences, or making my personal skill football videos, I bring dedication and creativity to everything I do. I'm always excited to learn new technologies and take on challenging projects.",
-  aboutSubtitle: 'Passionate about technology and creative storytelling.',
+    "My focus is on building scalable, real-time systems with clean architecture. I work across the full stack — from Firebase backends to polished React and Flutter frontends. I'm always looking for challenging problems that require both technical depth and practical thinking.",
+  aboutSubtitle: 'Building production systems with real users and real impact.',
   aboutCta: "Let's Work Together",
   skillsHeading: 'Skills & Expertise',
   skillsSubtitle: 'Technologies and tools I work with',
@@ -101,20 +101,20 @@ export const DEFAULT_CONTENT = {
   contactHeading: 'Get In Touch',
   contactSubtitle: 'Available for new projects and collaborations',
   aboutStats: [
-    { number: '1+',  label: 'Years Experience' },
-    { number: '15+', label: 'Projects Built' },
-    { number: '10+', label: 'Technologies' },
+    { number: '2+',  label: 'Years in Tech' },
+    { number: '4',   label: 'Production Apps' },
     { number: '300+',label: 'Users Served' },
+    { number: '7',   label: 'Role Levels Built' },
   ],
-  footerBio: 'Software Engineer & Football Content Creator passionate about building innovative solutions and creating engaging content.',
+  footerBio: 'Software Engineer building production mobile and web systems with Flutter, React Native, and Firebase.',
   cvUrl: '/resume',
 };
 
 export const DEFAULT_HIGHLIGHTS: AboutHighlight[] = [
-  { id: 'h1', icon: 'Code',       title: 'Full-Stack Development', description: 'Building scalable web applications with modern technologies' },
-  { id: 'h2', icon: 'Smartphone', title: 'Mobile Development',     description: 'Creating responsive and intuitive mobile experiences' },
-  { id: 'h3', icon: 'Video',      title: 'Football Videos',        description: 'Making Football tricks, skills and trick shot videos' },
-  { id: 'h4', icon: 'Users',      title: 'Team Collaboration',     description: 'Working effectively in agile development teams' },
+  { id: 'h1', icon: 'Smartphone', title: 'Cross-Platform Mobile', description: 'Flutter and React Native production apps with real-time sync and role-based access' },
+  { id: 'h2', icon: 'Database',   title: 'Full-Stack Systems',   description: 'Firebase, Node.js backends paired with React and TypeScript frontends' },
+  { id: 'h3', icon: 'Shield',     title: 'Architecture Design',  description: 'Role-based access control, hierarchical permission systems, and scalable data models' },
+  { id: 'h4', icon: 'Rocket',     title: 'Real-World Deployment', description: 'Production apps serving hundreds of users, from legacy migration to new builds' },
 ];
 
 export const DEFAULT_CONTACT: ContactData = {
