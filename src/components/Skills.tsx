@@ -1,8 +1,8 @@
 import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getSkills, getTools } from '@/lib/firestore';
+import { getSkills, getTools, getContent } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import { DEFAULT_SKILLS, DEFAULT_TOOLS } from '@/data/defaults';
+import { DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT } from '@/data/defaults';
 import { SplitReveal } from '@/components/SplitReveal';
 import { gsap, ScrollTrigger, useGSAP } from '@/lib/gsap';
 
@@ -44,8 +44,18 @@ export const Skills = () => {
     retry: false,
   });
 
+  const { data: content } = useQuery({
+    queryKey: ['content'],
+    queryFn: getContent,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
   const skills = (firestoreSkills && firestoreSkills.length > 0) ? firestoreSkills : DEFAULT_SKILLS;
   const tools = (firestoreTools && firestoreTools.length > 0) ? firestoreTools : DEFAULT_TOOLS;
+  const skillsHeading = content?.skillsHeading ?? DEFAULT_CONTENT.skillsHeading;
+  const skillsSubtitle = content?.skillsSubtitle ?? DEFAULT_CONTENT.skillsSubtitle;
 
   useGSAP(
     () => {
@@ -152,10 +162,10 @@ export const Skills = () => {
               type="chars"
               className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4"
             >
-              Skills & Expertise
+              {skillsHeading}
             </SplitReveal>
             <SplitReveal as="p" className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
-              Technologies and tools I work with
+              {skillsSubtitle}
             </SplitReveal>
           </div>
 

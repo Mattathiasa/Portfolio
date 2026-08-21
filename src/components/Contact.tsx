@@ -6,9 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import emailjs from '@emailjs/browser';
 import { useQuery } from '@tanstack/react-query';
-import { getContactData } from '@/lib/firestore';
+import { getContactData, getContent } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import { DEFAULT_CONTACT } from '@/data/defaults';
+import { DEFAULT_CONTACT, DEFAULT_CONTENT } from '@/data/defaults';
 import { SplitReveal } from '@/components/SplitReveal';
 import { gsap, ScrollTrigger, useGSAP } from '@/lib/gsap';
 
@@ -24,7 +24,17 @@ export const Contact = () => {
     retry: false,
   });
 
+  const { data: content } = useQuery({
+    queryKey: ['content'],
+    queryFn: getContent,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
   const c = contactData ?? DEFAULT_CONTACT;
+  const contactHeading = content?.contactHeading ?? DEFAULT_CONTENT.contactHeading;
+  const contactSubtitle = content?.contactSubtitle ?? DEFAULT_CONTENT.contactSubtitle;
 
   const contactInfo = [
     { icon: Mail,    label: 'Email',    value: c.email,    link: `mailto:${c.email}` },
@@ -156,10 +166,10 @@ export const Contact = () => {
             type="chars"
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4"
           >
-            Get In Touch
+            {contactHeading}
           </SplitReveal>
           <SplitReveal as="p" className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
-            Available for new projects and collaborations
+            {contactSubtitle}
           </SplitReveal>
         </div>
 

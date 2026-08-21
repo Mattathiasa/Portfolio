@@ -75,10 +75,19 @@ export interface PortfolioContent {
   currentlyWorking?: string;
   siteInitials?: string;
   aboutHeading?: string;
+  aboutSubtitle?: string;
   aboutBody1?: string;
   aboutBody2?: string;
   aboutImage?: string;
   aboutStats?: AboutStat[];
+  aboutCta?: string;
+  skillsHeading?: string;
+  skillsSubtitle?: string;
+  blogHeading?: string;
+  blogSubtitle?: string;
+  blogViewAllText?: string;
+  contactHeading?: string;
+  contactSubtitle?: string;
   footerBio?: string;
   cvUrl?: string;
 }

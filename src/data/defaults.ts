@@ -91,6 +91,15 @@ export const DEFAULT_CONTENT = {
     "I'm a Software Engineering graduate from Addis Ababa, with a strong passion for building innovative web and mobile applications that solve real-world problems. My journey in tech is complemented by my creative side — I love making football videos, combining my technical skills with storytelling and video editing.",
   aboutBody2:
     "Whether it's developing full-stack applications, creating mobile experiences, or making my personal skill football videos, I bring dedication and creativity to everything I do. I'm always excited to learn new technologies and take on challenging projects.",
+  aboutSubtitle: 'Passionate about technology and creative storytelling.',
+  aboutCta: "Let's Work Together",
+  skillsHeading: 'Skills & Expertise',
+  skillsSubtitle: 'Technologies and tools I work with',
+  blogHeading: 'Latest Insights',
+  blogSubtitle: 'Thoughts on development, football, and technology',
+  blogViewAllText: 'View All Posts',
+  contactHeading: 'Get In Touch',
+  contactSubtitle: 'Available for new projects and collaborations',
   aboutStats: [
     { number: '1+',  label: 'Years Experience' },
     { number: '15+', label: 'Projects Built' },

@@ -2,9 +2,9 @@ import { useRef } from 'react';
 import { Calendar, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
-import { getBlogPosts } from '@/lib/firestore';
+import { getBlogPosts, getContent } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import { DEFAULT_BLOG_POSTS } from '@/data/defaults';
+import { DEFAULT_BLOG_POSTS, DEFAULT_CONTENT } from '@/data/defaults';
 import type { BlogPost } from '@/types/portfolio';
 import reactImage from '@/assets/blog-react.jpg';
 import analyticsImage from '@/assets/blog-analytics.jpg';
@@ -27,6 +27,18 @@ export const Blog = () => {
   });
 
   const rawPosts: BlogPost[] = (firestorePosts && firestorePosts.length > 0) ? firestorePosts : DEFAULT_BLOG_POSTS;
+
+  const { data: content } = useQuery({
+    queryKey: ['content'],
+    queryFn: getContent,
+    enabled: isFirebaseConfigured,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
+  const blogHeading = content?.blogHeading ?? DEFAULT_CONTENT.blogHeading;
+  const blogSubtitle = content?.blogSubtitle ?? DEFAULT_CONTENT.blogSubtitle;
+  const blogViewAllText = content?.blogViewAllText ?? DEFAULT_CONTENT.blogViewAllText;
 
   // Resolve empty images: use local fallback by order index
   const posts = rawPosts.map((p, i) => ({
@@ -108,10 +120,10 @@ export const Blog = () => {
             type="chars"
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4"
           >
-            Latest Insights
+            {blogHeading}
           </SplitReveal>
           <SplitReveal as="p" className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
-            Thoughts on development, football, and technology
+            {blogSubtitle}
           </SplitReveal>
         </div>
 
@@ -176,7 +188,7 @@ export const Blog = () => {
 
         <div className="blog-cta text-center">
           <Button size="lg" variant="outline" className="border-accent text-accent hover:bg-accent hover:text-accent-foreground" asChild>
-            <a href="#">View All Posts</a>
+            <a href="#">{blogViewAllText}</a>
           </Button>
         </div>
       </div>

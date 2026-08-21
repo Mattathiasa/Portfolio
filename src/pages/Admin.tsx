@@ -1660,6 +1660,14 @@ function ContentTab() {
             <Textarea rows={4} value={form.aboutBody2 ?? ''} onChange={e => set('aboutBody2', e.target.value)} />
           </div>
           <div className="space-y-2">
+            <Label>Section Subtitle <span className="text-muted-foreground font-normal">(below the heading)</span></Label>
+            <Input value={form.aboutSubtitle ?? ''} onChange={e => set('aboutSubtitle', e.target.value)} placeholder="Passionate about technology and creative storytelling." />
+          </div>
+          <div className="space-y-2">
+            <Label>CTA Button Text <span className="text-muted-foreground font-normal">("Let's Work Together" button)</span></Label>
+            <Input value={form.aboutCta ?? ''} onChange={e => set('aboutCta', e.target.value)} placeholder="Let's Work Together" />
+          </div>
+          <div className="space-y-2">
             <Label>About Section Image</Label>
             <ImageDropzone
               image={form.aboutImage ?? ''}
@@ -1730,6 +1738,67 @@ function ContentTab() {
         </CardContent>
       </Card>
 
+
+      {/* Skills Section */}
+      <Card className="glass-card border-accent/10">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ChevronRight className="w-4 h-4 text-accent" /> Skills Section
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Heading</Label>
+            <Input value={form.skillsHeading ?? ''} onChange={e => set('skillsHeading', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Subtitle</Label>
+            <Input value={form.skillsSubtitle ?? ''} onChange={e => set('skillsSubtitle', e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Blog Section */}
+      <Card className="glass-card border-accent/10">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ChevronRight className="w-4 h-4 text-accent" /> Blog Section
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Heading</Label>
+            <Input value={form.blogHeading ?? ''} onChange={e => set('blogHeading', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Subtitle</Label>
+            <Input value={form.blogSubtitle ?? ''} onChange={e => set('blogSubtitle', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>View All Button Text</Label>
+            <Input value={form.blogViewAllText ?? ''} onChange={e => set('blogViewAllText', e.target.value)} placeholder="View All Posts" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Contact Section */}
+      <Card className="glass-card border-accent/10">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ChevronRight className="w-4 h-4 text-accent" /> Contact Section
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Heading</Label>
+            <Input value={form.contactHeading ?? ''} onChange={e => set('contactHeading', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Subtitle</Label>
+            <Input value={form.contactSubtitle ?? ''} onChange={e => set('contactSubtitle', e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
       <Button
         className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
         onClick={() => saveMut.mutate()}

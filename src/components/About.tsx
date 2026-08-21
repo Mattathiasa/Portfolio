@@ -47,12 +47,14 @@ export const About = () => {
     retry: false,
   });
 
-  const aboutHeading = content?.aboutHeading ?? DEFAULT_CONTENT.aboutHeading;
-  const aboutBody1   = content?.aboutBody1   ?? DEFAULT_CONTENT.aboutBody1;
-  const aboutBody2   = content?.aboutBody2   ?? DEFAULT_CONTENT.aboutBody2;
-  const aboutImage   = content?.aboutImage   || workspaceImage;
-  const aboutStats   = content?.aboutStats   ?? DEFAULT_CONTENT.aboutStats;
-  const highlights   = firestoreHighlights   ?? DEFAULT_HIGHLIGHTS;
+  const aboutHeading  = content?.aboutHeading  ?? DEFAULT_CONTENT.aboutHeading;
+  const aboutSubtitle = content?.aboutSubtitle ?? DEFAULT_CONTENT.aboutSubtitle;
+  const aboutBody1    = content?.aboutBody1    ?? DEFAULT_CONTENT.aboutBody1;
+  const aboutBody2    = content?.aboutBody2    ?? DEFAULT_CONTENT.aboutBody2;
+  const aboutImage    = content?.aboutImage    || workspaceImage;
+  const aboutStats    = content?.aboutStats    ?? DEFAULT_CONTENT.aboutStats;
+  const aboutCta      = content?.aboutCta      ?? DEFAULT_CONTENT.aboutCta;
+  const highlights    = firestoreHighlights     ?? DEFAULT_HIGHLIGHTS;
 
   useGSAP(
     () => {
@@ -155,7 +157,7 @@ export const About = () => {
             About Me
           </SplitReveal>
           <SplitReveal as="p" className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
-            Passionate about technology and creative storytelling.
+            {aboutSubtitle}
           </SplitReveal>
         </div>
 
@@ -191,7 +193,7 @@ export const About = () => {
                 className="bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth"
                 asChild
               >
-                <a href="#contact">Let's Work Together</a>
+                <a href="#contact">{aboutCta}</a>
               </Button>
             </div>
           </div>
