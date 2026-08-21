@@ -36,10 +36,11 @@ import {
   GripVertical, ArrowUp, ArrowDown, LayoutGrid, List, CalendarDays,
 } from 'lucide-react';
 import * as fb from '@/lib/firestore';
-import type { Project, Skill, PortfolioContent, AboutStat, CVData, CVExperience, CVProject, CVEducation, CVLanguage, BlogPost, ProjectDev, DevItem, ProjectImage, ImageDevice } from '@/types/portfolio';
+import type { Project, Skill, PortfolioContent, AboutStat, CVData, CVExperience, CVProject, CVEducation, CVLanguage, BlogPost, ProjectDev, DevItem, ProjectImage, ImageDevice, Testimonial, Certification } from '@/types/portfolio';
 import { LIFECYCLE_STAGES, emptyProjectDev, DEVICE_DEFAULTS, ASPECT_PRESETS, toProjectMedia } from '@/types/portfolio';
-import { DEFAULT_PROJECTS, DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT, DEFAULT_CV, DEFAULT_HIGHLIGHTS, DEFAULT_CONTACT, DEFAULT_BLOG_POSTS } from '@/data/defaults';
+import { DEFAULT_PROJECTS, DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT, DEFAULT_CV, DEFAULT_HIGHLIGHTS, DEFAULT_CONTACT, DEFAULT_BLOG_POSTS, DEFAULT_TESTIMONIALS, DEFAULT_CERTIFICATIONS } from '@/data/defaults';
 import { SchedulerTab } from '@/components/admin/SchedulerTab';
+import { TestimonialsTab, CertificationsTab } from '@/components/admin/ContentSectionsTab';
 
 const CATEGORIES = ['Web Apps', 'Mobile', 'Games', 'Content'];
 const SESSION_KEY = 'portfolio_admin_auth';
@@ -2512,6 +2513,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 { value: 'content',   icon: FileText,      label: 'Hero/About' },
                 { value: 'cv',        icon: FileText,      label: 'CV Editor' },
                 { value: 'scheduler', icon: CalendarDays,  label: 'Scheduler' },
+                { value: 'testimonials', icon: Star,       label: 'Testimonials' },
+                { value: 'certifications', icon: BookOpen,  label: 'Certs & Edu' },
               ].map(({ value, icon: Icon, label }) => (
                 <TabsTrigger
                   key={value}
@@ -2534,6 +2537,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           <TabsContent value="content"><ContentTab /></TabsContent>
           <TabsContent value="cv"><CVTab /></TabsContent>
           <TabsContent value="scheduler"><SchedulerTab /></TabsContent>
+          <TabsContent value="testimonials"><TestimonialsTab /></TabsContent>
+          <TabsContent value="certifications"><CertificationsTab /></TabsContent>
         </Tabs>
       </div>
     </div>
