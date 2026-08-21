@@ -115,7 +115,7 @@ export const Hero = ({ introReady }: HeroProps) => {
 
           <h1
             ref={titleRef}
-            className="font-title text-[13vw] leading-[0.95] md:text-[7.5rem] lg:text-[8.5rem] text-foreground opacity-0"
+            className="font-title text-[14vw] leading-[0.95] max-w-[6rem] sm:max-w-none md:text-[7.5rem] lg:text-[8.5rem] 2xl:text-[10rem] text-foreground opacity-0"
             style={{ perspective: '600px' }}
           >
             {heroTitle.split(' ').map((word, i, words) => (
@@ -130,12 +130,12 @@ export const Hero = ({ introReady }: HeroProps) => {
             <h2 className="hero-subtitle text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground/90 opacity-0 translate-y-4">
               {heroSubtitle}
             </h2>
-            <p className="hero-description text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4 opacity-0 translate-y-4">
+            <p className="hero-description text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground max-w-lg sm:max-w-2xl mx-auto px-2 sm:px-4 opacity-0 translate-y-4">
               {heroDescription}
             </p>
           </div>
 
-          <div className="hero-ctas flex flex-col sm:flex-row gap-4 justify-center items-center pt-6 opacity-0 translate-y-4">
+          <div className="hero-ctas flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center pt-4 sm:pt-6 opacity-0 translate-y-4">
             <Button
               size="lg"
               className="bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth glow-accent group"

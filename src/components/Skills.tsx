@@ -152,11 +152,11 @@ export const Skills = () => {
     <section
       id="skills"
       ref={sectionRef}
-      className="min-h-screen flex items-center justify-center relative bg-gradient-to-b from-background to-[hsl(var(--gradient-mid))] py-24"
+      className="min-h-screen flex items-center justify-center relative bg-gradient-to-b from-background to-[hsl(var(--gradient-mid))] py-16 sm:py-24"
     >
       <div className="w-full">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 sm:mb-16">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
             <SplitReveal
               as="h2"
               type="chars"
@@ -170,7 +170,7 @@ export const Skills = () => {
           </div>
 
           {/* Kinetic skill rows */}
-          <div className="mb-16 sm:mb-24">
+          <div className="mb-10 sm:mb-16 md:mb-24">
             {skills.map((skill, index) => (
               <div
                 key={index}

@@ -146,9 +146,9 @@ export const About = () => {
   );
 
   return (
-    <section id="about" ref={sectionRef} className="min-h-screen flex items-center justify-center relative py-24">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12 sm:mb-16">
+    <section id="about" ref={sectionRef} className="min-h-screen flex items-center justify-center relative py-16 sm:py-24">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="text-center mb-8 sm:mb-12 md:mb-16">
           <SplitReveal
             as="h2"
             type="chars"
@@ -161,7 +161,7 @@ export const About = () => {
           </SplitReveal>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center mb-12 sm:mb-16">
+        <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center mb-10 sm:mb-12 md:mb-16">
           {/* Image */}
           <div className="about-image-frame relative rounded-3xl overflow-hidden shadow-2xl border border-border/50">
             <img
@@ -201,7 +201,7 @@ export const About = () => {
 
         {/* Stats Grid */}
         {aboutStats && aboutStats.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5 mb-6 sm:mb-8">
             {aboutStats.map((stat, index) => (
               <div
                 key={index}
@@ -217,7 +217,7 @@ export const About = () => {
         )}
 
         {/* Highlights */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           {highlights.map((item, index) => {
             const IconComponent = ICON_MAP[item.icon] ?? Code;
             return (

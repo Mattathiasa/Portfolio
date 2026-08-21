@@ -79,7 +79,7 @@ export const Footer = () => {
   );
 
   return (
-    <footer ref={footerRef} className="relative overflow-hidden bg-gradient-to-b from-background to-[hsl(var(--gradient-end))] border-t border-border">
+    <footer ref={footerRef} className="relative overflow-hidden bg-gradient-to-b from-background to-[hsl(var(--gradient-end))] border-t border-border mt-8 sm:mt-0">
       {/* Oversized wordmark rising out of the footer as it enters */}
       <div className="overflow-hidden pt-10 pb-2 px-2" aria-hidden="true">
         <div className="footer-wordmark font-title text-[11vw] leading-none text-center text-stroke whitespace-nowrap select-none">
@@ -87,8 +87,8 @@ export const Footer = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid md:grid-cols-3 gap-8 lg:gap-12 mb-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8 lg:gap-12 mb-8">
 
           {/* Brand */}
           <div className="space-y-4">

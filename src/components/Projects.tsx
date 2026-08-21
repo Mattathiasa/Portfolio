@@ -172,7 +172,7 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
       : [];
 
   return (
-    <div className="project-card w-full md:w-[42vw] xl:w-[36vw] shrink-0">
+    <div className="project-card w-full md:w-[42vw] xl:w-[36vw] 2xl:w-[30vw] shrink-0">
       <Dialog>
         <DialogTrigger asChild>
           <div className="group relative glass-card rounded-xl overflow-hidden cursor-pointer flex flex-col border border-border/30 hover:border-accent/40 transition-all duration-500 hover:shadow-[0_0_40px_hsl(72_72%_73%/0.12)]">
@@ -267,7 +267,7 @@ const ProjectCard = ({ project, index }: { project: Project; index: number }) =>
 
         {/* ── Detail dialog ── */}
         <DialogContent
-          className="w-[calc(100vw-1.5rem)] sm:w-full max-w-3xl p-0 gap-0 bg-background/95 backdrop-blur-xl border-accent/20 max-h-[88dvh] overflow-hidden project-dialog"
+          className="w-[calc(100vw-1rem)] sm:w-full max-w-3xl 2xl:max-w-4xl p-0 gap-0 bg-background/95 backdrop-blur-xl border-accent/20 max-h-[92dvh] sm:max-h-[88dvh] overflow-hidden project-dialog"
         >
           {/* Inner scroller keeps the close button pinned while the body scrolls */}
           <ScrollArea className="h-full max-h-[88dvh] project-dialog-scroll" type="auto">
@@ -656,7 +656,7 @@ export const Projects = () => {
       </span>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full relative">
-        <div className="text-center mb-8 sm:mb-12">
+        <div className="text-center mb-6 sm:mb-8 md:mb-12">
           <SplitReveal
             as="h2"
             type="chars"
@@ -682,12 +682,12 @@ export const Projects = () => {
         </div>
 
         {/* Filter Buttons — editorial pill style */}
-        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8 sm:mb-12">
+        <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 md:gap-3 mb-6 sm:mb-8 md:mb-12">
           {categories.map((category) => (
             <button
               key={category}
               onClick={() => selectCategory(category)}
-              className={`font-title text-[11px] tracking-widest px-5 py-2 rounded-full border transition-all duration-300 ${
+              className={`font-title text-[10px] sm:text-[11px] tracking-widest px-3 sm:px-5 py-2 sm:py-2 rounded-full border transition-all duration-300 min-h-[36px] sm:min-h-0 ${
                 activeCategory === category
                   ? 'bg-accent text-accent-foreground border-accent'
                   : 'border-accent/30 text-accent/70 hover:border-accent hover:text-accent bg-transparent'

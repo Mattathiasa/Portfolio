@@ -158,9 +158,9 @@ export const Contact = () => {
   );
 
   return (
-    <section id="contact" ref={sectionRef} className="min-h-screen flex items-center justify-center relative py-24">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="text-center mb-12 sm:mb-16">
+    <section id="contact" ref={sectionRef} className="min-h-screen flex items-center justify-center relative py-16 sm:py-24">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 w-full">
+        <div className="text-center mb-8 sm:mb-12 md:mb-16">
           <SplitReveal
             as="h2"
             type="chars"
@@ -173,7 +173,7 @@ export const Contact = () => {
           </SplitReveal>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 sm:gap-12">
+        <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
           {/* Contact Form */}
           <div>
             <form onSubmit={handleSubmit} className="space-y-6">
