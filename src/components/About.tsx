@@ -6,12 +6,27 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import workspaceImage from '@/assets/workspace.jpg';
+import workspace640 from '@/assets/workspace-640.webp';
+import workspace960 from '@/assets/workspace-960.webp';
+import workspace1280 from '@/assets/workspace-1280.webp';
+import workspace1600 from '@/assets/workspace-1600.webp';
 import { useQuery } from '@tanstack/react-query';
 import { getContent, getHighlights } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { DEFAULT_CONTENT, DEFAULT_HIGHLIGHTS } from '@/data/defaults';
 import type { FC } from 'react';
 import { SplitReveal } from '@/components/SplitReveal';
+
+// Responsive variants of the bundled workspace photo. The source was a 6720x4480
+// camera original (2.9 MB); it is displayed at roughly half the grid on large
+// screens, so the largest variant we ever need is 1600w.
+const WORKSPACE_WEBP_SRCSET = [
+  `${workspace640} 640w`,
+  `${workspace960} 960w`,
+  `${workspace1280} 1280w`,
+  `${workspace1600} 1600w`,
+].join(', ');
+const WORKSPACE_SIZES = '(min-width: 1024px) 50vw, 100vw';
 import { gsap, ScrollTrigger, useGSAP } from '@/lib/gsap';
 
 const ICON_MAP: Record<string, FC<LucideProps>> = {
@@ -51,7 +66,8 @@ export const About = () => {
   const aboutSubtitle = content?.aboutSubtitle ?? DEFAULT_CONTENT.aboutSubtitle;
   const aboutBody1    = content?.aboutBody1    ?? DEFAULT_CONTENT.aboutBody1;
   const aboutBody2    = content?.aboutBody2    ?? DEFAULT_CONTENT.aboutBody2;
-  const aboutImage    = content?.aboutImage    || workspaceImage;
+  const customImage   = content?.aboutImage;   // admin-supplied URL, if any
+  const aboutImage    = customImage            || workspaceImage;
   const aboutStats    = content?.aboutStats    ?? DEFAULT_CONTENT.aboutStats;
   const aboutCta      = content?.aboutCta      ?? DEFAULT_CONTENT.aboutCta;
   const highlights    = firestoreHighlights     ?? DEFAULT_HIGHLIGHTS;
@@ -164,12 +180,30 @@ export const About = () => {
         <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center mb-10 sm:mb-12 md:mb-16">
           {/* Image */}
           <div className="about-image-frame relative rounded-3xl overflow-hidden shadow-2xl border border-border/50">
-            <img
-              src={aboutImage}
-              alt="Mattathias Abraham's workspace"
-              className="about-image w-full h-auto object-cover scale-110"
-              style={{ background: 'transparent' }}
-            />
+            {customImage ? (
+              <img
+                src={customImage}
+                alt="Mattathias Abraham's workspace"
+                loading="lazy"
+                decoding="async"
+                className="about-image w-full h-auto object-cover scale-110"
+                style={{ background: 'transparent' }}
+              />
+            ) : (
+              <picture className="block">
+                <source type="image/webp" srcSet={WORKSPACE_WEBP_SRCSET} sizes={WORKSPACE_SIZES} />
+                <img
+                  src={workspaceImage}
+                  alt="Mattathias Abraham's workspace"
+                  width={1280}
+                  height={1920}
+                  loading="lazy"
+                  decoding="async"
+                  className="about-image w-full h-auto object-cover scale-110"
+                  style={{ background: 'transparent' }}
+                />
+              </picture>
+            )}
           </div>
 
           {/* Content */}
