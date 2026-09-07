@@ -1,61 +1,24 @@
 import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getSkills, getTools, getContent } from '@/lib/firestore';
+import { getCV } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import { DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT } from '@/data/defaults';
-import { SplitReveal } from '@/components/SplitReveal';
-import { gsap, ScrollTrigger, useGSAP } from '@/lib/gsap';
-
-const MarqueeRow = ({ tools, reverse }: { tools: string[]; reverse?: boolean }) => (
-  <div className="marquee-row overflow-hidden" data-reverse={reverse ? '1' : undefined}>
-    <div className="marquee-track flex w-max gap-3 sm:gap-4 py-2">
-      {[0, 1].map((copy) => (
-        <div key={copy} className="flex gap-3 sm:gap-4" aria-hidden={copy === 1 || undefined}>
-          {tools.map((tool, i) => (
-            <span
-              key={`${copy}-${i}`}
-              className="glass-card whitespace-nowrap px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium text-foreground/90 border border-accent/10"
-            >
-              {tool}
-            </span>
-          ))}
-        </div>
-      ))}
-    </div>
-  </div>
-);
+import { DEFAULT_CV } from '@/data/defaults';
+import { useContent } from '@/hooks/useContent';
+import { Certifications } from '@/components/Certifications';
+import { gsap, useGSAP } from '@/lib/gsap';
 
 export const Skills = () => {
   const sectionRef = useRef<HTMLElement>(null);
+  const { c } = useContent();
 
-  const { data: firestoreSkills } = useQuery({
-    queryKey: ['skills'],
-    queryFn: getSkills,
+  const { data: cvData } = useQuery({
+    queryKey: ['cv'],
+    queryFn: getCV,
     enabled: isFirebaseConfigured,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
-
-  const { data: firestoreTools } = useQuery({
-    queryKey: ['tools'],
-    queryFn: getTools,
-    enabled: isFirebaseConfigured,
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  });
-
-  const { data: content } = useQuery({
-    queryKey: ['content'],
-    queryFn: getContent,
-    enabled: isFirebaseConfigured,
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  });
-
-  const skills = (firestoreSkills && firestoreSkills.length > 0) ? firestoreSkills : DEFAULT_SKILLS;
-  const tools = (firestoreTools && firestoreTools.length > 0) ? firestoreTools : DEFAULT_TOOLS;
-  const skillsHeading = content?.skillsHeading ?? DEFAULT_CONTENT.skillsHeading;
-  const skillsSubtitle = content?.skillsSubtitle ?? DEFAULT_CONTENT.skillsSubtitle;
+  const groups = (cvData ?? DEFAULT_CV).skills ?? [];
 
   useGSAP(
     () => {
@@ -69,151 +32,66 @@ export const Skills = () => {
           reduced: '(prefers-reduced-motion: reduce)',
         },
         (ctx) => {
-          const rows = gsap.utils.toArray<HTMLElement>('.skill-row', section);
-
+          const reveals = gsap.utils.toArray<HTMLElement>('[data-reveal]', section);
           if (ctx.conditions?.reduced) {
-            // Static end state: filled to level, number shown, no marquee.
-            rows.forEach((row) => {
-              const level = Number(row.dataset.level ?? 0);
-              const fill = row.querySelector<HTMLElement>('.skill-fill');
-              const num = row.querySelector<HTMLElement>('.skill-num');
-              if (fill) fill.style.clipPath = `inset(0 ${100 - level}% 0 0)`;
-              if (num) num.textContent = `${level}%`;
-            });
+            gsap.set(reveals, { opacity: 1, y: 0 });
             return;
           }
-
-          // Kinetic rows: the lime fill wipes to the skill level and the
-          // number counts alongside as the row crosses the viewport.
-          rows.forEach((row) => {
-            const level = Number(row.dataset.level ?? 0);
-            const fill = row.querySelector<HTMLElement>('.skill-fill');
-            const num = row.querySelector<HTMLElement>('.skill-num');
-
-            ScrollTrigger.create({
-              trigger: row,
-              start: 'top 85%',
-              end: 'top 40%',
-              scrub: true,
-              onUpdate: (self) => {
-                const current = level * self.progress;
-                if (fill) fill.style.clipPath = `inset(0 ${100 - current}% 0 0)`;
-                if (num) num.textContent = `${Math.round(current)}%`;
-              },
+          reveals.forEach((el) => {
+            gsap.from(el, {
+              y: 24,
+              opacity: 0,
+              duration: 0.8,
+              ease: 'power3.out',
+              scrollTrigger: { trigger: el, start: 'top 88%', once: true },
             });
-          });
-
-          // Opposing marquees whose speed and skew react to scroll velocity.
-          const marqueeTweens: gsap.core.Tween[] = [];
-          gsap.utils.toArray<HTMLElement>('.marquee-row', section).forEach((rowEl) => {
-            const track = rowEl.querySelector<HTMLElement>('.marquee-track');
-            if (!track) return;
-            const reverse = rowEl.dataset.reverse === '1';
-            const tween = gsap.fromTo(
-              track,
-              { xPercent: reverse ? -50 : 0 },
-              { xPercent: reverse ? 0 : -50, duration: 28, ease: 'none', repeat: -1 }
-            );
-            marqueeTweens.push(tween);
-          });
-
-          const proxy = { timeScale: 1, skew: 0 };
-          const apply = () => {
-            marqueeTweens.forEach((tw) => tw.timeScale(proxy.timeScale));
-            gsap.set('.marquee-track', { skewX: proxy.skew });
-          };
-          ScrollTrigger.create({
-            trigger: section,
-            start: 'top bottom',
-            end: 'bottom top',
-            onUpdate: (self) => {
-              const velocity = self.getVelocity();
-              const boost = gsap.utils.clamp(1, 5, 1 + Math.abs(velocity) / 900);
-              const skew = gsap.utils.clamp(-8, 8, velocity / 300);
-              gsap.to(proxy, {
-                timeScale: boost,
-                skew,
-                duration: 0.3,
-                overwrite: true,
-                onUpdate: apply,
-                onComplete: () => {
-                  gsap.to(proxy, { timeScale: 1, skew: 0, duration: 0.8, onUpdate: apply });
-                },
-              });
-            },
           });
         }
       );
     },
-    { scope: sectionRef, dependencies: [skills, tools], revertOnUpdate: true }
+    { scope: sectionRef, dependencies: [groups.length], revertOnUpdate: true }
   );
 
   return (
     <section
       id="skills"
       ref={sectionRef}
-      className="min-h-screen flex items-center justify-center relative bg-gradient-to-b from-background to-[hsl(var(--gradient-mid))] py-16 sm:py-24"
+      className="relative border-t hairline bg-card [scroll-margin-top:64px]"
     >
-      <div className="w-full">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8 sm:mb-12 md:mb-16">
-            <SplitReveal
-              as="h2"
-              type="chars"
-              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4"
-            >
-              {skillsHeading}
-            </SplitReveal>
-            <SplitReveal as="p" className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
-              {skillsSubtitle}
-            </SplitReveal>
-          </div>
+      <div className="section-shell">
+        <div data-reveal className="mb-[clamp(32px,5vh,56px)] flex items-end justify-between gap-6">
+          <h2>{c('skillsHeading')}</h2>
+          <span className="mono-label shrink-0 pb-2">{c('skillsIndexLabel')}</span>
+        </div>
 
-          {/* Kinetic skill rows */}
-          <div className="mb-10 sm:mb-16 md:mb-24">
-            {skills.map((skill, index) => (
-              <div
-                key={index}
-                data-level={skill.level}
-                className="skill-row flex items-center justify-between gap-4 border-b border-border/30 py-4 sm:py-5"
-              >
-                <div className="relative min-w-0">
-                  <span className="block font-title text-[9vw] md:text-6xl xl:text-7xl leading-none text-stroke select-none truncate">
-                    {skill.name}
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className="skill-fill absolute inset-0 block font-title text-[9vw] md:text-6xl xl:text-7xl leading-none text-accent select-none truncate"
-                    style={{ clipPath: 'inset(0 100% 0 0)' }}
-                  >
-                    {skill.name}
-                  </span>
-                </div>
-                <span className="skill-num shrink-0 font-title text-xl sm:text-2xl md:text-4xl text-accent tabular-nums">
-                  0%
-                </span>
+        {/* Category cells with 1px dividers */}
+        <div data-reveal className="grid gap-px overflow-hidden rounded-md border hairline bg-foreground/10 sm:grid-cols-2 lg:grid-cols-3">
+          {groups.map((group, index) => (
+            <div key={group.label ?? index} className="bg-card p-6">
+              <div className="mb-4 flex items-baseline justify-between gap-4">
+                <h3 className="!text-[22px]">{group.label}</h3>
+                <span className="mono-label">{String(index + 1).padStart(2, '0')}</span>
               </div>
-            ))}
-          </div>
+              <ul className="flex flex-wrap gap-2">
+                {group.value
+                  .split(',')
+                  .map((chip) => chip.trim())
+                  .filter(Boolean)
+                  .map((chip) => (
+                    <li
+                      key={chip}
+                      className="rounded-full border border-foreground/15 px-3 py-1 font-mono text-[11px] text-foreground/70"
+                    >
+                      {chip}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        {/* Tools: opposing velocity marquees (motion), wrapped grid (reduced) */}
-        <div className="motion-safe:block motion-reduce:hidden space-y-2">
-          <MarqueeRow tools={tools} />
-          <MarqueeRow tools={tools} reverse />
-        </div>
-        <div className="motion-safe:hidden motion-reduce:block container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-center gap-3">
-            {tools.map((tool, i) => (
-              <span
-                key={i}
-                className="glass-card px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-foreground/90 border border-accent/10"
-              >
-                {tool}
-              </span>
-            ))}
-          </div>
-        </div>
+        {/* Credentials row */}
+        <Certifications />
       </div>
     </section>
   );

@@ -1,162 +1,159 @@
-import { useState, useEffect, useRef } from 'react';
-import { Menu, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ScrollTrigger, useGSAP } from '@/lib/gsap';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getContent } from '@/lib/firestore';
+import { getContactData } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import { DEFAULT_CONTENT } from '@/data/defaults';
-
-const NAV_ITEMS = [
-  { name: 'Home',     href: '#home' },
-  { name: 'About',    href: '#about' },
-  { name: 'Skills',   href: '#skills' },
-  { name: 'Projects', href: '#projects' },
-  { name: 'Blog',     href: '#blog' },
-  { name: 'Contact',  href: '#contact' },
-  { name: 'Resume',   href: '/resume' },
-];
+import { DEFAULT_CONTACT } from '@/data/defaults';
+import { useContent } from '@/hooks/useContent';
 
 export const Navigation = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('home');
-  const progressRef = useRef<HTMLDivElement>(null);
+  const { c } = useContent();
+  const { pathname } = useLocation();
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  useGSAP(() => {
-    const st = ScrollTrigger.create({
-      start: 0,
-      end: 'max',
-      onUpdate: (self) => {
-        if (progressRef.current) {
-          progressRef.current.style.transform = `scaleX(${self.progress})`;
-        }
-      },
-    });
-    return () => st.kill();
-  });
+  // On the homepage the section links are in-page hashes (smooth-scrolled by
+  // Lenis). On other routes they point back to the homepage; native hash
+  // scrolling + each section's scroll-margin-top handles the 64px nav offset.
+  const onHome = pathname === '/';
+  const sectionHref = (id: string) => (onHome ? `#${id}` : `/#${id}`);
+  const homeHref = onHome ? '#home' : '/';
 
-  const { data: content } = useQuery({
-    queryKey: ['content'],
-    queryFn: getContent,
+  const { data: contactData } = useQuery({
+    queryKey: ['contact'],
+    queryFn: getContactData,
     enabled: isFirebaseConfigured,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
-
-  const initials = content?.siteInitials ?? DEFAULT_CONTENT.siteInitials;
+  const email = contactData?.email ?? DEFAULT_CONTACT.email;
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-      const scrollPosition = window.scrollY + 200;
-      for (const item of NAV_ITEMS) {
-        const id = item.href.replace('#', '');
-        const el = document.getElementById(id);
-        if (el) {
-          const { offsetTop, offsetHeight } = el;
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            setActiveSection(id);
-            break;
-          }
-        }
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Lock body scroll while the mobile menu is open.
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
+
+  const links = [
+    { label: c('navWork'), href: sectionHref('work') },
+    { label: c('navAbout'), href: sectionHref('about') },
+    { label: c('navExperience'), href: sectionHref('experience') },
+    { label: c('navStack'), href: sectionHref('skills') },
+    { label: c('navContact'), href: sectionHref('contact') },
+  ];
+
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'glass shadow-elegant py-3' : 'py-6'}`}>
-      <div
-        ref={progressRef}
-        className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent origin-left z-50"
-        style={{ transform: 'scaleX(0)' }}
-      />
+    <>
+    <header
+      className={`fixed inset-x-0 top-0 z-40 h-16 transition-colors duration-300 ${
+        scrolled || menuOpen
+          ? 'border-b hairline bg-[rgba(14,25,29,0.8)] backdrop-blur-md'
+          : 'border-b border-transparent bg-transparent'
+      }`}
+    >
+      <nav className="mx-auto flex h-full max-w-[1280px] items-center justify-between px-[clamp(20px,4vw,48px)]">
+        {/* Brand */}
+        <a href={homeHref} className="flex items-center gap-2.5" onClick={() => setMenuOpen(false)}>
+          <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
+          <span className="font-mono text-[13px] tracking-[0.02em] text-foreground">
+            {c('brandLabel')}
+          </span>
+        </a>
 
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <motion.a
-            href="#home"
-            className="text-2xl font-display gradient-text"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
+        {/* Desktop links */}
+        <div className="hidden items-center gap-7 min-[900px]:flex">
+          {links.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="mono-label !text-[11px] transition-colors hover:text-foreground"
+            >
+              {link.label}
+            </a>
+          ))}
+          <a
+            href={c('cvUrl')}
+            className="mono-label !text-[11px] transition-colors hover:text-foreground"
           >
-            {initials}
-          </motion.a>
-
-          {/* Desktop Navigation */}
-          <motion.div
-            className="hidden md:flex items-center gap-8"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            {c('navResume')}
+          </a>
+          <a
+            href={`mailto:${email}`}
+            className="rounded-full bg-accent px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-accent-foreground transition-colors hover:bg-accent-hover"
           >
-            {NAV_ITEMS.map(item => {
-              const isExternal = item.href.startsWith('/');
-              const id = item.href.replace('#', '');
-              const isActive = !isExternal && activeSection === id;
-              return (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  target={isExternal ? '_blank' : undefined}
-                  rel={isExternal ? 'noopener noreferrer' : undefined}
-                  className={`relative text-sm font-medium transition-colors hover:text-accent ${isActive ? 'text-accent' : 'text-foreground/80'}`}
-                >
-                  {item.name}
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeSection"
-                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-accent"
-                      initial={false}
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                </a>
-              );
-            })}
-          </motion.div>
-
-          {/* Mobile Menu Button */}
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden text-foreground">
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+            {c('navHire')}
+          </a>
         </div>
-      </div>
 
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden glass mt-4 overflow-hidden"
-          >
-            <div className="container mx-auto px-4 py-6 flex flex-col gap-4">
-              {NAV_ITEMS.map(item => {
-                const isExternal = item.href.startsWith('/');
-                const id = item.href.replace('#', '');
-                return (
+        {/* Mobile menu toggle */}
+        <button
+          type="button"
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-menu"
+          className="rounded-full border border-foreground/25 px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-foreground transition-colors hover:border-accent hover:text-accent min-[900px]:hidden"
+        >
+          {menuOpen ? 'Close' : 'Menu'}
+        </button>
+      </nav>
+    </header>
+
+      {/* Mobile menu: full-width serif list. Rendered as a sibling of the
+          header — its backdrop-filter would otherwise become the containing
+          block for this fixed overlay and collapse it to zero height. */}
+      {menuOpen && (
+        <div
+          id="mobile-menu"
+          className="fixed inset-x-0 bottom-0 top-16 z-40 overflow-y-auto bg-[rgba(14,25,29,0.97)] backdrop-blur-xl min-[900px]:hidden"
+        >
+          <div className="flex min-h-full flex-col justify-between px-[clamp(20px,4vw,48px)] py-10">
+            <ul className="space-y-1">
+              {links.map((link, i) => (
+                <li key={link.href}>
                   <a
-                    key={item.name}
-                    href={item.href}
-                    target={isExternal ? '_blank' : undefined}
-                    rel={isExternal ? 'noopener noreferrer' : undefined}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`text-lg font-medium transition-colors ${activeSection === id ? 'text-accent' : 'text-foreground/80 hover:text-accent'}`}
+                    href={link.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="group flex items-baseline gap-4 border-b border-foreground/10 py-4"
                   >
-                    {item.name}
+                    <span className="mono-label !text-accent/70">0{i + 1}</span>
+                    <span className="font-serif text-4xl text-foreground transition-colors group-hover:text-accent">
+                      {link.label}
+                    </span>
                   </a>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </nav>
+                </li>
+              ))}
+              <li>
+                <a
+                  href={c('cvUrl')}
+                  onClick={() => setMenuOpen(false)}
+                  className="group flex items-baseline gap-4 py-4"
+                >
+                  <span className="mono-label !text-accent/70">06</span>
+                  <span className="font-serif text-4xl text-foreground transition-colors group-hover:text-accent">
+                    {c('navResume')}
+                  </span>
+                </a>
+              </li>
+            </ul>
+            <a
+              href={`mailto:${email}`}
+              onClick={() => setMenuOpen(false)}
+              className="mt-10 inline-flex w-full items-center justify-center rounded-full bg-accent px-6 py-3.5 font-mono text-xs uppercase tracking-[0.06em] text-accent-foreground"
+            >
+              {c('navHire')} — {email}
+            </a>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

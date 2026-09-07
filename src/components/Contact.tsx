@@ -1,20 +1,17 @@
 import { useRef, useState } from 'react';
-import { Mail, Phone, MapPin, Send, Github, Linkedin, Instagram } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import emailjs from '@emailjs/browser';
 import { useQuery } from '@tanstack/react-query';
-import { getContactData, getContent } from '@/lib/firestore';
+import { getContactData } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import { DEFAULT_CONTACT, DEFAULT_CONTENT } from '@/data/defaults';
-import { SplitReveal } from '@/components/SplitReveal';
+import { DEFAULT_CONTACT } from '@/data/defaults';
+import { useContent } from '@/hooks/useContent';
+import { renderAccent } from '@/lib/accentText';
 import { gsap, ScrollTrigger, useGSAP } from '@/lib/gsap';
 
 export const Contact = () => {
   const sectionRef = useRef<HTMLElement>(null);
-  const magneticRef = useRef<HTMLDivElement>(null);
+  const { c: copy } = useContent();
 
   const { data: contactData } = useQuery({
     queryKey: ['contact'],
@@ -24,29 +21,19 @@ export const Contact = () => {
     retry: false,
   });
 
-  const { data: content } = useQuery({
-    queryKey: ['content'],
-    queryFn: getContent,
-    enabled: isFirebaseConfigured,
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  });
-
   const c = contactData ?? DEFAULT_CONTACT;
-  const contactHeading = content?.contactHeading ?? DEFAULT_CONTENT.contactHeading;
-  const contactSubtitle = content?.contactSubtitle ?? DEFAULT_CONTENT.contactSubtitle;
 
-  const contactInfo = [
-    { icon: Mail,    label: 'Email',    value: c.email,    link: `mailto:${c.email}` },
-    { icon: Phone,   label: 'Phone',    value: c.phone,    link: `tel:${c.phone.replace(/\s/g, '')}` },
-    { icon: MapPin,  label: 'Location', value: c.location, link: c.locationUrl },
-  ];
+  const elsewhereLinks = [
+    { label: 'GitHub', link: c.github },
+    { label: 'LinkedIn', link: c.linkedin },
+    { label: 'Instagram', link: c.instagram },
+  ].filter((l) => l.link);
 
-  const socialLinks = [
-    { icon: Github,   label: 'GitHub',    link: c.github },
-    { icon: Linkedin, label: 'LinkedIn',  link: c.linkedin },
-    { icon: Instagram,label: 'Instagram', link: c.instagram },
-  ];
+  const directLinks = [
+    { label: c.phone, link: `tel:${c.phone.replace(/\s/g, '')}` },
+    { label: c.location, link: c.locationUrl },
+  ].filter((l) => l.label);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -77,17 +64,13 @@ export const Contact = () => {
         import.meta.env.VITE_EMAILJS_PUBLIC_KEY
       );
 
-      toast.success('Message sent!', {
-        description: "Thanks for reaching out. I'll get back to you soon!",
-      });
-      setStatus("Message sent! Thanks for reaching out — I'll get back to you soon.");
+      toast.success(copy('formSuccess'));
+      setStatus(copy('formSuccess'));
 
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
-      toast.error('Error sending message', {
-        description: 'Please try again or contact me directly via email.',
-      });
-      setStatus('Message failed to send. Please try again or email me directly.');
+      toast.error(copy('formError'));
+      setStatus(copy('formError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -96,7 +79,7 @@ export const Contact = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (name === 'message' && value.length > 500) return;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   useGSAP(
@@ -109,220 +92,171 @@ export const Contact = () => {
         {
           motionOk: '(prefers-reduced-motion: no-preference)',
           reduced: '(prefers-reduced-motion: reduce)',
-          finePointer: '(pointer: fine) and (prefers-reduced-motion: no-preference)',
         },
         (ctx) => {
-          const reveals = gsap.utils.toArray<HTMLElement>('.contact-reveal', section);
-
+          const reveals = gsap.utils.toArray<HTMLElement>('[data-reveal]', section);
           if (ctx.conditions?.reduced) {
             gsap.set(reveals, { opacity: 1, y: 0 });
             return;
           }
-
-          gsap.set(reveals, { opacity: 0, y: 28 });
+          gsap.set(reveals, { opacity: 0, y: 24 });
           ScrollTrigger.batch(reveals, {
             start: 'top 88%',
             once: true,
             onEnter: (batch) =>
-              gsap.to(batch, { opacity: 1, y: 0, duration: 0.7, stagger: 0.09, ease: 'power3.out' }),
+              gsap.to(batch, { opacity: 1, y: 0, duration: 0.8, stagger: 0.08, ease: 'power3.out' }),
           });
-
-          // Magnetic submit button (desktop pointers only).
-          if (ctx.conditions?.finePointer && magneticRef.current) {
-            const wrap = magneticRef.current;
-            const xTo = gsap.quickTo(wrap, 'x', { duration: 0.4, ease: 'power3.out' });
-            const yTo = gsap.quickTo(wrap, 'y', { duration: 0.4, ease: 'power3.out' });
-
-            const onMove = (e: MouseEvent) => {
-              const rect = wrap.getBoundingClientRect();
-              const dx = e.clientX - (rect.left + rect.width / 2);
-              const dy = e.clientY - (rect.top + rect.height / 2);
-              const dist = Math.hypot(dx, dy);
-              const radius = 140;
-              if (dist < radius) {
-                const pull = 1 - dist / radius;
-                xTo(dx * pull * 0.4);
-                yTo(dy * pull * 0.4);
-              } else {
-                xTo(0);
-                yTo(0);
-              }
-            };
-            window.addEventListener('mousemove', onMove);
-            return () => window.removeEventListener('mousemove', onMove);
-          }
         }
       );
     },
     { scope: sectionRef }
   );
 
+  const inputClass =
+    'h-11 w-full rounded-md border border-foreground/15 bg-background px-3.5 text-[15px] text-foreground placeholder:text-foreground/35 outline-none transition-colors focus:border-accent';
+
   return (
-    <section id="contact" ref={sectionRef} className="min-h-screen flex items-center justify-center relative py-16 sm:py-24">
-      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 w-full">
-        <div className="text-center mb-8 sm:mb-12 md:mb-16">
-          <SplitReveal
-            as="h2"
-            type="chars"
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold gradient-text mb-4"
+    <section id="contact" ref={sectionRef} className="section-shell relative [scroll-margin-top:64px]">
+      <div className="grid gap-14 lg:grid-cols-[1.1fr_1fr] lg:gap-20">
+        {/* Left: headline + links */}
+        <div>
+          <p data-reveal className="mono-label mb-6 flex flex-wrap items-center gap-x-2">
+            <span>{copy('contactIndexLabel')}</span>
+            <span aria-hidden>·</span>
+            <span className="text-accent">{c.availabilityText}</span>
+          </p>
+          <h2 data-reveal className="!text-[clamp(36px,5.5vw,84px)]">
+            {renderAccent(copy('contactHeading'))}
+          </h2>
+          <a
+            data-reveal
+            href={`mailto:${c.email}`}
+            className="mt-8 inline-block break-all font-mono text-[clamp(16px,2.4vw,26px)] text-foreground underline decoration-foreground/25 underline-offset-8 transition-colors hover:text-accent hover:decoration-accent"
           >
-            {contactHeading}
-          </SplitReveal>
-          <SplitReveal as="p" className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
-            {contactSubtitle}
-          </SplitReveal>
+            {c.email}
+          </a>
+
+          <div data-reveal className="mt-12 grid grid-cols-2 gap-8 border-t hairline pt-8">
+            <div>
+              <p className="mono-label mb-4">{copy('elsewhereLabel')}</p>
+              <ul className="space-y-2.5">
+                {elsewhereLinks.map((item) => (
+                  <li key={item.label}>
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[15px] text-foreground/70 transition-colors hover:text-accent"
+                    >
+                      {item.label} ↗
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="mono-label mb-4">{copy('directLabel')}</p>
+              <ul className="space-y-2.5">
+                {directLinks.map((item) =>
+                  item.link ? (
+                    <li key={item.label}>
+                      <a
+                        href={item.link}
+                        className="text-[15px] text-foreground/70 transition-colors hover:text-accent"
+                      >
+                        {item.label}
+                      </a>
+                    </li>
+                  ) : (
+                    <li key={item.label} className="text-[15px] text-foreground/70">
+                      {item.label}
+                    </li>
+                  )
+                )}
+              </ul>
+            </div>
+          </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
-          {/* Contact Form */}
-          <div>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div className="contact-reveal space-y-2">
-                  <label htmlFor="name" className="text-sm font-medium text-foreground">
-                    Name
-                  </label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Your name"
-                    required
-                    className="bg-secondary border-border focus:border-accent"
-                  />
-                </div>
-                <div className="contact-reveal space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium text-foreground">
-                    Email
-                  </label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="your.email@example.com"
-                    required
-                    className="bg-secondary border-border focus:border-accent"
-                  />
-                </div>
-              </div>
-              <div className="contact-reveal space-y-2">
-                <label htmlFor="subject" className="text-sm font-medium text-foreground">
-                  Subject
+        {/* Right: form card */}
+        <div data-reveal className="self-start rounded-lg border hairline bg-card p-[clamp(20px,3vw,32px)]">
+          <h3 className="!text-[26px]">{copy('formHeading')}</h3>
+          <p className="mt-1.5 text-sm text-foreground/60">{copy('formIntro')}</p>
+
+          <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor="name" className="mono-label !text-[11px]">
+                  {copy('formName')}
                 </label>
-                <Input
-                  id="subject"
-                  name="subject"
-                  value={formData.subject}
+                <input
+                  id="name"
+                  name="name"
+                  value={formData.name}
                   onChange={handleChange}
-                  placeholder="What's this about?"
                   required
-                  className="bg-secondary border-border focus:border-accent"
+                  className={inputClass}
                 />
               </div>
-              <div className="contact-reveal space-y-2">
-                <div className="flex justify-between items-center">
-                  <label htmlFor="message" className="text-sm font-medium text-foreground">
-                    Message
-                  </label>
-                  <span className="text-xs text-muted-foreground">
-                    {formData.message.length}/500
-                  </span>
-                </div>
-                <Textarea
-                  id="message"
-                  name="message"
-                  value={formData.message}
+              <div className="space-y-1.5">
+                <label htmlFor="email" className="mono-label !text-[11px]">
+                  {copy('formEmail')}
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
                   onChange={handleChange}
-                  placeholder="Tell me about your project..."
                   required
-                  rows={6}
-                  className="bg-secondary border-border focus:border-accent resize-none"
+                  className={inputClass}
                 />
               </div>
-              <div ref={magneticRef} className="contact-reveal will-change-transform">
-                <Button
-                  type="submit"
-                  size="lg"
-                  disabled={isSubmitting}
-                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90 transition-smooth glow-accent"
-                >
-                  {isSubmitting ? (
-                    'Sending...'
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-5 w-5" />
-                      Send Message
-                    </>
-                  )}
-                </Button>
-              </div>
-              {/* Screen-reader announcement of the submit outcome. */}
-              <p role="status" aria-live="polite" className="sr-only">
-                {status}
-              </p>
-            </form>
-          </div>
-
-          {/* Contact Info */}
-          <div className="space-y-8">
-            <div className="contact-reveal glass-card p-6 sm:p-8 rounded-xl">
-              <div className="flex items-center gap-3 mb-4 sm:mb-6">
-                <div className="w-3 h-3 bg-accent rounded-full animate-pulse" />
-                <span className="text-xs sm:text-sm font-medium text-accent">{c.availabilityText}</span>
-              </div>
-              <div className="space-y-4 sm:space-y-6">
-                {contactInfo.map((info, index) => {
-                  const content = (
-                    <>
-                      <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors">
-                        <info.icon className="w-6 h-6 text-accent" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">{info.label}</p>
-                        <p className="text-foreground font-medium">{info.value}</p>
-                      </div>
-                    </>
-                  );
-                  // Guard against a missing link (e.g. locationUrl not configured).
-                  return info.link ? (
-                    <a
-                      key={index}
-                      href={info.link}
-                      aria-label={`${info.label}: ${info.value}`}
-                      className="flex items-start gap-4 group transition-smooth hover:translate-x-2"
-                    >
-                      {content}
-                    </a>
-                  ) : (
-                    <div key={index} className="flex items-start gap-4 group">
-                      {content}
-                    </div>
-                  );
-                })}
-              </div>
             </div>
-
-            <div className="contact-reveal glass-card p-6 sm:p-8 rounded-xl">
-              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6">Connect With Me</h3>
-              <div className="flex gap-4">
-                {socialLinks.map((social, index) => (
-                  <a
-                    key={index}
-                    href={social.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:rotate-3 hover:bg-accent group"
-                    aria-label={social.label}
-                  >
-                    <social.icon className="w-6 h-6 text-accent group-hover:text-accent-foreground transition-colors" />
-                  </a>
-                ))}
-              </div>
+            <div className="space-y-1.5">
+              <label htmlFor="subject" className="mono-label !text-[11px]">
+                {copy('formSubject')}
+              </label>
+              <input
+                id="subject"
+                name="subject"
+                value={formData.subject}
+                onChange={handleChange}
+                required
+                className={inputClass}
+              />
             </div>
-          </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="message" className="mono-label !text-[11px]">
+                  {copy('formMessage')}
+                </label>
+                <span className="font-mono text-[11px] text-foreground/40">
+                  {formData.message.length}/500
+                </span>
+              </div>
+              <textarea
+                id="message"
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
+                required
+                rows={6}
+                className={`${inputClass} h-auto resize-none py-3 leading-relaxed`}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex w-full items-center justify-center rounded-full bg-accent px-6 py-3.5 font-mono text-xs uppercase tracking-[0.06em] text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-60"
+            >
+              {isSubmitting ? 'Sending…' : copy('formSubmit')}
+            </button>
+            {/* Screen-reader announcement of the submit outcome. */}
+            <p role="status" aria-live="polite" className="sr-only">
+              {status}
+            </p>
+          </form>
         </div>
       </div>
     </section>

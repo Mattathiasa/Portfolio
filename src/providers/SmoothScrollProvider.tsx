@@ -9,7 +9,7 @@ import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import { gsap, ScrollTrigger, prefersReducedMotion } from '@/lib/gsap';
 
-const ANCHOR_OFFSET = -80;
+const ANCHOR_OFFSET = -64;
 
 interface SmoothScrollContextValue {
   lenisRef: React.MutableRefObject<Lenis | null>;
