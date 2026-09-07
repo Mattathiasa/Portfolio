@@ -63,6 +63,14 @@ export default function Resume() {
           border-radius: 4px;
         }
 
+        /* Keep CV headings on the print-friendly family — the site's global
+           h1–h3 rules would otherwise pull in the serif display font. */
+        .cv-root h1, .cv-root h2, .cv-root h3 {
+          font-family: inherit;
+          line-height: inherit;
+          letter-spacing: normal;
+        }
+
         .cv-header { text-align: center; padding-bottom: 12px; border-bottom: 2.5px solid #2563eb; margin-bottom: 18px; }
         .cv-header h1 { font-size: 24pt; font-weight: 800; letter-spacing: 0.8px; color: #0f172a; }
         .cv-role { font-size: 11pt; font-weight: 600; color: #2563eb; margin: 3px 0 2px; }
