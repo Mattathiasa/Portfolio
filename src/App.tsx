@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 // the main bundle every public visitor downloads.
 const Admin = lazy(() => import("./pages/Admin"));
 const Resume = lazy(() => import("./pages/Resume"));
+const AllProjects = lazy(() => import("./pages/AllProjects"));
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
           <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/projects" element={<AllProjects />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/resume" element={<Resume />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
