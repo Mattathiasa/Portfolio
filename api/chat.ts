@@ -1,3 +1,9 @@
+// Run on Vercel's Edge runtime: this handler uses the Web-standard
+// Request -> Response signature and streams the upstream SSE body straight
+// through, both of which require the edge runtime (the Node runtime expects
+// (req, res) and would hang when a Response is returned instead).
+export const config = { runtime: 'edge' };
+
 export default async function handler(request: Request): Promise<Response> {
   if (request.method === 'OPTIONS') {
     return new Response(null, {
