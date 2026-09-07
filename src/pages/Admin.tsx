@@ -41,6 +41,7 @@ import { LIFECYCLE_STAGES, emptyProjectDev, DEVICE_DEFAULTS, ASPECT_PRESETS, toP
 import { DEFAULT_PROJECTS, DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT, DEFAULT_CV, DEFAULT_HIGHLIGHTS, DEFAULT_CONTACT, DEFAULT_BLOG_POSTS, DEFAULT_TESTIMONIALS, DEFAULT_CERTIFICATIONS } from '@/data/defaults';
 import { SchedulerTab } from '@/components/admin/SchedulerTab';
 import { TestimonialsTab, CertificationsTab } from '@/components/admin/ContentSectionsTab';
+import { SiteCopyTab, AiChatTab } from '@/components/admin/SiteCopyTab';
 
 const CATEGORIES = ['Web Apps', 'Mobile', 'Games', 'Content'];
 const SESSION_KEY = 'portfolio_admin_auth';
@@ -2087,23 +2088,22 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--hero-gradient-from))] via-[hsl(var(--hero-gradient-via))] to-[hsl(var(--hero-gradient-to))]" />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-background">
       <motion.div
         animate={shaking ? { x: [-8, 8, -8, 8, 0] } : { x: 0 }}
         transition={{ duration: 0.4 }}
         className="relative z-10 w-full max-w-sm mx-4"
       >
-        <Card className="glass-card border-accent/20 shadow-2xl">
-          <CardContent className="p-8 space-y-6">
-            <div className="text-center space-y-2">
-              <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto">
-                <Lock className="w-7 h-7 text-accent" />
-              </div>
-              <h1 className="text-2xl font-bold gradient-text">Admin Panel</h1>
-              <p className="text-sm text-muted-foreground">Enter your password to continue</p>
-            </div>
-            <div className="space-y-3">
+        <div className="rounded-lg border hairline bg-card p-[clamp(28px,5vw,44px)] space-y-7">
+          <div className="space-y-2">
+            <p className="mono-label">Admin</p>
+            <h1 className="font-serif text-[clamp(30px,5vw,38px)] leading-tight">
+              Welcome <em className="italic text-accent">back.</em>
+            </h1>
+          </div>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label className="mono-label !text-[11px]">Password</Label>
               <div className="relative">
                 <Input
                   type={showPw ? 'text' : 'password'}
@@ -2111,34 +2111,38 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError(false); }}
                   onKeyDown={e => { if (e.key === 'Enter') attempt(); }}
-                  className={error ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  className={`bg-background ${error ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                   autoFocus
                 />
                 <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <AnimatePresence>
-                {error && (
-                  <motion.p
-                    role="alert"
-                    aria-live="assertive"
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center gap-1.5 text-xs text-destructive"
-                  >
-                    <X className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                    Incorrect password. Please try again.
-                  </motion.p>
-                )}
-              </AnimatePresence>
-              <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={attempt} disabled={!password}>
-                Enter Admin
-              </Button>
             </div>
-          </CardContent>
-        </Card>
+            <AnimatePresence>
+              {error && (
+                <motion.p
+                  role="alert"
+                  aria-live="assertive"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-1.5 text-xs text-destructive"
+                >
+                  <X className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  Incorrect password. Please try again.
+                </motion.p>
+              )}
+            </AnimatePresence>
+            <Button
+              className="w-full rounded-full bg-accent text-accent-foreground hover:bg-accent/90 font-mono text-xs uppercase tracking-[0.06em]"
+              onClick={attempt}
+              disabled={!password}
+            >
+              Enter admin →
+            </Button>
+          </div>
+        </div>
       </motion.div>
     </div>
   );
@@ -2471,17 +2475,46 @@ function DevelopTab() {
   );
 }
 
+const TAB_GROUPS: { label: string; tabs: { value: string; icon: React.ComponentType<{ className?: string }>; label: string }[] }[] = [
+  {
+    label: 'Site',
+    tabs: [
+      { value: 'projects',       icon: FolderOpen,   label: 'Projects' },
+      { value: 'content',        icon: FileText,     label: 'Hero & About' },
+      { value: 'about',          icon: Users,        label: 'About cards' },
+      { value: 'skills',         icon: Layers,       label: 'Skills & Tools' },
+      { value: 'certifications', icon: BookOpen,     label: 'Certs & Edu' },
+      { value: 'testimonials',   icon: Star,         label: 'Testimonials' },
+      { value: 'blog',           icon: BookOpen,     label: 'Blog' },
+      { value: 'contact',        icon: Mail,         label: 'Contact' },
+      { value: 'copy',           icon: ListChecks,   label: 'Site copy' },
+      { value: 'chat',           icon: Sparkles,     label: 'AI chat' },
+    ],
+  },
+  {
+    label: 'Career',
+    tabs: [{ value: 'cv', icon: FileText, label: 'CV editor' }],
+  },
+  {
+    label: 'Private',
+    tabs: [
+      { value: 'develop',   icon: KanbanSquare, label: 'Develop' },
+      { value: 'scheduler', icon: CalendarDays, label: 'Scheduler' },
+    ],
+  },
+];
+
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
+  const [tab, setTab] = useState('projects');
+
   return (
     <div className="min-h-screen bg-background">
       {/* ── Sticky header ── */}
-      <div className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-50 border-b hairline bg-[rgba(14,25,29,0.85)] backdrop-blur-xl">
         <div className="container mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
-              <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
-            </div>
-            <span className="font-bold gradient-text text-base sm:text-lg truncate">Portfolio Admin</span>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent shrink-0" aria-hidden />
+            <span className="font-mono text-[13px] text-foreground truncate">admin</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <Button variant="ghost" size="sm" className="hidden sm:flex" asChild>
@@ -2490,55 +2523,80 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             <Button variant="ghost" size="icon" className="sm:hidden" asChild>
               <a href="/" target="_blank" rel="noopener noreferrer"><Eye className="w-4 h-4" /></a>
             </Button>
-            <Button variant="outline" size="sm" className="border-destructive/30 text-destructive hover:bg-destructive hover:text-white" onClick={onLogout}>
-              <LogOut className="w-4 h-4" /><span className="hidden sm:inline ml-1.5">Logout</span>
-            </Button>
+            <button
+              onClick={onLogout}
+              className="font-mono text-[11px] uppercase tracking-[0.06em] text-foreground/45 hover:text-destructive transition-colors px-2 py-1.5 flex items-center gap-1.5"
+            >
+              <LogOut className="w-3.5 h-3.5" /><span className="hidden sm:inline">Logout</span>
+            </button>
           </div>
         </div>
       </div>
 
       {/* ── Content ── */}
       <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">
-        <Tabs defaultValue="projects">
-          {/* Horizontally scrollable tab bar on mobile */}
-          <div className="w-full mb-6 sm:mb-8 overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-0.5 [&::-webkit-scrollbar-thumb]:bg-border/50 [&::-webkit-scrollbar-thumb]:rounded-full">
-            <TabsList className="bg-secondary/50 border border-border/50 inline-flex h-auto gap-0.5 p-1 w-max min-w-full sm:w-auto sm:flex-wrap">
-              {[
-                { value: 'projects',  icon: FolderOpen,    label: 'Projects' },
-                { value: 'develop',   icon: KanbanSquare,  label: 'Develop' },
-                { value: 'skills',    icon: Layers,        label: 'Skills' },
-                { value: 'blog',      icon: BookOpen,      label: 'Blog' },
-                { value: 'about',     icon: Users,         label: 'About Cards' },
-                { value: 'contact',   icon: Mail,          label: 'Contact' },
-                { value: 'content',   icon: FileText,      label: 'Hero/About' },
-                { value: 'cv',        icon: FileText,      label: 'CV Editor' },
-                { value: 'scheduler', icon: CalendarDays,  label: 'Scheduler' },
-                { value: 'testimonials', icon: Star,       label: 'Testimonials' },
-                { value: 'certifications', icon: BookOpen,  label: 'Certs & Edu' },
-              ].map(({ value, icon: Icon, label }) => (
-                <TabsTrigger
-                  key={value}
-                  value={value}
-                  className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm data-[state=active]:bg-accent data-[state=active]:text-accent-foreground whitespace-nowrap"
-                >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span>{label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
+        <Tabs value={tab} onValueChange={setTab}>
+          <div className="grid gap-8 min-[900px]:grid-cols-[240px_1fr]">
+            {/* Desktop sidebar (≥900px): grouped Site / Career / Private */}
+            <aside className="hidden min-[900px]:block">
+              <nav className="sticky top-24 space-y-6">
+                {TAB_GROUPS.map((group) => (
+                  <div key={group.label}>
+                    <p className="mono-label !text-[10px] mb-2 px-3">{group.label}</p>
+                    <ul className="space-y-0.5">
+                      {group.tabs.map(({ value, icon: Icon, label }) => (
+                        <li key={value}>
+                          <button
+                            onClick={() => setTab(value)}
+                            className={`w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-left transition-colors ${
+                              tab === value
+                                ? 'bg-accent/10 text-accent'
+                                : 'text-foreground/60 hover:bg-card hover:text-foreground'
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5 shrink-0" />
+                            {label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </nav>
+            </aside>
 
-          <TabsContent value="projects"><ProjectsTab /></TabsContent>
-          <TabsContent value="develop"><DevelopTab /></TabsContent>
-          <TabsContent value="skills"><SkillsTab /></TabsContent>
-          <TabsContent value="blog"><BlogTab /></TabsContent>
-          <TabsContent value="about"><AboutTab /></TabsContent>
-          <TabsContent value="contact"><ContactTab /></TabsContent>
-          <TabsContent value="content"><ContentTab /></TabsContent>
-          <TabsContent value="cv"><CVTab /></TabsContent>
-          <TabsContent value="scheduler"><SchedulerTab /></TabsContent>
-          <TabsContent value="testimonials"><TestimonialsTab /></TabsContent>
-          <TabsContent value="certifications"><CertificationsTab /></TabsContent>
+            <div className="min-w-0">
+              {/* Horizontal pill strip below 900px */}
+              <div className="min-[900px]:hidden w-full mb-6 overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-0.5 [&::-webkit-scrollbar-thumb]:bg-border/50 [&::-webkit-scrollbar-thumb]:rounded-full">
+                <TabsList className="bg-transparent inline-flex h-auto gap-1.5 p-0 w-max">
+                  {TAB_GROUPS.flatMap((g) => g.tabs).map(({ value, icon: Icon, label }) => (
+                    <TabsTrigger
+                      key={value}
+                      value={value}
+                      className="flex items-center gap-1.5 rounded-full border border-border px-3.5 py-1.5 text-xs whitespace-nowrap data-[state=active]:border-accent data-[state=active]:text-accent data-[state=active]:bg-accent/5"
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span>{label}</span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+
+              <TabsContent value="projects"><ProjectsTab /></TabsContent>
+              <TabsContent value="develop"><DevelopTab /></TabsContent>
+              <TabsContent value="skills"><SkillsTab /></TabsContent>
+              <TabsContent value="blog"><BlogTab /></TabsContent>
+              <TabsContent value="about"><AboutTab /></TabsContent>
+              <TabsContent value="contact"><ContactTab /></TabsContent>
+              <TabsContent value="content"><ContentTab /></TabsContent>
+              <TabsContent value="cv"><CVTab /></TabsContent>
+              <TabsContent value="scheduler"><SchedulerTab /></TabsContent>
+              <TabsContent value="testimonials"><TestimonialsTab /></TabsContent>
+              <TabsContent value="certifications"><CertificationsTab /></TabsContent>
+              <TabsContent value="copy"><SiteCopyTab /></TabsContent>
+              <TabsContent value="chat"><AiChatTab /></TabsContent>
+            </div>
+          </div>
         </Tabs>
       </div>
     </div>
