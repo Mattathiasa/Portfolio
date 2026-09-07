@@ -3,13 +3,15 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getProjects, getContactData } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import { DEFAULT_PROJECTS, DEFAULT_CONTACT } from '@/data/defaults';
+import { DEFAULT_CONTACT } from '@/data/defaults';
 import { toProjectMedia } from '@/types/portfolio';
 import type { Project } from '@/types/portfolio';
 import { useContent } from '@/hooks/useContent';
 import { gsap, useGSAP } from '@/lib/gsap';
 
-const coverUrl = (p: Project) => toProjectMedia(p)[0]?.url ?? p.image;
+// The admin marks the first media entry as the cover and sets its fit
+// (Cover crops to fill, Contain shows the whole image — e.g. portrait app shots).
+const cover = (p: Project) => toProjectMedia(p)[0];
 
 // The homepage shows a curated few; the full catalogue lives at /projects.
 const HOMEPAGE_PROJECT_LIMIT = 4;
@@ -35,12 +37,15 @@ export const Projects = () => {
   });
   const githubUrl = contactData?.github ?? DEFAULT_CONTACT.github;
 
-  const allVisible = ((firestoreProjects?.length ? firestoreProjects : DEFAULT_PROJECTS) as Project[])
+  // No default fallback — an unconnected/empty Firestore shows an empty state
+  // rather than misleading sample projects.
+  const allVisible = ((firestoreProjects ?? []) as Project[])
     .filter((p) => p.visible !== false)
     .slice()
     .sort((a, b) => a.order - b.order);
   const projects = allVisible.slice(0, HOMEPAGE_PROJECT_LIMIT);
   const hasMore = allVisible.length > projects.length;
+  const isEmpty = allVisible.length === 0;
 
   useGSAP(
     () => {
@@ -79,14 +84,25 @@ export const Projects = () => {
       {/* Header row */}
       <div data-reveal className="mb-[clamp(32px,5vh,56px)] flex items-end justify-between gap-6">
         <h2>{c('workHeading')}</h2>
-        <span className="mono-label shrink-0 pb-2">
-          01 — {String(projects.length).padStart(2, '0')}
-        </span>
+        {!isEmpty && (
+          <span className="mono-label shrink-0 pb-2">
+            01 — {String(projects.length).padStart(2, '0')}
+          </span>
+        )}
       </div>
+
+      {isEmpty && (
+        <div data-reveal className="border-t hairline py-20 text-center">
+          <p className="mono-label text-foreground/40">No projects to display yet</p>
+        </div>
+      )}
 
       {/* Vertical project rows */}
       <div>
-        {projects.map((project, index) => (
+        {projects.map((project, index) => {
+          const cov = cover(project);
+          const coverContain = cov?.fit === 'contain';
+          return (
           <article
             key={project.id ?? project.title}
             data-reveal
@@ -100,13 +116,13 @@ export const Projects = () => {
               className="group relative block self-start overflow-hidden rounded-md border hairline"
               aria-label={project.title}
             >
-              <div className="aspect-[16/10] w-full">
+              <div className={`aspect-[16/10] w-full ${coverContain ? 'bg-secondary' : ''}`}>
                 <img
-                  src={coverUrl(project)}
+                  src={cov?.url ?? project.image}
                   alt={project.title}
                   loading="lazy"
                   decoding="async"
-                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                  className={`h-full w-full ${coverContain ? 'object-contain' : 'object-cover'} transition-transform duration-700 ease-out group-hover:scale-[1.04]`}
                 />
               </div>
               {project.category?.[0] && (
@@ -170,29 +186,32 @@ export const Projects = () => {
               </div>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
 
       {/* Footer row */}
-      <div data-reveal className="flex flex-wrap items-center justify-between gap-4 border-t hairline pt-8">
-        <p className="text-sm text-foreground/60">{c('workMoreText')}</p>
-        <div className="flex items-center gap-6">
-          <Link
-            to="/projects"
-            className="font-mono text-xs uppercase tracking-[0.06em] text-accent transition-colors hover:text-accent-hover"
-          >
-            {hasMore ? `View all ${allVisible.length} projects →` : 'All projects →'}
-          </Link>
-          <a
-            href={githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-mono text-xs uppercase tracking-[0.06em] text-foreground/60 transition-colors hover:text-foreground"
-          >
-            GitHub ↗
-          </a>
+      {!isEmpty && (
+        <div data-reveal className="flex flex-wrap items-center justify-between gap-4 border-t hairline pt-8">
+          <p className="text-sm text-foreground/60">{c('workMoreText')}</p>
+          <div className="flex items-center gap-6">
+            <Link
+              to="/projects"
+              className="font-mono text-xs uppercase tracking-[0.06em] text-accent transition-colors hover:text-accent-hover"
+            >
+              {hasMore ? `View all ${allVisible.length} projects →` : 'All projects →'}
+            </Link>
+            <a
+              href={githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-xs uppercase tracking-[0.06em] text-foreground/60 transition-colors hover:text-foreground"
+            >
+              GitHub ↗
+            </a>
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 };

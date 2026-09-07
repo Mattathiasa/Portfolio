@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getProjects } from '@/lib/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import { DEFAULT_PROJECTS } from '@/data/defaults';
 import { toProjectMedia } from '@/types/portfolio';
 import type { Project } from '@/types/portfolio';
 import { useContent } from '@/hooks/useContent';
@@ -12,7 +11,7 @@ import { Footer } from '@/components/Footer';
 import { SmoothScrollProvider } from '@/providers/SmoothScrollProvider';
 import { gsap, useGSAP } from '@/lib/gsap';
 
-const coverUrl = (p: Project) => toProjectMedia(p)[0]?.url ?? p.image;
+const cover = (p: Project) => toProjectMedia(p)[0];
 
 const AllProjects = () => {
   const mainRef = useRef<HTMLElement>(null);
@@ -35,7 +34,8 @@ const AllProjects = () => {
     retry: false,
   });
 
-  const projects = ((firestoreProjects?.length ? firestoreProjects : DEFAULT_PROJECTS) as Project[])
+  // No default fallback — show a real (possibly empty) view of Firestore.
+  const projects = ((firestoreProjects ?? []) as Project[])
     .filter((p) => p.visible !== false)
     .slice()
     .sort((a, b) => a.order - b.order);
@@ -94,6 +94,11 @@ const AllProjects = () => {
 
           {/* Full project list */}
           <section className="section-shell !pt-0">
+            {projects.length === 0 && (
+              <div data-reveal className="border-t hairline py-20 text-center">
+                <p className="mono-label text-foreground/40">No projects to display yet</p>
+              </div>
+            )}
             {projects.map((project, index) => (
               <article
                 key={project.id ?? project.title}
@@ -108,13 +113,13 @@ const AllProjects = () => {
                   className="group relative block self-start overflow-hidden rounded-md border hairline"
                   aria-label={project.title}
                 >
-                  <div className="aspect-[16/10] w-full">
+                  <div className={`aspect-[16/10] w-full ${cover(project)?.fit === 'contain' ? 'bg-secondary' : ''}`}>
                     <img
-                      src={coverUrl(project)}
+                      src={cover(project)?.url ?? project.image}
                       alt={project.title}
                       loading="lazy"
                       decoding="async"
-                      className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                      className={`h-full w-full ${cover(project)?.fit === 'contain' ? 'object-contain' : 'object-cover'} transition-transform duration-700 ease-out group-hover:scale-[1.04]`}
                     />
                   </div>
                   {project.category?.[0] && (
