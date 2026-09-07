@@ -177,14 +177,12 @@ export const Projects = () => {
       <div data-reveal className="flex flex-wrap items-center justify-between gap-4 border-t hairline pt-8">
         <p className="text-sm text-foreground/60">{c('workMoreText')}</p>
         <div className="flex items-center gap-6">
-          {hasMore && (
-            <Link
-              to="/projects"
-              className="font-mono text-xs uppercase tracking-[0.06em] text-accent transition-colors hover:text-accent-hover"
-            >
-              View all {allVisible.length} projects →
-            </Link>
-          )}
+          <Link
+            to="/projects"
+            className="font-mono text-xs uppercase tracking-[0.06em] text-accent transition-colors hover:text-accent-hover"
+          >
+            {hasMore ? `View all ${allVisible.length} projects →` : 'All projects →'}
+          </Link>
           <a
             href={githubUrl}
             target="_blank"
