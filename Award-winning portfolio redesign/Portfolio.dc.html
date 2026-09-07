@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+html{scroll-behavior:smooth}
+body{margin:0;background:#0E191D;color:#F3EFE2;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#F3EFE2;text-decoration:none}a:hover{color:#DDEB9D}
+*{box-sizing:border-box}
+input,textarea,button{font-family:inherit}
+input::placeholder,textarea::placeholder{color:rgba(243,239,226,.35)}
+::selection{background:#DDEB9D;color:#0E191D}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes ping{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.8);opacity:0}}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+@keyframes panelin{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" data-screen-label="Portfolio (live data)" style="position:relative;min-height:100vh;background:#0E191D;color:#F3EFE2;font-family:'DM Sans',sans-serif;overflow-x:clip">
+  <div ref="{{ threeRef }}" style="position:fixed;inset:0;z-index:0;pointer-events:none;opacity:{{ ambientOpacity }}"></div>
+  <div style="position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(221,235,157,.07),transparent 70%)"></div>
+
+  <nav style="position:fixed;top:0;left:0;right:0;z-index:40;transition:background .3s,border-color .3s;background:{{ navBg }};backdrop-filter:{{ navBlur }};border-bottom:1px solid {{ navLine }}">
+    <div style="max-width:1280px;margin:0 auto;padding:0 clamp(20px,4vw,48px);height:64px;display:flex;align-items:center;justify-content:space-between;gap:24px">
+      <a href="#top" style="font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.04em;color:#F3EFE2;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;border-radius:50%;background:#DDEB9D;display:inline-block"></span>{{ c.siteInitials }} · {{ c.brandLabel }}</a>
+      <div style="display:{{ desktopNavDisplay }};align-items:center;gap:32px">
+        <sc-for list="{{ navItems }}" as="it" hint-placeholder-count="5"><a href="{{ it.href }}" style="font-size:14px;color:rgba(243,239,226,.72);transition:color .2s" style-hover="color:#DDEB9D">{{ it.name }}</a></sc-for>
+        <a href="{{ c.cvUrl }}" style="font-size:14px;color:rgba(243,239,226,.72)" style-hover="color:#DDEB9D">{{ c.navResume }}</a>
+        <a href="{{ mailto }}" style="font-size:13px;font-family:'JetBrains Mono',monospace;color:#0E191D;background:#DDEB9D;padding:8px 14px;border-radius:999px;transition:transform .2s,background .2s" style-hover="background:#E9F3B8;color:#0E191D;transform:translateY(-1px)">{{ c.navHire }}</a>
+      </div>
+      <button onClick="{{ toggleMenu }}" aria-label="Menu" style="display:{{ mobileBtnDisplay }};background:none;border:1px solid rgba(243,239,226,.2);border-radius:999px;color:#F3EFE2;cursor:pointer;height:44px;padding:0 16px;font-family:'JetBrains Mono',monospace;font-size:12px">{{ menuLabel }}</button>
+    </div>
+    <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#0E191D;border-bottom:1px solid rgba(243,239,226,.12);padding:16px clamp(20px,4vw,48px) 28px;display:flex;flex-direction:column;gap:4px">
+        <sc-for list="{{ navItems }}" as="it" hint-placeholder-count="5"><a href="{{ it.href }}" onClick="{{ closeMenu }}" style="font-family:'Instrument Serif',serif;font-size:36px;line-height:1.3;color:#F3EFE2;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(243,239,226,.08);padding:8px 0"><span>{{ it.name }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(243,239,226,.5)">{{ it.idx }}</span></a></sc-for>
+        <a href="{{ c.cvUrl }}" onClick="{{ closeMenu }}" style="font-family:'Instrument Serif',serif;font-size:36px;line-height:1.3;color:#F3EFE2;padding:8px 0;border-bottom:1px solid rgba(243,239,226,.08)">{{ c.navResume }}</a>
+        <a href="{{ mailto }}" onClick="{{ closeMenu }}" style="margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:14px;color:#DDEB9D">{{ ct.email }} ↗</a>
+      </div>
+    </sc-if>
+  </nav>
+
+  <main id="top" style="position:relative;z-index:1">
+    <section id="home" data-screen-label="Hero" style="min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;padding:120px clamp(20px,4vw,48px) clamp(32px,5vh,56px);max-width:1280px;margin:0 auto;width:100%">
+      <div data-hero style="display:flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.6);margin-bottom:28px;flex-wrap:wrap"><span style="width:6px;height:6px;border-radius:50%;background:#DDEB9D;display:inline-block;animation:blink 2s infinite"></span>{{ c.currentlyWorking }}<span style="opacity:.4">/</span>{{ c.heroSubtitle }}<span style="opacity:.4">/</span>{{ ct.location }} · {{ c.heroTimezone }}</div>
+      <h1 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(44px,9vw,128px);line-height:.98;letter-spacing:-.02em;max-width:18ch;text-wrap:balance;display:flex;flex-wrap:wrap;gap:0 .25em">
+        <sc-for list="{{ heroWords }}" as="w" hint-placeholder-count="0"><span data-hero style="display:inline-block;color:{{ w.color }};font-style:{{ w.fontStyle }}">{{ w.text }}</span></sc-for>
+      </h1>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:32px;align-items:end;margin-top:clamp(32px,5vh,56px);padding-top:28px;border-top:1px solid rgba(243,239,226,.14)">
+        <p data-hero style="margin:0;font-size:clamp(17px,1.4vw,20px);line-height:1.5;color:rgba(243,239,226,.78);max-width:52ch;text-wrap:pretty"><span style="color:#F3EFE2">{{ c.heroTitle }}</span> — {{ c.heroDescription }}</p>
+        <div data-hero style="display:flex;flex-wrap:wrap;gap:12px">
+          <a href="#work" style="display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 22px;border-radius:999px;background:#F3EFE2;color:#0E191D;font-size:15px;font-weight:500;transition:transform .2s,background .2s" style-hover="background:#DDEB9D;color:#0E191D;transform:translateY(-2px)">{{ c.heroCtaPrimary }} <span aria-hidden="true">↓</span></a>
+          <a href="{{ c.cvUrl }}" style="display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 22px;border-radius:999px;border:1px solid rgba(243,239,226,.25);color:#F3EFE2;font-size:15px;transition:border-color .2s,transform .2s" style-hover="border-color:#DDEB9D;color:#DDEB9D;transform:translateY(-2px)">{{ c.heroCtaSecondary }}</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="work" data-screen-label="Selected work" style="max-width:1280px;margin:0 auto;padding:clamp(72px,10vh,140px) clamp(20px,4vw,48px)">
+      <div data-reveal style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:clamp(32px,5vh,56px)">
+        <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(36px,5vw,64px);letter-spacing:-.02em;line-height:1">{{ c.workHeading }}</h2>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(243,239,226,.55);letter-spacing:.06em">{{ workCount }} · {{ dataSource }}</span>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <sc-for list="{{ projects }}" as="p" hint-placeholder-count="0">
+          <article data-reveal style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:clamp(20px,3vw,48px);align-items:center;padding:clamp(28px,4vh,48px) 0;border-top:1px solid rgba(243,239,226,.14)">
+            <a href="{{ p.demo }}" target="_blank" rel="noopener" style="position:relative;aspect-ratio:16/10;overflow:hidden;border-radius:6px;background:#14232A;display:block">
+              <div role="img" aria-label="{{ p.title }}" style="width:100%;height:100%;background-color:#14232A;background-position:center;background-size:cover;background-repeat:no-repeat;background-image:url({{ p.image }});transition:transform .8s cubic-bezier(.2,.8,.2,1)" style-hover="transform:scale(1.04)"></div>
+              <span style="position:absolute;top:14px;left:14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;padding:6px 10px;border-radius:999px;background:rgba(14,25,29,.75);backdrop-filter:blur(8px);color:#DDEB9D">{{ p.kind }}</span>
+            </a>
+            <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+              <div style="display:flex;align-items:baseline;gap:16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(243,239,226,.55)"><span>{{ p.idx }}</span><span>{{ p.stackLine }}</span></div>
+              <h3 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(28px,3.2vw,44px);line-height:1.05;letter-spacing:-.01em">{{ p.title }}</h3>
+              <p style="margin:0;font-size:16px;line-height:1.55;color:rgba(243,239,226,.72);max-width:52ch;text-wrap:pretty">{{ p.longDescription }}</p>
+              <div style="padding:14px 16px;border-left:1px solid #DDEB9D;background:rgba(221,235,157,.05);font-size:14px;line-height:1.5;color:rgba(243,239,226,.8)"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#DDEB9D;display:block;margin-bottom:6px">{{ c.workHardPartLabel }}</span>{{ p.challenges }}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <sc-for list="{{ p.tags }}" as="t" hint-placeholder-count="4"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.04em;padding:6px 10px;border:1px solid rgba(243,239,226,.18);border-radius:999px;color:rgba(243,239,226,.8)">{{ t }}</span></sc-for>
+              </div>
+              <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:4px;font-size:14px">
+                <a href="{{ p.demo }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;color:#DDEB9D">{{ c.workLiveLabel }} <span aria-hidden="true">↗</span></a>
+                <a href="{{ p.github }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;color:rgba(243,239,226,.7)" style-hover="color:#DDEB9D">{{ c.workSourceLabel }} <span aria-hidden="true">↗</span></a>
+              </div>
+            </div>
+          </article>
+        </sc-for>
+      </div>
+      <div data-reveal style="border-top:1px solid rgba(243,239,226,.14);padding-top:28px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;align-items:center">
+        <span style="font-size:14px;color:rgba(243,239,226,.6)">{{ c.workMoreText }}</span>
+        <a href="{{ ct.github }}" target="_blank" rel="noopener" style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#F3EFE2;border-bottom:1px solid rgba(243,239,226,.3);padding-bottom:2px" style-hover="color:#DDEB9D;border-color:#DDEB9D">{{ githubLabel }} ↗</a>
+      </div>
+    </section>
+
+    <section id="about" data-screen-label="About" style="border-top:1px solid rgba(243,239,226,.1);background:linear-gradient(180deg,#0E191D,#112025)">
+      <div style="max-width:1280px;margin:0 auto;padding:clamp(72px,10vh,140px) clamp(20px,4vw,48px);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:clamp(32px,5vw,96px);align-items:start">
+        <div data-reveal style="display:flex;flex-direction:column;gap:24px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">{{ c.aboutIndexLabel }}</span>
+          <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(32px,4vw,56px);line-height:1.08;letter-spacing:-.02em;text-wrap:balance">{{ c.aboutHeading }}</h2>
+          <p style="margin:0;font-family:'Instrument Serif',serif;font-style:italic;font-size:clamp(20px,1.8vw,26px);color:#DDEB9D;line-height:1.3">{{ c.aboutSubtitle }}</p>
+          <div style="position:relative;aspect-ratio:2/3;width:100%;max-height:min(720px,80vh);border-radius:6px;overflow:hidden;background:#14232A;margin-top:8px"><div role="img" aria-label="Workspace" style="position:absolute;inset:0;background-color:#14232A;background-position:center;background-size:cover;background-repeat:no-repeat;background-image:url({{ aboutImage }});filter:saturate(.85)"></div></div>
+        </div>
+        <div data-reveal style="display:flex;flex-direction:column;gap:28px;font-size:17px;line-height:1.6;color:rgba(243,239,226,.78)">
+          <p style="margin:0;text-wrap:pretty">{{ c.aboutBody1 }}</p>
+          <p style="margin:0;text-wrap:pretty">{{ c.aboutBody2 }}</p>
+          <dl style="margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:20px;padding-top:20px;border-top:1px solid rgba(243,239,226,.14)">
+            <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+              <div><dd style="margin:0;font-family:'Instrument Serif',serif;font-size:40px;line-height:1;color:#F3EFE2"><span data-count="{{ s.n }}">{{ s.n }}</span>{{ s.suffix }}</dd><dt style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.5);margin-top:8px">{{ s.label }}</dt></div>
+            </sc-for>
+          </dl>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px">
+            <sc-for list="{{ highlights }}" as="h" hint-placeholder-count="4">
+              <div style="padding:16px;border:1px solid rgba(243,239,226,.12);border-radius:6px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:#DDEB9D">{{ h.idx }}</span><strong style="font-size:15px;font-weight:500;color:#F3EFE2">{{ h.title }}</strong><span style="font-size:13.5px;line-height:1.5;color:rgba(243,239,226,.65)">{{ h.description }}</span></div>
+            </sc-for>
+          </div>
+          <a href="#contact" style="align-self:flex-start;display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 20px;border-radius:999px;border:1px solid rgba(243,239,226,.25);color:#F3EFE2;font-size:14px" style-hover="border-color:#DDEB9D;color:#DDEB9D">{{ c.aboutCta }} →</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="experience" data-screen-label="Experience" style="max-width:1280px;margin:0 auto;padding:clamp(72px,10vh,140px) clamp(20px,4vw,48px)">
+      <div data-reveal style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:clamp(32px,5vh,56px)">
+        <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(36px,5vw,64px);letter-spacing:-.02em;line-height:1">{{ c.experienceHeading }}</h2>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(243,239,226,.55);letter-spacing:.06em">{{ c.experienceIndexLabel }}</span>
+      </div>
+      <ol style="list-style:none;margin:0;padding:0;position:relative">
+        <div data-timeline-line style="position:absolute;left:7px;top:8px;bottom:8px;width:1px;background:rgba(243,239,226,.14);transform-origin:top"></div>
+        <sc-for list="{{ timeline }}" as="e" hint-placeholder-count="4">
+          <li data-reveal style="position:relative;display:grid;grid-template-columns:32px minmax(0,1fr);gap:0 20px;padding:0 0 clamp(32px,4vh,48px)">
+            <span style="width:15px;height:15px;border-radius:50%;border:1px solid #DDEB9D;background:#0E191D;display:block;margin-top:5px;position:relative"><span style="position:absolute;inset:4px;border-radius:50%;background:{{ e.dot }}"></span></span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px 40px">
+              <div><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.06em;color:rgba(243,239,226,.55)">{{ e.date }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid rgba(221,235,157,.4);color:#DDEB9D">{{ e.badge }}</span></div><h3 style="margin:0;font-size:20px;font-weight:500;letter-spacing:-.01em">{{ e.title }}</h3><div style="font-size:14px;color:rgba(243,239,226,.6);margin-top:4px">{{ e.org }}</div></div>
+              <ul style="margin:0;padding:0 0 0 16px;font-size:15px;line-height:1.55;color:rgba(243,239,226,.72);display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ e.bullets }}" as="b" hint-placeholder-count="3"><li style="text-wrap:pretty">{{ b }}</li></sc-for>
+              </ul>
+            </div>
+          </li>
+        </sc-for>
+      </ol>
+    </section>
+
+    <section id="skills" data-screen-label="Stack" style="border-top:1px solid rgba(243,239,226,.1);background:#112025">
+      <div style="max-width:1280px;margin:0 auto;padding:clamp(72px,10vh,140px) clamp(20px,4vw,48px)">
+        <div data-reveal style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:clamp(32px,5vh,56px)">
+          <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(36px,5vw,64px);letter-spacing:-.02em;line-height:1">{{ c.skillsHeading }}</h2>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(243,239,226,.55);letter-spacing:.06em">{{ c.skillsIndexLabel }}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:1px;background:rgba(243,239,226,.12);border:1px solid rgba(243,239,226,.12)">
+          <sc-for list="{{ stack }}" as="g" hint-placeholder-count="6">
+            <div data-reveal style="background:#112025;padding:28px 24px;display:flex;flex-direction:column;gap:16px;min-height:160px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><h3 style="margin:0;font-size:15px;font-weight:500">{{ g.label }}</h3><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(243,239,226,.45)">{{ g.idx }}</span></div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <sc-for list="{{ g.items }}" as="t" hint-placeholder-count="4"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 10px;border-radius:4px;background:rgba(243,239,226,.06);color:rgba(243,239,226,.85)">{{ t }}</span></sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div data-reveal style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:24px;margin-top:clamp(32px,5vh,56px)">
+          <sc-for list="{{ credentials }}" as="cr" hint-placeholder-count="3">
+            <div style="display:flex;gap:16px;align-items:flex-start;padding-top:20px;border-top:1px solid rgba(243,239,226,.14)">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#DDEB9D;padding-top:2px">{{ cr.date }}</span>
+              <div><div style="font-size:16px;font-weight:500">{{ cr.name }}</div><div style="font-size:14px;color:rgba(243,239,226,.6);margin-top:4px">{{ cr.issuer }}</div></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" data-screen-label="Contact" style="max-width:1280px;margin:0 auto;padding:clamp(96px,14vh,180px) clamp(20px,4vw,48px) clamp(48px,6vh,80px)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:clamp(32px,5vw,80px);align-items:start">
+        <div data-reveal style="display:flex;flex-direction:column;gap:24px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">{{ c.contactIndexLabel }} · {{ ct.availabilityText }}</span>
+          <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(36px,5.5vw,84px);line-height:1;letter-spacing:-.02em;text-wrap:balance"><sc-for list="{{ contactWords }}" as="w" hint-placeholder-count="0"><span style="color:{{ w.color }};font-style:{{ w.fontStyle }}">{{ w.text }}</span> </sc-for></h2>
+          <a href="{{ mailto }}" style="align-self:flex-start;font-family:'JetBrains Mono',monospace;font-size:clamp(16px,2vw,24px);color:#F3EFE2;border-bottom:1px solid rgba(243,239,226,.3);padding-bottom:6px;margin-top:8px;word-break:break-all;transition:color .2s,border-color .2s" style-hover="color:#DDEB9D;border-color:#DDEB9D">{{ ct.email }}</a>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:24px;margin-top:clamp(24px,4vh,48px);padding-top:24px;border-top:1px solid rgba(243,239,226,.14);font-size:14px">
+            <div style="display:flex;flex-direction:column;gap:10px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.5)">{{ c.elsewhereLabel }}</span><a href="{{ ct.github }}" target="_blank" rel="noopener" style-hover="color:#DDEB9D">GitHub ↗</a><a href="{{ ct.linkedin }}" target="_blank" rel="noopener" style-hover="color:#DDEB9D">LinkedIn ↗</a><a href="{{ ct.instagram }}" target="_blank" rel="noopener" style-hover="color:#DDEB9D">Instagram ↗</a></div>
+            <div style="display:flex;flex-direction:column;gap:10px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.5)">{{ c.directLabel }}</span><a href="{{ tel }}" style-hover="color:#DDEB9D">{{ ct.phone }}</a><a href="{{ ct.locationUrl }}" target="_blank" rel="noopener" style="color:rgba(243,239,226,.7)" style-hover="color:#DDEB9D">{{ ct.location }}</a></div>
+          </div>
+        </div>
+        <form data-reveal onSubmit="{{ submitForm }}" style="border:1px solid rgba(243,239,226,.14);border-radius:8px;background:#112025;padding:clamp(20px,3vw,32px);display:flex;flex-direction:column;gap:16px">
+          <div><h3 style="margin:0 0 6px;font-family:'Instrument Serif',serif;font-weight:400;font-size:28px;letter-spacing:-.01em">{{ c.formHeading }}</h3><p style="margin:0;font-size:14px;color:rgba(243,239,226,.6)">{{ c.formIntro }}</p></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px">
+            <label style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">{{ c.formName }}</span><input required="{{ true }}" value="{{ form.name }}" onChange="{{ setFormName }}" placeholder="Your name" style="height:44px;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 12px;font-size:15px;outline:none" style-focus="border-color:#DDEB9D"></label>
+            <label style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">{{ c.formEmail }}</span><input type="email" required="{{ true }}" value="{{ form.email }}" onChange="{{ setFormEmail }}" placeholder="you@company.com" style="height:44px;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 12px;font-size:15px;outline:none" style-focus="border-color:#DDEB9D"></label>
+          </div>
+          <label style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">{{ c.formSubject }}</span><input required="{{ true }}" value="{{ form.subject }}" onChange="{{ setFormSubject }}" placeholder="Role, project, or question" style="height:44px;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 12px;font-size:15px;outline:none" style-focus="border-color:#DDEB9D"></label>
+          <label style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)"><span>{{ c.formMessage }}</span><span>{{ formCount }}</span></span><textarea required="{{ true }}" rows="6" value="{{ form.message }}" onChange="{{ setFormMessage }}" placeholder="Tell me about the role or the problem…" style="border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:10px 12px;font-size:15px;line-height:1.5;outline:none;resize:vertical" style-focus="border-color:#DDEB9D"></textarea></label>
+          <button type="submit" disabled="{{ formBusy }}" style="height:48px;border-radius:999px;border:0;background:#DDEB9D;color:#0E191D;font-size:15px;font-weight:500;cursor:pointer;transition:background .2s;opacity:{{ formOpacity }}" style-hover="background:#E9F3B8">{{ formSubmitLabel }}</button>
+          <sc-if value="{{ formStatus }}" hint-placeholder-val="{{ false }}"><p role="status" style="margin:0;font-size:14px;color:{{ formStatusColor }}">{{ formStatus }}</p></sc-if>
+        </form>
+      </div>
+      <div data-reveal style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px 24px;margin-top:clamp(48px,7vh,96px);padding-top:24px;border-top:1px solid rgba(243,239,226,.14);color:rgba(243,239,226,.5);font-family:'JetBrains Mono',monospace;font-size:12px"><span>© 2026 {{ c.heroTitle }}</span><span style="display:flex;gap:12px;flex-wrap:wrap"><span>{{ c.footerCredit }}</span><a href="Admin.dc.html" style="color:rgba(243,239,226,.35)" style-hover="color:#DDEB9D">admin</a></span></div>
+    </section>
+  </main>
+
+  <div data-screen-label="AI chat" style="position:fixed;right:clamp(12px,3vw,24px);bottom:clamp(12px,3vw,24px);z-index:70;display:flex;flex-direction:column;align-items:flex-end;gap:12px">
+    <sc-if value="{{ chatOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="width:min(420px,calc(100vw - 24px));max-height:min(72vh,640px);display:flex;flex-direction:column;background:rgba(17,32,37,.96);backdrop-filter:blur(20px);border:1px solid rgba(243,239,226,.14);border-radius:12px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(0,0,0,.8);animation:panelin .25s cubic-bezier(.16,1,.3,1)">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(243,239,226,.1)">
+          <span style="width:32px;height:32px;border-radius:8px;border:1px solid rgba(221,235,157,.35);background:rgba(221,235,157,.1);display:grid;place-items:center;color:#DDEB9D;font-family:'Instrument Serif',serif;font-style:italic;font-size:18px">m</span>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ c.chatTitle }}</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ chatStatusColor }}">{{ chatStatus }}</div></div>
+          <button onClick="{{ clearChat }}" title="Clear conversation" style="height:30px;padding:0 10px;border-radius:6px;border:0;background:transparent;color:rgba(243,239,226,.5);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px" style-hover="color:#F3EFE2">clear</button>
+          <button onClick="{{ toggleChat }}" aria-label="Close chat" style="height:30px;width:30px;border-radius:6px;border:0;background:transparent;color:rgba(243,239,226,.6);cursor:pointer;font-size:14px" style-hover="color:#F3EFE2">✕</button>
+        </div>
+        <div ref="{{ chatScrollRef }}" style="flex:1;min-height:200px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px">
+          <sc-for list="{{ chatMessages }}" as="m" hint-placeholder-count="1">
+            <div style="display:flex;gap:10px;justify-content:{{ m.justify }};align-items:flex-start">
+              <sc-if value="{{ m.isAssistant }}" hint-placeholder-val="{{ true }}"><span style="width:26px;height:26px;flex-shrink:0;border-radius:7px;border:1px solid rgba(221,235,157,.3);background:rgba(221,235,157,.08);display:grid;place-items:center;color:#DDEB9D;font-family:'Instrument Serif',serif;font-style:italic;font-size:15px">m</span></sc-if>
+              <div style="max-width:{{ m.maxWidth }};padding:{{ m.pad }};border-radius:{{ m.radius }};background:{{ m.bg }};color:{{ m.color }};font-size:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere">{{ m.content }}</div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ chatWaiting }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:10px;align-items:center"><span style="width:26px;height:26px;border-radius:7px;border:1px solid rgba(221,235,157,.3);background:rgba(221,235,157,.08);display:grid;place-items:center;color:#DDEB9D;font-family:'Instrument Serif',serif;font-style:italic;font-size:15px">m</span><span style="display:flex;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:rgba(221,235,157,.6);animation:bounce 1s infinite"></span><span style="width:6px;height:6px;border-radius:50%;background:rgba(221,235,157,.6);animation:bounce 1s .15s infinite"></span><span style="width:6px;height:6px;border-radius:50%;background:rgba(221,235,157,.6);animation:bounce 1s .3s infinite"></span></span></div></sc-if>
+        </div>
+        <sc-if value="{{ showSuggestions }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px"><sc-for list="{{ chatSuggestions }}" as="q" hint-placeholder-count="3"><button onClick="{{ q.send }}" style="height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(221,235,157,.3);background:rgba(221,235,157,.06);color:#DDEB9D;font-size:12px;cursor:pointer" style-hover="background:rgba(221,235,157,.14)">{{ q.text }}</button></sc-for></div></sc-if>
+        <a href="#contact" onClick="{{ toggleChat }}" style="margin:0 16px 10px;display:flex;justify-content:center;align-items:center;height:36px;border-radius:8px;border:1px solid rgba(221,235,157,.25);background:rgba(221,235,157,.06);color:#DDEB9D;font-size:12.5px;font-weight:500" style-hover="background:rgba(221,235,157,.14)">{{ c.chatCta }}</a>
+        <form onSubmit="{{ sendChat }}" style="display:flex;gap:8px;padding:12px 16px 16px;border-top:1px solid rgba(243,239,226,.1)">
+          <input ref="{{ chatInputRef }}" value="{{ chatInput }}" onChange="{{ setChatInput }}" placeholder="{{ c.chatPlaceholder }}" maxLength="600" disabled="{{ chatBusy }}" style="flex:1;height:42px;border-radius:8px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 12px;font-size:14px;outline:none;min-width:0" style-focus="border-color:#DDEB9D">
+          <button type="submit" disabled="{{ chatSendDisabled }}" aria-label="Send" style="height:42px;width:42px;border-radius:8px;border:0;background:#DDEB9D;color:#0E191D;cursor:pointer;font-size:16px;opacity:{{ chatSendOpacity }}">↑</button>
+        </form>
+      </div>
+    </sc-if>
+    <button onClick="{{ toggleChat }}" aria-label="{{ chatFabLabel }}" style="position:relative;width:56px;height:56px;border-radius:50%;border:0;background:#DDEB9D;color:#0E191D;cursor:pointer;box-shadow:0 12px 32px -8px rgba(221,235,157,.45);display:grid;place-items:center;font-family:'Instrument Serif',serif;font-style:italic;font-size:26px;transition:transform .2s" style-hover="transform:scale(1.06)">
+      <sc-if value="{{ chatPing }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;border-radius:50%;background:rgba(221,235,157,.5);animation:ping 1.6s ease-out infinite"></span></sc-if>
+      <span style="position:relative">{{ chatFabGlyph }}</span>
+      <sc-if value="{{ chatUnread }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:4px;right:4px;width:12px;height:12px;border-radius:50%;background:#A6E3A1;border:2px solid #0E191D"></span></sc-if>
+    </button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;ambientBackground&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;},&quot;autoOpenChat&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Chat&quot;}}">
+class Component extends DCLogic {
+  state = { menuOpen: false, scrolled: false, narrow: false, data: null, form: { name: '', email: '', subject: '', message: '' }, formBusy: false, formStatus: '', formOk: true,
+    chatOpen: false, chatMessages: [], chatInput: '', chatWaiting: false, chatStreaming: false, chatUnread: false, chatVisited: true };
+  rootRef = React.createRef(); threeRef = React.createRef(); chatScrollRef = React.createRef(); chatInputRef = React.createRef();
+  CHAT_KEY = 'matty_chat_v2'; VISITED_KEY = 'matty_chat_visited';
+  async componentDidMount() {
+    this.onScroll = () => { const sc = window.scrollY > 24; if (sc !== this.state.scrolled) this.setState({ scrolled: sc }); };
+    this.onResize = () => { const n = window.innerWidth < 900; if (n !== this.state.narrow) this.setState({ narrow: n }); };
+    window.addEventListener('scroll', this.onScroll, { passive: true }); window.addEventListener('resize', this.onResize); this.onResize();
+    this.mod = await import('./portfolio-data.js'); this.cfg = await import('./firebase-config.js');
+    const data = await this.mod.loadPortfolio();
+    let msgs = []; try { const raw = localStorage.getItem(this.CHAT_KEY); if (raw) msgs = JSON.parse(raw); } catch (e) {}
+    if (!msgs.length) msgs = [{ id: 'welcome', role: 'assistant', content: data.content.chatWelcome }];
+    const visited = !!localStorage.getItem(this.VISITED_KEY);
+    this.setState({ data, chatMessages: msgs, chatVisited: visited }, () => setTimeout(() => { this.initGsap(); if (this.props.ambientBackground ?? true) this.initThree(); }, 80));
+    if (!visited && (this.props.autoOpenChat ?? true)) setTimeout(() => { this.setState({ chatOpen: true, chatVisited: true }); localStorage.setItem(this.VISITED_KEY, '1'); }, 3000);
+    if (window.emailjs && this.cfg.emailjs.publicKey) emailjs.init({ publicKey: this.cfg.emailjs.publicKey });
+  }
+  componentDidUpdate() { const el = this.chatScrollRef.current; if (el) el.scrollTop = el.scrollHeight; }
+  componentWillUnmount() { window.removeEventListener('scroll', this.onScroll); window.removeEventListener('resize', this.onResize); if (this.raf) cancelAnimationFrame(this.raf); if (window.ScrollTrigger) ScrollTrigger.getAll().forEach(t => t.kill()); }
+  initGsap() {
+    const g = window.gsap, root = this.rootRef.current; if (!g || !root || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    g.registerPlugin(window.ScrollTrigger);
+    g.from(root.querySelectorAll('[data-hero]'), { y: 28, opacity: 0, duration: .9, ease: 'power3.out', stagger: .06, delay: .1 });
+    root.querySelectorAll('[data-reveal]').forEach(el => g.from(el, { y: 24, opacity: 0, duration: .8, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 88%', once: true } }));
+    const line = root.querySelector('[data-timeline-line]'); if (line) g.from(line, { scaleY: 0, duration: 1.4, ease: 'power2.out', scrollTrigger: { trigger: line.parentElement, start: 'top 75%', once: true } });
+    root.querySelectorAll('[data-count]').forEach(el => { const n = +el.getAttribute('data-count'); if (!n) return; const o = { v: 0 }; g.to(o, { v: n, duration: 1.2, ease: 'power2.out', onUpdate: () => { el.textContent = Math.round(o.v); }, scrollTrigger: { trigger: el, start: 'top 90%', once: true } }); });
+  }
+  initThree() {
+    const T = window.THREE, el = this.threeRef.current; if (!T || !el || el.childElementCount) return;
+    const scene = new T.Scene(); scene.fog = new T.FogExp2(0x0E191D, .028);
+    const cam = new T.PerspectiveCamera(60, innerWidth / innerHeight, .1, 200); cam.position.z = 26;
+    const r = new T.WebGLRenderer({ alpha: true, antialias: false, powerPreference: 'low-power' }); r.setPixelRatio(Math.min(devicePixelRatio, 1.5)); r.setSize(innerWidth, innerHeight); el.appendChild(r.domElement);
+    const n = innerWidth < 820 ? 700 : 1600, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), lime = new T.Color('#DDEB9D'), cream = new T.Color('#F3EFE2');
+    for (let i = 0; i < n; i++) { pos[i*3] = (Math.random() - .5) * 90; pos[i*3+1] = (Math.random() - .5) * 60; pos[i*3+2] = (Math.random() - .5) * 60; const c = Math.random() < .35 ? lime : cream; col[i*3] = c.r; col[i*3+1] = c.g; col[i*3+2] = c.b; }
+    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('color', new T.BufferAttribute(col, 3));
+    const pts = new T.Points(geo, new T.PointsMaterial({ size: .09, vertexColors: true, transparent: true, opacity: .55, depthWrite: false })); scene.add(pts);
+    const mouse = { x: 0, y: 0 }; let scrollY = 0;
+    window.addEventListener('mousemove', e => { mouse.x = e.clientX / innerWidth * 2 - 1; mouse.y = -(e.clientY / innerHeight) * 2 + 1; }, { passive: true });
+    window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
+    window.addEventListener('resize', () => { cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); r.setSize(innerWidth, innerHeight); });
+    let last = 0; const tick = (t) => { this.raf = requestAnimationFrame(tick); if (t - last < 33) return; last = t; pts.rotation.y += .0004; pts.rotation.x = scrollY * .00012; cam.position.x += (mouse.x * 2 - cam.position.x) * .03; cam.position.y += (mouse.y * 1.2 - cam.position.y) * .03; r.render(scene, cam); };
+    this.raf = requestAnimationFrame(tick);
+  }
+  // Splits "*word*" markup into accent words.
+  words(str) { return (str || '').split(/(\*[^*]+\*)/).flatMap(seg => { const acc = /^\*[^*]+\*$/.test(seg); return seg.replace(/\*/g, '').split(/\s+/).filter(Boolean).map(text => ({ text, color: acc ? '#DDEB9D' : '#F3EFE2', fontStyle: acc ? 'italic' : 'normal' })); }); }
+  async submitForm(e) {
+    e.preventDefault(); const f = this.state.form, c = this.state.data.content, ct = this.state.data.contact, ej = this.cfg.emailjs;
+    this.setState({ formBusy: true, formStatus: '' });
+    try {
+      if (window.emailjs && ej.serviceId && ej.templateId && ej.publicKey) await emailjs.send(ej.serviceId, ej.templateId, { from_name: f.name, from_email: f.email, subject: f.subject, message: f.message, to_email: ct.email });
+      else window.location.href = 'mailto:' + ct.email + '?subject=' + encodeURIComponent(f.subject) + '&body=' + encodeURIComponent(f.message + '\n\n— ' + f.name + ' (' + f.email + ')');
+      this.setState({ formBusy: false, formStatus: c.formSuccess, formOk: true, form: { name: '', email: '', subject: '', message: '' } });
+    } catch (err) { this.setState({ formBusy: false, formStatus: c.formError, formOk: false }); }
+  }
+  persistChat(msgs) { try { localStorage.setItem(this.CHAT_KEY, JSON.stringify(msgs)); } catch (e) {} }
+  async sendChat(text) {
+    const t = (text || '').trim(); const s = this.state; if (!t || s.chatWaiting || s.chatStreaming) return;
+    const c = s.data.content, ct = s.data.contact;
+    const msgs = [...s.chatMessages, { id: 'u' + Date.now(), role: 'user', content: t }];
+    this.setState({ chatMessages: msgs, chatInput: '', chatWaiting: true }); this.persistChat(msgs);
+    const key = this.cfg.groqApiKey;
+    const payload = { model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: c.chatSystemPrompt }, ...msgs.slice(-10).map(m => ({ role: m.role, content: m.content }))], max_tokens: 500, temperature: .7, stream: true };
+    try {
+      const res = await fetch(key ? 'https://api.groq.com/openai/v1/chat/completions' : '/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(key ? { Authorization: 'Bearer ' + key } : {}) }, body: JSON.stringify(payload) });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const id = 'a' + Date.now(); let full = ''; this.setState({ chatWaiting: false, chatStreaming: true, chatMessages: [...msgs, { id, role: 'assistant', content: '' }] });
+      const reader = res.body.getReader(), dec = new TextDecoder();
+      while (true) { const { done, value } = await reader.read(); if (done) break; for (const line of dec.decode(value, { stream: true }).split('\n')) { if (!line.startsWith('data: ')) continue; const d = line.slice(6).trim(); if (d === '[DONE]') continue; try { const delta = JSON.parse(d).choices?.[0]?.delta?.content ?? ''; if (delta) { full += delta; this.setState({ chatMessages: [...msgs, { id, role: 'assistant', content: full }] }); } } catch (e) {} } }
+      const done = [...msgs, { id, role: 'assistant', content: full || '…' }]; this.setState({ chatStreaming: false, chatMessages: done, chatUnread: !this.state.chatOpen }); this.persistChat(done);
+    } catch (err) {
+      const done = [...msgs, { id: 'e' + Date.now(), role: 'assistant', content: "Sorry, I couldn't connect right now. Email Matty at " + ct.email + ' and he\u2019ll get back to you.' }];
+      this.setState({ chatWaiting: false, chatStreaming: false, chatMessages: done }); this.persistChat(done);
+    }
+  }
+  renderVals() {
+    const s = this.state, d = s.data;
+    const base = {
+      rootRef: this.rootRef, threeRef: this.threeRef, chatScrollRef: this.chatScrollRef, chatInputRef: this.chatInputRef, ambientOpacity: (this.props.ambientBackground ?? true) ? 1 : 0,
+      navBg: s.scrolled ? 'rgba(14,25,29,.8)' : 'transparent', navBlur: s.scrolled ? 'blur(16px)' : 'none', navLine: s.scrolled ? 'rgba(243,239,226,.1)' : 'transparent',
+      desktopNavDisplay: s.narrow ? 'none' : 'flex', mobileBtnDisplay: s.narrow ? 'inline-flex' : 'none', menuOpen: s.menuOpen && s.narrow, menuLabel: s.menuOpen ? 'Close' : 'Menu',
+      toggleMenu: () => this.setState(t => ({ menuOpen: !t.menuOpen })), closeMenu: () => this.setState({ menuOpen: false }),
+      c: {}, ct: {}, navItems: [], heroWords: [], contactWords: [], projects: [], aboutImage: 'src/assets/workspace-1280.webp', stats: [], highlights: [], timeline: [], stack: [], credentials: [],
+      form: s.form, formBusy: s.formBusy, formOpacity: s.formBusy ? .6 : 1, formStatus: s.formStatus, formStatusColor: s.formOk ? '#A6E3A1' : '#F0A6A6', formCount: s.form.message.length + '/500', formSubmitLabel: 'Send message',
+      setFormName: e => this.setState({ form: { ...s.form, name: e.target.value } }), setFormEmail: e => this.setState({ form: { ...s.form, email: e.target.value } }), setFormSubject: e => this.setState({ form: { ...s.form, subject: e.target.value } }), setFormMessage: e => { if (e.target.value.length <= 500) this.setState({ form: { ...s.form, message: e.target.value } }); }, submitForm: e => this.submitForm(e),
+      chatOpen: s.chatOpen, toggleChat: () => this.setState(t => ({ chatOpen: !t.chatOpen, chatUnread: false, chatVisited: true }), () => { if (this.state.chatOpen) { localStorage.setItem(this.VISITED_KEY, '1'); setTimeout(() => this.chatInputRef.current && this.chatInputRef.current.focus(), 150); } }),
+      chatFabGlyph: s.chatOpen ? '✕' : 'm', chatFabLabel: s.chatOpen ? 'Close chat' : 'Open chat', chatPing: !s.chatVisited && !s.chatOpen, chatUnread: s.chatUnread && !s.chatOpen,
+      chatMessages: s.chatMessages.map(m => { const a = m.role === 'assistant'; return { ...m, isAssistant: a, justify: a ? 'flex-start' : 'flex-end', maxWidth: a ? '100%' : '82%', pad: a ? '2px 0' : '10px 14px', radius: a ? '0' : '14px 14px 4px 14px', bg: a ? 'transparent' : '#DDEB9D', color: a ? '#F3EFE2' : '#0E191D' }; }),
+      chatWaiting: s.chatWaiting, chatBusy: s.chatWaiting || s.chatStreaming, chatStatus: s.chatWaiting || s.chatStreaming ? 'Thinking…' : (d ? d.content.chatSubtitle : ''), chatStatusColor: s.chatWaiting || s.chatStreaming ? '#DDEB9D' : 'rgba(243,239,226,.5)',
+      chatInput: s.chatInput, setChatInput: e => this.setState({ chatInput: e.target.value }), sendChat: e => { e.preventDefault(); this.sendChat(s.chatInput); }, chatSendDisabled: !s.chatInput.trim() || s.chatWaiting || s.chatStreaming, chatSendOpacity: !s.chatInput.trim() || s.chatWaiting || s.chatStreaming ? .45 : 1,
+      showSuggestions: s.chatMessages.length <= 1 && !s.chatWaiting && !s.chatStreaming, chatSuggestions: d ? (d.content.chatSuggestions || []).map(text => ({ text, send: () => this.sendChat(text) })) : [],
+      clearChat: () => { const w = [{ id: 'welcome', role: 'assistant', content: d ? d.content.chatWelcome : '' }]; this.setState({ chatMessages: w, chatWaiting: false, chatStreaming: false }); try { localStorage.removeItem(this.CHAT_KEY); } catch (e) {} },
+    };
+    if (!d) return base;
+    const c = d.content, ct = d.contact, cv = d.cv;
+    const projects = d.projects.filter(p => p.visible !== false).sort((a, b) => a.order - b.order);
+    const edu = cv.education.map(e => ({ date: e.date, badge: c.educationBadge, title: e.degree, org: e.school + (e.gpa ? ' · GPA ' + e.gpa : ''), bullets: [], dot: 'transparent' }));
+    const exp = cv.experience.map(e => ({ date: e.date, badge: e.badge, title: e.title, org: e.org, bullets: e.bullets, dot: /present/i.test(e.date) ? '#DDEB9D' : 'transparent' }));
+    return Object.assign(base, {
+      c, ct, formSubmitLabel: s.formBusy ? 'Sending…' : c.formSubmit,
+      navItems: [[c.navWork, '#work'], [c.navAbout, '#about'], [c.navExperience, '#experience'], [c.navStack, '#skills'], [c.navContact, '#contact']].map(([name, href], i) => ({ name, href, idx: '0' + (i + 1) })),
+      heroWords: this.words(c.heroHeadline), contactWords: this.words(c.contactHeading),
+      aboutImage: c.aboutImage || 'src/assets/workspace-1280.webp',
+      stats: (c.aboutStats || []).map(x => { const m = String(x.number).match(/^(\d+)(.*)$/); return { n: m ? +m[1] : 0, suffix: m ? m[2] : x.number, label: x.label }; }),
+      highlights: d.highlights.map((h, i) => ({ ...h, idx: '0' + (i + 1) })),
+      mailto: 'mailto:' + ct.email, tel: 'tel:' + ct.phone.replace(/\s/g, ''), githubLabel: ct.github.replace(/^https?:\/\//, ''),
+      workCount: '01 — 0' + projects.length, dataSource: d.source === 'firestore' ? 'live from Firestore' : 'defaults (Firebase not configured)',
+      projects: projects.map((p, i) => ({ ...p, idx: '0' + (i + 1), kind: (p.category || []).join(' · ').toUpperCase(), stackLine: (p.techStack || p.tags || []).slice(0, 3).join(' · ') })),
+      timeline: [...exp, ...edu],
+      stack: cv.skills.map((g, i) => ({ label: g.label, idx: '0' + (i + 1), items: g.value.split(',').map(x => x.trim()).filter(Boolean) })),
+      credentials: d.certifications.slice().sort((a, b) => a.order - b.order),
+    });
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+body{margin:0;background:#0E191D;color:#F3EFE2;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#F3EFE2;text-decoration:none}a:hover{color:#DDEB9D}
+*{box-sizing:border-box}
+input,textarea,select,button{font-family:inherit}
+input::placeholder,textarea::placeholder{color:rgba(243,239,226,.35)}
+::selection{background:#DDEB9D;color:#0E191D}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes toastin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" data-screen-label="Admin" style="min-height:100vh;background:#0E191D;color:#F3EFE2;font-family:'DM Sans',sans-serif">
+
+  <sc-if value="{{ showLogin }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="Admin · Login" style="min-height:100vh;display:grid;place-items:center;padding:24px;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 60% 50% at 50% 20%,rgba(221,235,157,.08),transparent 70%)"></div>
+      <form ref="{{ loginRef }}" onSubmit="{{ attemptLogin }}" style="position:relative;width:100%;max-width:420px;border:1px solid rgba(243,239,226,.14);border-radius:8px;background:#112025;padding:clamp(28px,5vw,44px);display:flex;flex-direction:column;gap:24px">
+        <div style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)"><span style="width:6px;height:6px;border-radius:50%;background:#DDEB9D;animation:blink 2s infinite"></span>Admin · mattathias.dev</div>
+        <div><h1 style="margin:0 0 8px;font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(36px,5vw,48px);line-height:1;letter-spacing:-.02em">Welcome <em style="color:#DDEB9D">back.</em></h1><p style="margin:0;font-size:15px;color:rgba(243,239,226,.65)">Enter your password to edit the site.</p></div>
+        <label style="display:flex;flex-direction:column;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">Password
+          <div style="position:relative">
+            <input type="{{ pwType }}" value="{{ pw }}" onChange="{{ setPw }}" autoFocus="{{ true }}" placeholder="••••••••" style="height:48px;width:100%;border-radius:6px;border:1px solid {{ pwBorder }};background:#0E191D;color:#F3EFE2;padding:0 48px 0 14px;font-size:16px;font-family:'JetBrains Mono',monospace;outline:none" style-focus="border-color:#DDEB9D">
+            <button type="button" onClick="{{ togglePw }}" style="position:absolute;right:8px;top:8px;height:32px;padding:0 10px;border:0;background:transparent;color:rgba(243,239,226,.55);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px" style-hover="color:#DDEB9D">{{ pwToggleLabel }}</button>
+          </div>
+        </label>
+        <sc-if value="{{ loginError }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin:-8px 0 0;font-size:13px;color:#F0A6A6">Incorrect password. Try again.</p></sc-if>
+        <button type="submit" style="height:48px;border-radius:999px;border:0;background:#DDEB9D;color:#0E191D;font-size:15px;font-weight:500;cursor:pointer;transition:background .2s" style-hover="background:#E9F3B8">Enter admin →</button>
+        <p style="margin:0;font-size:12px;color:rgba(243,239,226,.45);font-family:'JetBrains Mono',monospace">{{ loginHint }}</p>
+      </form>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showDash }}" hint-placeholder-val="{{ false }}">
+    <div style="display:grid;grid-template-columns:{{ shellCols }};min-height:100vh">
+      <aside style="display:{{ sidebarDisplay }};flex-direction:column;border-right:1px solid rgba(243,239,226,.1);background:#0E191D;position:sticky;top:0;height:100vh;padding:24px 16px;gap:28px">
+        <a href="Portfolio.dc.html" style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.04em;padding:0 8px"><span style="width:8px;height:8px;border-radius:50%;background:#DDEB9D"></span>mattathias.dev</a>
+        <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(243,239,226,.4);padding:0 8px 8px">{{ g.name }}</span>
+            <sc-for list="{{ g.tabs }}" as="t" hint-placeholder-count="4">
+              <button onClick="{{ t.onClick }}" style="display:flex;align-items:center;justify-content:space-between;height:38px;padding:0 10px;border-radius:6px;border:0;background:{{ t.bg }};color:{{ t.color }};font-size:14px;cursor:pointer;text-align:left;transition:background .15s" style-hover="background:rgba(243,239,226,.06)"><span>{{ t.label }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(243,239,226,.35)">{{ t.count }}</span></button>
+            </sc-for>
+          </div>
+        </sc-for>
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:0 8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(243,239,226,.45)"><span style="display:flex;align-items:center;gap:8px"><span style="width:6px;height:6px;border-radius:50%;background:{{ sourceDot }}"></span>{{ sourceLabel }}</span><button onClick="{{ logout }}" style="height:36px;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:transparent;color:rgba(243,239,226,.7);cursor:pointer;font-size:13px" style-hover="border-color:#F0A6A6;color:#F0A6A6">Log out</button></div>
+      </aside>
+
+      <div style="min-width:0;display:flex;flex-direction:column">
+        <header style="position:sticky;top:0;z-index:20;background:rgba(14,25,29,.85);backdrop-filter:blur(14px);border-bottom:1px solid rgba(243,239,226,.1)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;height:60px;padding:0 clamp(16px,3vw,40px)">
+            <div style="display:flex;align-items:baseline;gap:14px;min-width:0"><h1 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:26px;letter-spacing:-.02em;white-space:nowrap">{{ activeLabel }}</h1><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(243,239,226,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ activeHint }}</span></div>
+            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+              <a href="Portfolio.dc.html" target="_blank" style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;border:1px solid rgba(243,239,226,.16);font-size:13px" style-hover="border-color:#DDEB9D;color:#DDEB9D">View site ↗</a>
+              <button onClick="{{ logout }}" style="display:{{ mobileLogoutDisplay }};height:36px;padding:0 12px;border-radius:999px;border:1px solid rgba(243,239,226,.16);background:transparent;color:rgba(243,239,226,.7);cursor:pointer;font-size:13px">Log out</button>
+            </div>
+          </div>
+          <div style="display:{{ tabstripDisplay }};gap:6px;overflow-x:auto;padding:0 16px 12px;scrollbar-width:none">
+            <sc-for list="{{ allTabs }}" as="t" hint-placeholder-count="11"><button onClick="{{ t.onClick }}" style="flex-shrink:0;height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ t.pillBorder }};background:{{ t.bg }};color:{{ t.color }};font-size:13px;cursor:pointer;white-space:nowrap">{{ t.label }}</button></sc-for>
+          </div>
+        </header>
+
+        <main style="padding:clamp(20px,3vw,40px);max-width:1100px;width:100%">
+          <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:12px;color:rgba(243,239,226,.6);font-family:'JetBrains Mono',monospace;font-size:13px;padding:80px 0;justify-content:center"><span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(221,235,157,.25);border-top-color:#DDEB9D;animation:spin .8s linear infinite"></span>Loading from Firestore…</div></sc-if>
+
+          <sc-if value="{{ isProjects }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Admin · Projects" style="display:flex;flex-direction:column;gap:20px">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                <p style="margin:0;font-size:14px;color:rgba(243,239,226,.6)">{{ projectCountLabel }} · drag handles reorder, eye toggles visibility on the site.</p>
+                <div style="display:flex;gap:8px"><button onClick="{{ saveOrder }}" style="display:{{ orderDirtyDisplay }};height:38px;padding:0 16px;border-radius:999px;border:1px solid #DDEB9D;background:transparent;color:#DDEB9D;font-size:14px;cursor:pointer">Save order</button><button onClick="{{ addProject }}" style="height:38px;padding:0 18px;border-radius:999px;border:0;background:#DDEB9D;color:#0E191D;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:#E9F3B8">+ Add project</button></div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:16px">
+                <sc-for list="{{ projectCards }}" as="p" hint-placeholder-count="0">
+                  <div style="border:1px solid rgba(243,239,226,.12);border-radius:8px;background:#112025;overflow:hidden;display:flex;flex-direction:column;opacity:{{ p.opacity }}">
+                    <div style="position:relative;aspect-ratio:16/9;background:#0E191D"><div role="img" aria-label="{{ p.title }}" style="width:100%;height:100%;background-color:#0E191D;background-position:center;background-size:cover;background-repeat:no-repeat;background-image:url({{ p.image }})"></div><span style="position:absolute;top:10px;left:10px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;padding:4px 8px;border-radius:999px;background:rgba(14,25,29,.8);color:#DDEB9D">{{ p.kind }}</span><span style="position:absolute;top:10px;right:10px;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 8px;border-radius:999px;background:rgba(14,25,29,.8);color:rgba(243,239,226,.7)">#{{ p.order }}</span></div>
+                    <div style="padding:16px;display:flex;flex-direction:column;gap:8px;flex:1">
+                      <h3 style="margin:0;font-size:17px;font-weight:500;letter-spacing:-.01em">{{ p.title }}</h3>
+                      <p style="margin:0;font-size:13px;line-height:1.5;color:rgba(243,239,226,.6)">{{ p.description }}</p>
+                      <div style="display:flex;gap:6px;margin-top:auto;padding-top:10px;border-top:1px solid rgba(243,239,226,.08);flex-wrap:wrap">
+                        <button onClick="{{ p.edit }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid rgba(243,239,226,.16);background:transparent;color:#F3EFE2;font-size:13px;cursor:pointer" style-hover="border-color:#DDEB9D;color:#DDEB9D">Edit</button>
+                        <button onClick="{{ p.toggle }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid rgba(243,239,226,.16);background:transparent;color:{{ p.visColor }};font-size:13px;cursor:pointer;font-family:'JetBrains Mono',monospace">{{ p.visLabel }}</button>
+                        <button onClick="{{ p.up }}" aria-label="Move up" style="height:32px;width:32px;border-radius:999px;border:1px solid rgba(243,239,226,.16);background:transparent;color:#F3EFE2;cursor:pointer">↑</button>
+                        <button onClick="{{ p.down }}" aria-label="Move down" style="height:32px;width:32px;border-radius:999px;border:1px solid rgba(243,239,226,.16);background:transparent;color:#F3EFE2;cursor:pointer">↓</button>
+                        <button onClick="{{ p.remove }}" style="height:32px;padding:0 12px;border-radius:999px;border:0;background:transparent;color:rgba(243,239,226,.45);font-size:13px;cursor:pointer;margin-left:auto" style-hover="color:#F0A6A6">Delete</button>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isForm }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Admin · Form" style="display:flex;flex-direction:column;gap:24px;max-width:760px">
+              <p style="margin:0;font-size:14px;color:rgba(243,239,226,.6)">{{ formIntro }}</p>
+              <sc-for list="{{ formSections }}" as="sec" hint-placeholder-count="2">
+                <section style="border:1px solid rgba(243,239,226,.12);border-radius:8px;background:#112025;padding:clamp(18px,3vw,28px);display:flex;flex-direction:column;gap:18px">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap"><h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px;letter-spacing:-.01em">{{ sec.title }}</h2><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(243,239,226,.45)">{{ sec.hint }}</span></div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,{{ sec.minCol }}),1fr));gap:16px">
+                    <sc-for list="{{ sec.fields }}" as="f" hint-placeholder-count="4">
+                      <label style="display:flex;flex-direction:column;gap:6px;grid-column:{{ f.span }}">
+                        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">{{ f.label }}</span>
+                        <sc-if value="{{ f.multiline }}" hint-placeholder-val="{{ false }}"><textarea rows="{{ f.rows }}" value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.placeholder }}" style="width:100%;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:10px 12px;font-size:14px;line-height:1.5;outline:none;resize:vertical" style-focus="border-color:#DDEB9D"></textarea></sc-if>
+                        <sc-if value="{{ f.single }}" hint-placeholder-val="{{ true }}"><input value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.placeholder }}" style="height:40px;width:100%;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 12px;font-size:14px;outline:none" style-focus="border-color:#DDEB9D"></sc-if>
+                      </label>
+                    </sc-for>
+                  </div>
+                </section>
+              </sc-for>
+              <sc-if value="{{ hasListEditor }}" hint-placeholder-val="{{ false }}">
+                <section style="border:1px solid rgba(243,239,226,.12);border-radius:8px;background:#112025;padding:clamp(18px,3vw,28px);display:flex;flex-direction:column;gap:14px">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap"><h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px;letter-spacing:-.01em">{{ listTitle }}</h2><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(243,239,226,.45)">{{ listHint }}</span></div>
+                  <sc-for list="{{ listRows }}" as="r" hint-placeholder-count="3">
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start;padding:14px;border:1px solid rgba(243,239,226,.1);border-radius:6px;background:#0E191D">
+                      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px">
+                        <sc-for list="{{ r.fields }}" as="f" hint-placeholder-count="3">
+                          <label style="display:flex;flex-direction:column;gap:4px;grid-column:{{ f.span }}"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.45)">{{ f.label }}</span>
+                            <sc-if value="{{ f.multiline }}" hint-placeholder-val="{{ false }}"><textarea rows="3" value="{{ f.value }}" onChange="{{ f.onChange }}" style="width:100%;border-radius:6px;border:1px solid rgba(243,239,226,.14);background:#112025;color:#F3EFE2;padding:8px 10px;font-size:14px;line-height:1.5;outline:none;resize:vertical" style-focus="border-color:#DDEB9D"></textarea></sc-if>
+                            <sc-if value="{{ f.single }}" hint-placeholder-val="{{ true }}"><input value="{{ f.value }}" onChange="{{ f.onChange }}" type="{{ f.type }}" min="0" max="100" style="height:36px;width:100%;border-radius:6px;border:1px solid rgba(243,239,226,.14);background:#112025;color:#F3EFE2;padding:0 10px;font-size:14px;outline:none" style-focus="border-color:#DDEB9D"></sc-if>
+                          </label>
+                        </sc-for>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:4px"><button onClick="{{ r.up }}" aria-label="Up" style="width:30px;height:30px;border-radius:6px;border:1px solid rgba(243,239,226,.14);background:transparent;color:#F3EFE2;cursor:pointer">↑</button><button onClick="{{ r.down }}" aria-label="Down" style="width:30px;height:30px;border-radius:6px;border:1px solid rgba(243,239,226,.14);background:transparent;color:#F3EFE2;cursor:pointer">↓</button><button onClick="{{ r.remove }}" aria-label="Remove" style="width:30px;height:30px;border-radius:6px;border:0;background:transparent;color:rgba(243,239,226,.45);cursor:pointer" style-hover="color:#F0A6A6">✕</button></div>
+                    </div>
+                  </sc-for>
+                  <button onClick="{{ listAdd }}" style="height:40px;border-radius:6px;border:1px dashed rgba(221,235,157,.4);background:transparent;color:rgba(243,239,226,.7);font-size:14px;cursor:pointer" style-hover="color:#DDEB9D;border-color:#DDEB9D">+ {{ listAddLabel }}</button>
+                </section>
+              </sc-if>
+              <sc-if value="{{ hasChips }}" hint-placeholder-val="{{ false }}">
+                <section style="border:1px solid rgba(243,239,226,.12);border-radius:8px;background:#112025;padding:clamp(18px,3vw,28px);display:flex;flex-direction:column;gap:14px">
+                  <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px;letter-spacing:-.01em">Tools</h2>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    <sc-for list="{{ chips }}" as="c" hint-placeholder-count="10"><span style="display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 6px 6px 10px;border-radius:4px;background:rgba(243,239,226,.06);color:rgba(243,239,226,.85)">{{ c.name }}<button onClick="{{ c.remove }}" aria-label="Remove" style="border:0;background:transparent;color:rgba(243,239,226,.45);cursor:pointer;padding:0 4px;font-size:12px" style-hover="color:#F0A6A6">✕</button></span></sc-for>
+                  </div>
+                  <form onSubmit="{{ addChip }}" style="display:flex;gap:8px"><input value="{{ chipDraft }}" onChange="{{ setChipDraft }}" placeholder="Add a tool and press Enter" style="height:40px;flex:1;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 12px;font-size:14px;outline:none" style-focus="border-color:#DDEB9D"><button type="submit" style="height:40px;padding:0 16px;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:transparent;color:#F3EFE2;cursor:pointer">Add</button></form>
+                </section>
+              </sc-if>
+              <div style="display:flex;justify-content:flex-end;align-items:center;gap:14px;position:sticky;bottom:16px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(243,239,226,.5)">{{ saveStatus }}</span><button onClick="{{ saveForm }}" style="height:44px;padding:0 22px;border-radius:999px;border:0;background:#DDEB9D;color:#0E191D;font-size:15px;font-weight:500;cursor:pointer;box-shadow:0 10px 30px -10px rgba(0,0,0,.6)" style-hover="background:#E9F3B8">{{ saveLabel }}</button></div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isCv }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Admin · CV" style="display:flex;flex-direction:column;gap:24px;max-width:760px">
+              <p style="margin:0;font-size:14px;color:rgba(243,239,226,.6)">Edits here feed the Experience and Stack sections of the homepage and the printable /resume page.</p>
+              <sc-for list="{{ formSections }}" as="sec" hint-placeholder-count="2">
+                <section style="border:1px solid rgba(243,239,226,.12);border-radius:8px;background:#112025;padding:clamp(18px,3vw,28px);display:flex;flex-direction:column;gap:18px">
+                  <h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px;letter-spacing:-.01em">{{ sec.title }}</h2>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,{{ sec.minCol }}),1fr));gap:16px">
+                    <sc-for list="{{ sec.fields }}" as="f" hint-placeholder-count="4">
+                      <label style="display:flex;flex-direction:column;gap:6px;grid-column:{{ f.span }}"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">{{ f.label }}</span>
+                        <sc-if value="{{ f.multiline }}" hint-placeholder-val="{{ false }}"><textarea rows="{{ f.rows }}" value="{{ f.value }}" onChange="{{ f.onChange }}" style="width:100%;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:10px 12px;font-size:14px;line-height:1.5;outline:none;resize:vertical" style-focus="border-color:#DDEB9D"></textarea></sc-if>
+                        <sc-if value="{{ f.single }}" hint-placeholder-val="{{ true }}"><input value="{{ f.value }}" onChange="{{ f.onChange }}" style="height:40px;width:100%;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 12px;font-size:14px;outline:none" style-focus="border-color:#DDEB9D"></sc-if>
+                      </label>
+                    </sc-for>
+                  </div>
+                </section>
+              </sc-for>
+              <section style="border:1px solid rgba(243,239,226,.12);border-radius:8px;background:#112025;padding:clamp(18px,3vw,28px);display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px">Experience</h2><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(243,239,226,.45)">one bullet per line</span></div>
+                <sc-for list="{{ cvExp }}" as="e" hint-placeholder-count="3">
+                  <div style="padding:14px;border:1px solid rgba(243,239,226,.1);border-radius:6px;background:#0E191D;display:flex;flex-direction:column;gap:10px">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:10px">
+                      <input value="{{ e.title }}" onChange="{{ e.setTitle }}" placeholder="Title" style="height:36px;border-radius:6px;border:1px solid rgba(243,239,226,.14);background:#112025;color:#F3EFE2;padding:0 10px;font-size:14px;outline:none" style-focus="border-color:#DDEB9D">
+                      <input value="{{ e.badge }}" onChange="{{ e.setBadge }}" placeholder="Full-time / Freelance" style="height:36px;border-radius:6px;border:1px solid rgba(243,239,226,.14);background:#112025;color:#F3EFE2;padding:0 10px;font-size:14px;outline:none" style-focus="border-color:#DDEB9D">
+                      <input value="{{ e.date }}" onChange="{{ e.setDate }}" placeholder="Feb 2026 – Present" style="height:36px;border-radius:6px;border:1px solid rgba(243,239,226,.14);background:#112025;color:#F3EFE2;padding:0 10px;font-size:14px;outline:none;font-family:'JetBrains Mono',monospace;font-size:13px" style-focus="border-color:#DDEB9D">
+                    </div>
+                    <input value="{{ e.org }}" onChange="{{ e.setOrg }}" placeholder="Organisation · City" style="height:36px;border-radius:6px;border:1px solid rgba(243,239,226,.14);background:#112025;color:#F3EFE2;padding:0 10px;font-size:14px;outline:none" style-focus="border-color:#DDEB9D">
+                    <textarea rows="4" value="{{ e.bullets }}" onChange="{{ e.setBullets }}" placeholder="What you did, one per line" style="border-radius:6px;border:1px solid rgba(243,239,226,.14);background:#112025;color:#F3EFE2;padding:8px 10px;font-size:14px;line-height:1.5;outline:none;resize:vertical" style-focus="border-color:#DDEB9D"></textarea>
+                    <div style="display:flex;justify-content:flex-end"><button onClick="{{ e.remove }}" style="height:30px;padding:0 10px;border:0;background:transparent;color:rgba(243,239,226,.45);cursor:pointer;font-size:13px" style-hover="color:#F0A6A6">Remove</button></div>
+                  </div>
+                </sc-for>
+                <button onClick="{{ addExp }}" style="height:40px;border-radius:6px;border:1px dashed rgba(221,235,157,.4);background:transparent;color:rgba(243,239,226,.7);font-size:14px;cursor:pointer" style-hover="color:#DDEB9D;border-color:#DDEB9D">+ Add experience</button>
+              </section>
+              <div style="display:flex;justify-content:flex-end;align-items:center;gap:14px;position:sticky;bottom:16px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(243,239,226,.5)">{{ saveStatus }}</span><button onClick="{{ saveForm }}" style="height:44px;padding:0 22px;border-radius:999px;border:0;background:#DDEB9D;color:#0E191D;font-size:15px;font-weight:500;cursor:pointer;box-shadow:0 10px 30px -10px rgba(0,0,0,.6)" style-hover="background:#E9F3B8">Save CV</button></div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isDevelop }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Admin · Develop" style="display:flex;flex-direction:column;gap:14px;max-width:860px">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><p style="margin:0;font-size:14px;color:rgba(243,239,226,.6)">Private planning notes per project. Never shown on the site.</p><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(243,239,226,.5);display:flex;align-items:center;gap:8px"><span style="width:6px;height:6px;border-radius:50%;background:{{ devDot }}"></span>{{ devStatus }}</span></div>
+              <sc-for list="{{ devRows }}" as="d" hint-placeholder-count="4">
+                <div style="border:1px solid {{ d.border }};border-radius:8px;background:#112025;overflow:hidden">
+                  <button onClick="{{ d.toggle }}" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 18px;border:0;background:transparent;color:#F3EFE2;cursor:pointer;text-align:left;flex-wrap:wrap">
+                    <span style="font-size:16px;font-weight:500;flex:1;min-width:120px">{{ d.title }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 8px;border-radius:999px;border:1px solid {{ d.stageColor }};color:{{ d.stageColor }}">{{ d.stage }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(243,239,226,.5)">{{ d.progress }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(243,239,226,.4)">{{ d.chev }}</span>
+                  </button>
+                  <sc-if value="{{ d.open }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:4px 18px 18px;display:flex;flex-direction:column;gap:18px;border-top:1px solid rgba(243,239,226,.08)">
+                      <label style="display:flex;flex-direction:column;gap:6px;max-width:300px;padding-top:14px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">Lifecycle stage</span><select value="{{ d.stage }}" onChange="{{ d.setStage }}" style="height:38px;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 10px;font-size:14px;outline:none"><sc-for list="{{ stages }}" as="s" hint-placeholder-count="10"><option value="{{ s }}">{{ s }}</option></sc-for></select></label>
+                      <sc-for list="{{ d.lists }}" as="L" hint-placeholder-count="3">
+                        <div style="display:flex;flex-direction:column;gap:8px">
+                          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:14px;font-weight:500">{{ L.title }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(221,235,157,.1);color:#DDEB9D">{{ L.count }}</span></div>
+                          <sc-for list="{{ L.items }}" as="it" hint-placeholder-count="2">
+                            <div style="display:flex;gap:10px;align-items:center"><input type="checkbox" checked="{{ it.done }}" onChange="{{ it.toggle }}" style="width:16px;height:16px;accent-color:#DDEB9D;flex-shrink:0"><input value="{{ it.text }}" onChange="{{ it.setText }}" style="flex:1;height:34px;border-radius:6px;border:1px solid rgba(243,239,226,.12);background:#0E191D;color:{{ it.color }};padding:0 10px;font-size:14px;outline:none;text-decoration:{{ it.deco }}" style-focus="border-color:#DDEB9D"><button onClick="{{ it.remove }}" aria-label="Remove" style="border:0;background:transparent;color:rgba(243,239,226,.4);cursor:pointer;font-size:13px" style-hover="color:#F0A6A6">✕</button></div>
+                          </sc-for>
+                          <form onSubmit="{{ L.add }}" style="display:flex;gap:8px"><input value="{{ L.draft }}" onChange="{{ L.setDraft }}" placeholder="{{ L.placeholder }}" style="flex:1;height:34px;border-radius:6px;border:1px dashed rgba(243,239,226,.2);background:transparent;color:#F3EFE2;padding:0 10px;font-size:14px;outline:none" style-focus="border-color:#DDEB9D"><button type="submit" style="height:34px;width:34px;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:transparent;color:#F3EFE2;cursor:pointer">+</button></form>
+                        </div>
+                      </sc-for>
+                      <label style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">Notes</span><textarea rows="3" value="{{ d.notes }}" onChange="{{ d.setNotes }}" placeholder="Freeform scratchpad…" style="border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:10px 12px;font-size:14px;line-height:1.5;outline:none;resize:vertical" style-focus="border-color:#DDEB9D"></textarea></label>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isScheduler }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Admin · Scheduler" style="display:flex;flex-direction:column;gap:20px">
+              <form onSubmit="{{ addTask }}" style="display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center;border:1px solid rgba(243,239,226,.12);border-radius:8px;background:#112025;padding:12px">
+                <input value="{{ taskDraft }}" onChange="{{ setTaskDraft }}" placeholder="New task…" style="height:40px;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 12px;font-size:14px;outline:none;min-width:0" style-focus="border-color:#DDEB9D">
+                <select value="{{ taskType }}" onChange="{{ setTaskType }}" style="height:40px;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 8px;font-size:13px"><option value="todo">to-do</option><option value="meeting">meeting</option><option value="deadline">deadline</option><option value="project">project</option></select>
+                <select value="{{ taskPri }}" onChange="{{ setTaskPri }}" style="height:40px;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 8px;font-size:13px"><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select>
+                <button type="submit" style="height:40px;padding:0 16px;border-radius:999px;border:0;background:#DDEB9D;color:#0E191D;font-weight:500;cursor:pointer">Add</button>
+              </form>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px">
+                <sc-for list="{{ schedColumns }}" as="col" hint-placeholder-count="5">
+                  <div style="display:flex;flex-direction:column;gap:8px;min-height:160px;border:1px solid rgba(243,239,226,.1);border-radius:8px;padding:12px;background:{{ col.bg }}">
+                    <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:{{ col.color }}">{{ col.label }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(243,239,226,.4)">{{ col.count }}</span></div>
+                    <sc-for list="{{ col.items }}" as="t" hint-placeholder-count="2">
+                      <div style="border:1px solid rgba(243,239,226,.12);border-radius:6px;background:#112025;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+                        <div style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" checked="{{ t.completed }}" onChange="{{ t.toggle }}" style="width:15px;height:15px;accent-color:#DDEB9D;margin-top:2px;flex-shrink:0"><span style="font-size:14px;line-height:1.4;color:{{ t.color }};text-decoration:{{ t.deco }}">{{ t.title }}</span></div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.06em"><span style="padding:3px 7px;border-radius:999px;border:1px solid {{ t.priColor }};color:{{ t.priColor }}">{{ t.priority }}</span><span style="padding:3px 7px;border-radius:999px;background:rgba(243,239,226,.06);color:rgba(243,239,226,.7)">{{ t.type }}</span><span style="color:rgba(243,239,226,.5)">{{ t.when }}</span></div>
+                        <div style="display:flex;gap:6px"><button onClick="{{ t.back }}" aria-label="Move back" style="height:26px;width:26px;border-radius:6px;border:1px solid rgba(243,239,226,.12);background:transparent;color:#F3EFE2;cursor:pointer;font-size:12px">←</button><button onClick="{{ t.fwd }}" aria-label="Move forward" style="height:26px;width:26px;border-radius:6px;border:1px solid rgba(243,239,226,.12);background:transparent;color:#F3EFE2;cursor:pointer;font-size:12px">→</button><button onClick="{{ t.remove }}" style="height:26px;padding:0 8px;border:0;background:transparent;color:rgba(243,239,226,.4);cursor:pointer;font-size:12px;margin-left:auto" style-hover="color:#F0A6A6">delete</button></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </main>
+      </div>
+    </div>
+
+    <sc-if value="{{ editorOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeEditor }}" style="position:fixed;inset:0;background:rgba(6,12,14,.6);backdrop-filter:blur(4px);z-index:60"></div>
+      <div data-screen-label="Admin · Project editor" style="position:fixed;top:0;right:0;bottom:0;width:min(100%,560px);background:#112025;border-left:1px solid rgba(243,239,226,.12);z-index:61;display:flex;flex-direction:column;box-shadow:-30px 0 80px -30px rgba(0,0,0,.7)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid rgba(243,239,226,.1)"><h2 style="margin:0;font-family:'Instrument Serif',serif;font-weight:400;font-size:26px;letter-spacing:-.01em">{{ editorTitle }}</h2><button onClick="{{ closeEditor }}" aria-label="Close" style="height:36px;width:36px;border-radius:999px;border:1px solid rgba(243,239,226,.16);background:transparent;color:#F3EFE2;cursor:pointer">✕</button></div>
+        <div style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px">
+          <div style="aspect-ratio:16/9;border-radius:6px;overflow:hidden;background:#0E191D;border:1px solid rgba(243,239,226,.1)"><div role="img" aria-label="Cover preview" style="width:100%;height:100%;background-color:#0E191D;background-position:center;background-size:cover;background-repeat:no-repeat;background-image:url({{ ep.image }})"></div></div>
+          <sc-for list="{{ editorFields }}" as="f" hint-placeholder-count="8">
+            <label style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">{{ f.label }}</span>
+              <sc-if value="{{ f.multiline }}" hint-placeholder-val="{{ false }}"><textarea rows="{{ f.rows }}" value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.placeholder }}" style="width:100%;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:10px 12px;font-size:14px;line-height:1.5;outline:none;resize:vertical" style-focus="border-color:#DDEB9D"></textarea></sc-if>
+              <sc-if value="{{ f.single }}" hint-placeholder-val="{{ true }}"><input value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.placeholder }}" style="height:40px;width:100%;border-radius:6px;border:1px solid rgba(243,239,226,.16);background:#0E191D;color:#F3EFE2;padding:0 12px;font-size:14px;outline:none" style-focus="border-color:#DDEB9D"></sc-if>
+            </label>
+          </sc-for>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,239,226,.55)">Categories</span><div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ editorCats }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.toggle }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};font-size:13px;cursor:pointer">{{ c.name }}</button></sc-for></div></div>
+          <label style="display:flex;align-items:center;gap:10px;font-size:14px;padding-top:8px"><input type="checkbox" checked="{{ ep.visible }}" onChange="{{ epToggleVisible }}" style="width:16px;height:16px;accent-color:#DDEB9D">Visible on the public site</label>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid rgba(243,239,226,.1)"><button onClick="{{ closeEditor }}" style="height:42px;padding:0 18px;border-radius:999px;border:1px solid rgba(243,239,226,.16);background:transparent;color:#F3EFE2;cursor:pointer;font-size:14px">Cancel</button><button onClick="{{ saveProject }}" style="height:42px;padding:0 20px;border-radius:999px;border:0;background:#DDEB9D;color:#0E191D;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:#E9F3B8">{{ saveProjectLabel }}</button></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:80;background:#F3EFE2;color:#0E191D;padding:12px 18px;border-radius:999px;font-size:14px;font-weight:500;box-shadow:0 20px 50px -20px rgba(0,0,0,.8);animation:toastin .25s ease-out;white-space:nowrap">{{ toast }}</div>
+    </sc-if>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { authed: false, pw: '', showPw: false, loginError: false, tab: 'projects', narrow: false, loading: true, data: null, extras: null, saving: false, dirty: false, orderDirty: false, editor: null, chipDraft: '', drafts: {}, openDev: {}, taskDraft: '', taskType: 'todo', taskPri: 'medium', toast: '' };
+  rootRef = React.createRef(); loginRef = React.createRef();
+  TABS = [
+    ['Site', [['projects', 'Projects', 'Cards shown in Selected work'], ['content', 'Hero & About', 'Headline copy, stats, CTA'], ['about', 'About cards', 'Four highlight cards'], ['skills', 'Skills & Tools', 'Skill levels and tool chips'], ['certifications', 'Certs & Edu', 'Credentials shown under Stack'], ['testimonials', 'Testimonials', 'Quotes from people you worked with'], ['blog', 'Blog', 'Posts (empty = section hidden)'], ['contact', 'Contact', 'Email, phone, links, availability'], ['copy', 'Site copy', 'Every heading, label and button'], ['chat', 'AI chat', 'Welcome, suggestions, system prompt']]],
+    ['Career', [['cv', 'CV editor', 'Feeds Experience, Stack and /resume']]],
+    ['Private', [['develop', 'Develop', 'Per-project planning notes'], ['scheduler', 'Scheduler', 'Tasks, meetings, deadlines']]]];
+  STAGES = ['Not set', 'Idea', 'Planning', 'Design', 'Development', 'Testing', 'Deployment', 'Live', 'Maintenance', 'On Hold'];
+  STAGE_COLORS = { 'Not set': 'rgba(243,239,226,.4)', Idea: '#C9B8F5', Planning: '#9DC4F0', Design: '#F0A6C8', Development: '#F0DB8A', Testing: '#F2B27A', Deployment: '#8FD9E6', Live: '#A6E3A1', Maintenance: '#8FD6C4', 'On Hold': 'rgba(243,239,226,.4)' };
+  CATS = ['Web Apps', 'Mobile', 'Games', 'Content'];
+  STATUSES = [['backlog', 'Backlog'], ['scheduled', 'Scheduled'], ['in_progress', 'In progress'], ['review', 'Review'], ['completed', 'Completed']];
+  async componentDidMount() {
+    this.onResize = () => { const n = window.innerWidth < 900; if (n !== this.state.narrow) this.setState({ narrow: n }); }; window.addEventListener('resize', this.onResize); this.onResize();
+    this.mod = await import('./portfolio-data.js'); this.cfg = await import('./firebase-config.js');
+    const authed = sessionStorage.getItem('portfolio-admin-authed') === 'true';
+    this.setState({ authed }); if (authed) this.load();
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this.onResize); }
+  async load() { const [data, extras] = await Promise.all([this.mod.loadPortfolio(), this.mod.loadAdminExtras()]); this.setState({ data, extras, loading: false }); }
+  say(msg) { this.setState({ toast: msg }); clearTimeout(this.tt); this.tt = setTimeout(() => this.setState({ toast: '' }), 2400); }
+  async attemptLogin(e) {
+    e.preventDefault(); const hash = await this.mod.sha256(this.state.pw);
+    if (!this.cfg.adminHash || hash === this.cfg.adminHash) { sessionStorage.setItem('portfolio-admin-authed', 'true'); this.setState({ authed: true, pw: '', loginError: false }); this.load(); }
+    else { this.setState({ loginError: true }); if (window.gsap && this.loginRef.current) gsap.fromTo(this.loginRef.current, { x: -8 }, { x: 0, duration: .4, ease: 'elastic.out(1,.3)' }); }
+  }
+  upd(path, value) { this.setState(s => { const data = structuredClone(s.data); let o = data; for (let i = 0; i < path.length - 1; i++) o = o[path[i]]; o[path[path.length - 1]] = value; return { data, dirty: true }; }); }
+  updX(path, value) { this.setState(s => { const extras = structuredClone(s.extras); let o = extras; for (let i = 0; i < path.length - 1; i++) { if (o[path[i]] == null) o[path[i]] = {}; o = o[path[i]]; } o[path[path.length - 1]] = value; return { extras }; }, () => this.autosaveDev()); }
+  autosaveDev() { clearTimeout(this.devT); this.setState({ devSaving: 'dirty' }); this.devT = setTimeout(async () => { this.setState({ devSaving: 'saving' }); await this.mod.save.items('develop', this.state.extras.develop); this.setState({ devSaving: 'saved' }); }, 900); }
+  field(label, path, opts = {}) { const v = path.reduce((o, k) => (o == null ? '' : o[k]), this.state.data); return { label, value: v ?? '', onChange: e => this.upd(path, e.target.value), multiline: !!opts.rows, single: !opts.rows, rows: opts.rows || 3, span: opts.full ? '1 / -1' : 'auto', placeholder: opts.ph || '', type: opts.type || 'text' }; }
+  listRows(key, cols) { const arr = this.state.data[key]; const setArr = a => this.upd([key], a.map((x, i) => ({ ...x, order: i }))); return arr.map((it, i) => ({ fields: cols.map(([k, label, o]) => ({ label, value: it[k] ?? '', onChange: e => { const a = arr.slice(); a[i] = { ...it, [k]: o && o.type === 'number' ? +e.target.value : e.target.value }; setArr(a); }, multiline: !!(o && o.rows), single: !(o && o.rows), span: o && o.full ? '1 / -1' : 'auto', type: (o && o.type) || 'text' })), up: () => { if (i) { const a = arr.slice(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; setArr(a); } }, down: () => { if (i < arr.length - 1) { const a = arr.slice(); [a[i + 1], a[i]] = [a[i], a[i + 1]]; setArr(a); } }, remove: () => setArr(arr.filter((_, j) => j !== i)) })); }
+  async saveForm() {
+    const t = this.state.tab, d = this.state.data, S = this.mod.save; this.setState({ saving: true });
+    try {
+      if (t === 'content' || t === 'copy' || t === 'chat') await S.content(d.content); else if (t === 'contact') await S.contact(d.contact);
+      else if (t === 'about') await S.items('highlights', d.highlights); else if (t === 'certifications') await S.items('certifications', d.certifications);
+      else if (t === 'testimonials') await S.items('testimonials', d.testimonials); else if (t === 'cv') await S.cv(d.cv);
+      else if (t === 'skills') { await S.items('tools', d.tools); for (const s of d.skills) await S.skill(s); }
+      else if (t === 'blog') { /* blog posts are a collection; wire per-post add/update here */ }
+      this.setState({ saving: false, dirty: false }); this.say(d.source === 'firestore' ? 'Saved to Firestore' : 'Saved locally (Firebase not configured)');
+    } catch (e) { this.setState({ saving: false }); this.say('Save failed: ' + e.message); }
+  }
+  renderVals() {
+    const s = this.state, d = s.data, x = s.extras, narrow = s.narrow;
+    const setTab = tab => this.setState({ tab, dirty: false });
+    const allTabs = this.TABS.flatMap(([, tabs]) => tabs);
+    const counts = d ? { projects: d.projects.length, skills: d.skills.length, certifications: d.certifications.length, testimonials: d.testimonials.length, blog: d.blog.length, about: d.highlights.length, scheduler: x ? x.scheduler.filter(t => !t.completed).length : '', develop: d.projects.length, cv: d.cv.experience.length } : {};
+    const mk = ([id, label]) => ({ id, label, onClick: () => setTab(id), bg: s.tab === id ? 'rgba(221,235,157,.12)' : 'transparent', color: s.tab === id ? '#DDEB9D' : 'rgba(243,239,226,.75)', pillBorder: s.tab === id ? '#DDEB9D' : 'rgba(243,239,226,.14)', count: counts[id] ?? '' });
+    const active = allTabs.find(t => t[0] === s.tab) || allTabs[0];
+    const base = {
+      rootRef: this.rootRef, loginRef: this.loginRef, showLogin: !s.authed, showDash: s.authed, pw: s.pw, pwType: s.showPw ? 'text' : 'password', pwToggleLabel: s.showPw ? 'hide' : 'show', pwBorder: s.loginError ? '#F0A6A6' : 'rgba(243,239,226,.16)',
+      setPw: e => this.setState({ pw: e.target.value, loginError: false }), togglePw: () => this.setState(t => ({ showPw: !t.showPw })), attemptLogin: e => this.attemptLogin(e), loginError: s.loginError,
+      loginHint: this.cfg && this.cfg.adminHash ? 'Password is checked against VITE_ADMIN_HASH (SHA-256).' : 'Demo mode: no admin hash set in firebase-config.js — any password works.',
+      logout: () => { sessionStorage.removeItem('portfolio-admin-authed'); this.setState({ authed: false }); },
+      shellCols: narrow ? '1fr' : '240px minmax(0,1fr)', sidebarDisplay: narrow ? 'none' : 'flex', tabstripDisplay: narrow ? 'flex' : 'none', mobileLogoutDisplay: narrow ? 'inline-flex' : 'none',
+      groups: this.TABS.map(([name, tabs]) => ({ name, tabs: tabs.map(mk) })), allTabs: allTabs.map(mk), activeLabel: active[1], activeHint: active[2],
+      sourceDot: d && d.source === 'firestore' ? '#A6E3A1' : '#F0DB8A', sourceLabel: d && d.source === 'firestore' ? 'Connected to Firestore' : 'Local defaults · add config',
+      loading: s.loading, toast: s.toast, stages: this.STAGES,
+      isProjects: !s.loading && s.tab === 'projects', isForm: !s.loading && ['content', 'contact', 'about', 'skills', 'certifications', 'testimonials', 'blog', 'copy', 'chat'].includes(s.tab), isCv: !s.loading && s.tab === 'cv', isDevelop: !s.loading && s.tab === 'develop', isScheduler: !s.loading && s.tab === 'scheduler',
+      saveStatus: s.saving ? 'Saving…' : s.dirty ? 'Unsaved changes' : 'All changes saved', saveLabel: 'Save changes', saveForm: () => this.saveForm(),
+      editorOpen: !!s.editor, hasListEditor: false, hasChips: false, formSections: [], formIntro: '',
+    };
+    if (!d) return Object.assign(base, { projectCards: [], ep: { image: 'src/assets/workspace-1280.webp' }, editorFields: [], editorCats: [], listRows: [], chips: [], cvExp: [], devRows: [], schedColumns: [] });
+    const F = (l, p, o) => this.field(l, p, o);
+    // ── Projects
+    const projects = d.projects.slice().sort((a, b) => a.order - b.order);
+    const setProjects = arr => this.upd(['projects'], arr.map((p, i) => ({ ...p, order: i })));
+    Object.assign(base, {
+      projectCountLabel: projects.length + ' project' + (projects.length === 1 ? '' : 's') + (d.source === 'firestore' ? ' in Firestore' : ' (defaults)'), orderDirtyDisplay: s.orderDirty ? 'inline-flex' : 'none',
+      saveOrder: async () => { for (const p of projects) await this.mod.save.project(p); this.setState({ orderDirty: false }); this.say('Order saved'); },
+      addProject: () => this.setState({ editor: { title: '', description: '', longDescription: '', challenges: '', image: '', tags: [], techStack: [], category: [], github: '', demo: '', visible: true, order: projects.length } }),
+      projectCards: projects.map((p, i) => ({ ...p, kind: (p.category || []).join(' · ').toUpperCase() || 'UNCATEGORISED', opacity: p.visible === false ? .55 : 1, visLabel: p.visible === false ? 'hidden' : 'visible', visColor: p.visible === false ? 'rgba(243,239,226,.5)' : '#DDEB9D',
+        edit: () => this.setState({ editor: structuredClone(p) }), toggle: async () => { const np = { ...p, visible: p.visible === false }; setProjects(projects.map(q => q.id === p.id ? np : q)); await this.mod.save.project(np); this.say(np.visible ? 'Shown on site' : 'Hidden from site'); },
+        up: () => { if (i) { const a = projects.slice(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; setProjects(a); this.setState({ orderDirty: true }); } }, down: () => { if (i < projects.length - 1) { const a = projects.slice(); [a[i + 1], a[i]] = [a[i], a[i + 1]]; setProjects(a); this.setState({ orderDirty: true }); } },
+        remove: async () => { if (!confirm('Delete "' + p.title + '"?')) return; await this.mod.save.deleteProject(p.id); setProjects(projects.filter(q => q.id !== p.id)); this.say('Project deleted'); } })),
+    });
+    if (s.editor) {
+      const ep = s.editor, set = (k, v) => this.setState(t => ({ editor: { ...t.editor, [k]: v } }));
+      const ef = (label, k, o = {}) => ({ label, value: o.list ? (ep[k] || []).join(', ') : (ep[k] ?? ''), onChange: e => set(k, o.list ? e.target.value.split(',').map(v => v.trim()).filter(Boolean) : e.target.value), multiline: !!o.rows, single: !o.rows, rows: o.rows || 3, placeholder: o.ph || '' });
+      Object.assign(base, {
+        ep, editorTitle: ep.id ? 'Edit project' : 'New project', saveProjectLabel: ep.id ? 'Save project' : 'Create project', closeEditor: () => this.setState({ editor: null }), epToggleVisible: () => set('visible', !ep.visible),
+        editorFields: [ef('Title', 'title', { ph: 'Project name' }), ef('Cover image URL', 'image', { ph: 'https://… (Firebase Storage or Cloudinary)' }), ef('Short description', 'description', { rows: 2, ph: 'One sentence shown on the card' }), ef('Long description', 'longDescription', { rows: 5 }), ef('Challenges / hard part', 'challenges', { rows: 4 }), ef('Tags', 'tags', { list: true, ph: 'React Native, Firebase, RBAC' }), ef('Tech stack', 'techStack', { list: true, ph: 'Comma separated' }), ef('GitHub URL', 'github'), ef('Live demo URL', 'demo')],
+        editorCats: this.CATS.map(c => { const on = (ep.category || []).includes(c); return { name: c, toggle: () => set('category', on ? ep.category.filter(v => v !== c) : [...(ep.category || []), c]), border: on ? '#DDEB9D' : 'rgba(243,239,226,.16)', bg: on ? 'rgba(221,235,157,.12)' : 'transparent', color: on ? '#DDEB9D' : 'rgba(243,239,226,.75)' }; }),
+        saveProject: async () => { const id = await this.mod.save.project(ep); const np = { ...ep, id }; setProjects(ep.id ? projects.map(q => q.id === id ? np : q) : [...projects, np]); this.setState({ editor: null }); this.say(ep.id ? 'Project saved' : 'Project created'); },
+      });
+    }
+    // ── Forms
+    const t = s.tab;
+    if (t === 'content') { base.formIntro = 'Copy for the hero and about sections. Stats accept a number plus suffix, e.g. 300+.'; base.formSections = [
+      { title: 'Hero', hint: 'content/main', minCol: '220px', fields: [F('Name', ['content', 'heroTitle']), F('Initials', ['content', 'siteInitials']), F('Role', ['content', 'heroSubtitle']), F('Status line', ['content', 'currentlyWorking'], { ph: 'Open to remote opportunities' }), F('Description', ['content', 'heroDescription'], { rows: 3, full: true }), F('Résumé URL', ['content', 'cvUrl'])] },
+      { title: 'About', hint: 'content/main', minCol: '100%', fields: [F('Heading', ['content', 'aboutHeading']), F('Subtitle (italic line)', ['content', 'aboutSubtitle']), F('Paragraph 1', ['content', 'aboutBody1'], { rows: 4 }), F('Paragraph 2', ['content', 'aboutBody2'], { rows: 4 }), F('Image URL', ['content', 'aboutImage']), F('Footer bio', ['content', 'footerBio'], { rows: 2 })] }];
+      Object.assign(base, { hasListEditor: true, listTitle: 'Stats', listHint: 'aboutStats', listAddLabel: 'Add stat' });
+      const stats = d.content.aboutStats || []; const setS = a => this.upd(['content', 'aboutStats'], a);
+      base.listRows = stats.map((it, i) => ({ fields: [{ label: 'Number', value: it.number, onChange: e => { const a = stats.slice(); a[i] = { ...it, number: e.target.value }; setS(a); }, single: true, multiline: false, span: 'auto', type: 'text' }, { label: 'Label', value: it.label, onChange: e => { const a = stats.slice(); a[i] = { ...it, label: e.target.value }; setS(a); }, single: true, multiline: false, span: 'auto', type: 'text' }], up: () => { if (i) { const a = stats.slice(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; setS(a); } }, down: () => { if (i < stats.length - 1) { const a = stats.slice(); [a[i + 1], a[i]] = [a[i], a[i + 1]]; setS(a); } }, remove: () => setS(stats.filter((_, j) => j !== i)) }));
+      base.listAdd = () => setS([...stats, { number: '', label: '' }]);
+    }
+    if (t === 'copy') { base.formIntro = 'Every visible string on the homepage. Wrap a word in *asterisks* to render it in the lime italic accent.'; base.formSections = [
+      { title: 'Navigation', hint: 'content/main', minCol: '160px', fields: [F('Brand label', ['content', 'brandLabel']), F('Work', ['content', 'navWork']), F('About', ['content', 'navAbout']), F('Experience', ['content', 'navExperience']), F('Stack', ['content', 'navStack']), F('Contact', ['content', 'navContact']), F('Résumé', ['content', 'navResume']), F('Hire button', ['content', 'navHire'])] },
+      { title: 'Hero', hint: '*accent* supported', minCol: '220px', fields: [F('Headline', ['content', 'heroHeadline'], { rows: 2, full: true, ph: 'I build software that *ships* — end to end.' }), F('Primary button', ['content', 'heroCtaPrimary']), F('Secondary button', ['content', 'heroCtaSecondary']), F('Timezone', ['content', 'heroTimezone'])] },
+      { title: 'Work section', hint: 'content/main', minCol: '220px', fields: [F('Heading', ['content', 'workHeading']), F('Hard-part label', ['content', 'workHardPartLabel']), F('Live link label', ['content', 'workLiveLabel']), F('Source link label', ['content', 'workSourceLabel']), F('Footer line', ['content', 'workMoreText'], { full: true })] },
+      { title: 'Section indices', hint: 'small mono labels', minCol: '220px', fields: [F('About index', ['content', 'aboutIndexLabel']), F('About CTA', ['content', 'aboutCta']), F('Experience heading', ['content', 'experienceHeading']), F('Experience index', ['content', 'experienceIndexLabel']), F('Education badge', ['content', 'educationBadge']), F('Stack heading', ['content', 'skillsHeading']), F('Stack index', ['content', 'skillsIndexLabel'])] },
+      { title: 'Contact & form', hint: '*accent* supported', minCol: '220px', fields: [F('Contact index', ['content', 'contactIndexLabel']), F('Contact headline', ['content', 'contactHeading'], { rows: 2, full: true }), F('Form heading', ['content', 'formHeading']), F('Form intro', ['content', 'formIntro']), F('Name label', ['content', 'formName']), F('Email label', ['content', 'formEmail']), F('Subject label', ['content', 'formSubject']), F('Message label', ['content', 'formMessage']), F('Submit button', ['content', 'formSubmit']), F('Success message', ['content', 'formSuccess'], { full: true }), F('Error message', ['content', 'formError'], { full: true }), F('"Elsewhere" label', ['content', 'elsewhereLabel']), F('"Direct" label', ['content', 'directLabel']), F('Footer credit', ['content', 'footerCredit'])] }]; }
+    if (t === 'chat') { base.formIntro = 'The floating assistant. The system prompt is what the model knows about you — keep it factual.'; base.formSections = [
+      { title: 'Panel', hint: 'content/main', minCol: '220px', fields: [F('Title', ['content', 'chatTitle']), F('Subtitle', ['content', 'chatSubtitle']), F('Input placeholder', ['content', 'chatPlaceholder']), F('Contact CTA', ['content', 'chatCta']), F('Welcome message', ['content', 'chatWelcome'], { rows: 2, full: true })] },
+      { title: 'Suggestions', hint: 'one per line', minCol: '100%', fields: [{ label: 'Suggested questions', value: (d.content.chatSuggestions || []).join('\n'), onChange: e => this.upd(['content', 'chatSuggestions'], e.target.value.split('\n')), multiline: true, single: false, rows: 4, span: 'auto', placeholder: '', type: 'text' }] },
+      { title: 'System prompt', hint: 'sent with every message', minCol: '100%', fields: [F('Prompt', ['content', 'chatSystemPrompt'], { rows: 14 })] }]; }
+    if (t === 'contact') { base.formIntro = 'Shown in the contact section, nav "Hire me" button and footer.'; base.formSections = [{ title: 'Contact details', hint: 'content/contact', minCol: '220px', fields: [F('Email', ['contact', 'email']), F('Phone', ['contact', 'phone']), F('Location', ['contact', 'location']), F('Location map URL', ['contact', 'locationUrl']), F('GitHub', ['contact', 'github']), F('LinkedIn', ['contact', 'linkedin']), F('Instagram', ['contact', 'instagram']), F('Availability text', ['contact', 'availabilityText'])] }]; }
+    if (t === 'about') { base.formIntro = 'Four highlight cards under the about text. Icon names are Lucide icons.'; Object.assign(base, { hasListEditor: true, listTitle: 'Highlight cards', listHint: 'content/highlights', listRows: this.listRows('highlights', [['title', 'Title'], ['icon', 'Icon (Lucide)'], ['description', 'Description', { rows: 2, full: true }]]), listAdd: () => this.upd(['highlights'], [...d.highlights, { id: 'h' + Date.now(), icon: 'Sparkles', title: '', description: '' }]), listAddLabel: 'Add card' }); }
+    if (t === 'skills') { base.formIntro = 'Skill levels are stored (0–100) but the redesign shows skills grouped by CV category instead of percentage bars.'; Object.assign(base, { hasListEditor: true, listTitle: 'Skills', listHint: 'skills collection', listRows: this.listRows('skills', [['name', 'Skill'], ['level', 'Level (0–100)', { type: 'number' }]]), listAdd: () => this.upd(['skills'], [...d.skills, { id: 'local-' + Date.now(), name: '', level: 70, order: d.skills.length }]), listAddLabel: 'Add skill', hasChips: true, chipDraft: s.chipDraft, setChipDraft: e => this.setState({ chipDraft: e.target.value }), chips: d.tools.map((name, i) => ({ name, remove: () => this.upd(['tools'], d.tools.filter((_, j) => j !== i)) })), addChip: e => { e.preventDefault(); const v = s.chipDraft.trim(); if (v) { this.upd(['tools'], [...d.tools, v]); this.setState({ chipDraft: '' }); } } }); }
+    if (t === 'certifications') { base.formIntro = 'Education and certifications shown under the Stack section.'; Object.assign(base, { hasListEditor: true, listTitle: 'Certs & education', listHint: 'content/certifications', listRows: this.listRows('certifications', [['name', 'Name / degree'], ['issuer', 'Issuer / school'], ['date', 'Date'], ['url', 'Credential URL']]), listAdd: () => this.upd(['certifications'], [...d.certifications, { id: 'cert-' + Date.now(), name: '', issuer: '', date: '', url: '', order: d.certifications.length }]), listAddLabel: 'Add credential' }); }
+    if (t === 'testimonials') { base.formIntro = 'Quotes from clients, teammates and supervisors.'; Object.assign(base, { hasListEditor: true, listTitle: 'Testimonials', listHint: 'content/testimonials', listRows: this.listRows('testimonials', [['quote', 'Quote', { rows: 3, full: true }], ['author', 'Author'], ['role', 'Role'], ['company', 'Company']]), listAdd: () => this.upd(['testimonials'], [...d.testimonials, { id: 't' + Date.now(), quote: '', author: '', role: '', company: '', order: d.testimonials.length }]), listAddLabel: 'Add testimonial' }); }
+    if (t === 'blog') { base.formIntro = d.blog.length ? 'Posts shown in Latest insights.' : 'No posts yet — the blog section stays hidden on the site until you add one.'; Object.assign(base, { hasListEditor: true, listTitle: 'Posts', listHint: 'blog collection', listRows: this.listRows('blog', [['title', 'Title', { full: true }], ['excerpt', 'Excerpt', { rows: 2, full: true }], ['category', 'Category'], ['date', 'Date (YYYY-MM-DD)'], ['readTime', 'Read time'], ['image', 'Image URL'], ['link', 'Link']]), listAdd: () => this.upd(['blog'], [...d.blog, { id: 'local-' + Date.now(), title: '', excerpt: '', image: '', category: '', date: '', readTime: '', link: '', order: d.blog.length }]), listAddLabel: 'Add post' }); }
+    // ── CV
+    if (t === 'cv') { const cv = d.cv; base.formSections = [
+      { title: 'Header', minCol: '220px', fields: [F('Name', ['cv', 'header', 'name']), F('Role line', ['cv', 'header', 'role']), F('Tagline 1', ['cv', 'header', 'tagline1'], { full: true }), F('Tagline 2', ['cv', 'header', 'tagline2'], { full: true }), F('Email', ['cv', 'header', 'email']), F('Phone', ['cv', 'header', 'phone']), F('Location', ['cv', 'header', 'location']), F('Portfolio URL', ['cv', 'header', 'portfolio']), F('LinkedIn', ['cv', 'header', 'linkedin']), F('GitHub', ['cv', 'header', 'github'])] },
+      { title: 'Summary', minCol: '100%', fields: [F('Professional summary', ['cv', 'summary'], { rows: 4 })] },
+      { title: 'Skill groups', minCol: '100%', fields: cv.skills.map((g, i) => F(g.label || 'Group ' + (i + 1), ['cv', 'skills', i, 'value'], { ph: 'Comma separated' })) },
+      { title: 'Education', minCol: '220px', fields: cv.education.flatMap((e, i) => [F('Degree', ['cv', 'education', i, 'degree']), F('School', ['cv', 'education', i, 'school']), F('Date', ['cv', 'education', i, 'date']), F('GPA', ['cv', 'education', i, 'gpa'])]) }];
+      const setExp = a => this.upd(['cv', 'experience'], a);
+      base.cvExp = cv.experience.map((e, i) => { const p = k => ev => { const a = cv.experience.slice(); a[i] = { ...e, [k]: k === 'bullets' ? ev.target.value.split('\n') : ev.target.value }; setExp(a); }; return { ...e, bullets: e.bullets.join('\n'), setTitle: p('title'), setBadge: p('badge'), setDate: p('date'), setOrg: p('org'), setBullets: p('bullets'), remove: () => setExp(cv.experience.filter((_, j) => j !== i)) }; });
+      base.addExp = () => setExp([...cv.experience, { id: 'exp-' + Date.now(), title: '', badge: '', org: '', date: '', bullets: [] }]);
+    }
+    // ── Develop
+    if (t === 'develop' && x) { const dev = x.develop || {}; base.devDot = s.devSaving === 'saving' ? '#F0DB8A' : s.devSaving === 'dirty' ? '#F0DB8A' : '#A6E3A1'; base.devStatus = s.devSaving === 'saving' ? 'Saving…' : s.devSaving === 'dirty' ? 'Unsaved…' : 'Autosaved';
+      base.devRows = projects.map(p => { const dd = dev[p.id] || { stage: 'Not set', aiPrompts: [], features: [], todos: [], notes: '' }; const all = [...dd.aiPrompts, ...dd.features, ...dd.todos]; const done = all.filter(i => i.done).length; const open = !!s.openDev[p.id];
+        const mkList = (key, title, placeholder) => ({ title, count: dd[key].filter(i => i.done).length + '/' + dd[key].length, placeholder, draft: s.drafts[p.id + key] || '', setDraft: e => this.setState(t => ({ drafts: { ...t.drafts, [p.id + key]: e.target.value } })), add: e => { e.preventDefault(); const v = (s.drafts[p.id + key] || '').trim(); if (!v) return; this.updX(['develop', p.id, key], [...dd[key], { id: 'i' + Date.now(), text: v, done: false }]); this.setState(t => ({ drafts: { ...t.drafts, [p.id + key]: '' } })); },
+          items: dd[key].map((it, i) => ({ ...it, color: it.done ? 'rgba(243,239,226,.45)' : '#F3EFE2', deco: it.done ? 'line-through' : 'none', toggle: () => { const a = dd[key].slice(); a[i] = { ...it, done: !it.done }; this.updX(['develop', p.id, key], a); }, setText: e => { const a = dd[key].slice(); a[i] = { ...it, text: e.target.value }; this.updX(['develop', p.id, key], a); }, remove: () => this.updX(['develop', p.id, key], dd[key].filter((_, j) => j !== i)) })) });
+        return { title: p.title, stage: dd.stage, stageColor: this.STAGE_COLORS[dd.stage] || '#DDEB9D', progress: all.length ? done + '/' + all.length + ' done' : 'no items', open, chev: open ? '−' : '+', border: open ? 'rgba(221,235,157,.4)' : 'rgba(243,239,226,.12)', toggle: () => this.setState(t => ({ openDev: { ...t.openDev, [p.id]: !open } })), setStage: e => this.updX(['develop', p.id, 'stage'], e.target.value), notes: dd.notes, setNotes: e => this.updX(['develop', p.id, 'notes'], e.target.value),
+          lists: [mkList('aiPrompts', 'AI prompts', 'Add an AI prompt to run later…'), mkList('features', 'Comments & features', 'Add a feature idea…'), mkList('todos', 'What to do next', 'Add a next step…')] }; }); }
+    // ── Scheduler
+    if (t === 'scheduler' && x) { const items = x.scheduler; const setItems = a => this.setState(st => ({ extras: { ...st.extras, scheduler: a } })); const PRI = { high: '#F0A6A6', medium: '#F0DB8A', low: 'rgba(243,239,226,.5)' };
+      Object.assign(base, { taskDraft: s.taskDraft, taskType: s.taskType, taskPri: s.taskPri, setTaskDraft: e => this.setState({ taskDraft: e.target.value }), setTaskType: e => this.setState({ taskType: e.target.value }), setTaskPri: e => this.setState({ taskPri: e.target.value }),
+        addTask: e => { e.preventDefault(); const v = s.taskDraft.trim(); if (!v) return; setItems([...items, { id: 'sc' + Date.now(), title: v, type: s.taskType, priority: s.taskPri, status: 'backlog', completed: false }]); this.setState({ taskDraft: '' }); this.say('Task added'); },
+        schedColumns: this.STATUSES.map(([id, label], ci) => { const col = items.filter(it => (it.status || (it.completed ? 'completed' : 'backlog')) === id); return { label, count: col.length, color: id === 'completed' ? '#A6E3A1' : id === 'in_progress' ? '#DDEB9D' : 'rgba(243,239,226,.55)', bg: id === 'in_progress' ? 'rgba(221,235,157,.04)' : 'transparent',
+          items: col.map(it => { const move = dir => { const ni = Math.min(4, Math.max(0, ci + dir)); const ns = this.STATUSES[ni][0]; setItems(items.map(q => q.id === it.id ? { ...q, status: ns, completed: ns === 'completed' } : q)); };
+            return { ...it, when: [it.date, it.time].filter(Boolean).join(' · ') || 'unscheduled', priColor: PRI[it.priority], color: it.completed ? 'rgba(243,239,226,.45)' : '#F3EFE2', deco: it.completed ? 'line-through' : 'none', toggle: () => setItems(items.map(q => q.id === it.id ? { ...q, completed: !q.completed, status: !q.completed ? 'completed' : 'scheduled' } : q)), back: () => move(-1), fwd: () => move(1), remove: () => setItems(items.filter(q => q.id !== it.id)) }; }) }; }) }); }
+    return base;
+  }
+}
+</script>
+</body>
+</html>

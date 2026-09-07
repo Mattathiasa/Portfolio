@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Pacifico&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
+<style>
+body{margin:0;background:#22333B;color:#FAF6E9;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+a{color:#DDEB9D;text-decoration:none}a:hover{color:#CFEE53}
+*{box-sizing:border-box}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(10px)}}
+@keyframes dot{0%,100%{transform:translateY(0)}50%{transform:translateY(16px)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes bounce3{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes spinfloat{0%{transform:translate(0,0) rotate(0)}50%{transform:translate(15px,-30px) rotate(180deg)}100%{transform:translate(0,0) rotate(360deg)}}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" data-screen-label="Current Portfolio" style="position:relative;min-height:100vh;background:#22333B;color:#FAF6E9;font-family:'Inter',sans-serif;overflow-x:hidden">
+  <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#22333B,#2A4147,#22333B)">
+      <div style="text-align:center;padding:0 16px;display:flex;flex-direction:column;gap:32px">
+        <h1 style="margin:0;font-family:'Pacifico',cursive;font-weight:700;font-size:clamp(48px,7vw,72px);background:linear-gradient(90deg,#DDEB9D,#CFEE53);-webkit-background-clip:text;background-clip:text;color:transparent">Mattathias Abraham</h1>
+        <div style="max-width:448px;margin:0 auto;display:flex;flex-direction:column;gap:16px;width:100%">
+          <p style="margin:0;color:rgba(250,246,233,.8);font-size:18px">Loading Portfolio...</p>
+          <div style="position:relative;width:100%;height:8px;background:#35535A;border-radius:999px;overflow:hidden"><div style="position:absolute;left:0;top:0;height:100%;width:{{ progressPct }};background:linear-gradient(90deg,#DDEB9D,#CFEE53);border-radius:999px;transition:width .3s"></div></div>
+          <div style="font-size:24px;font-weight:700;color:#DDEB9D">{{ progress }}%</div>
+          <div style="display:flex;justify-content:center;gap:8px;margin-top:24px">
+            <div style="width:12px;height:12px;background:#DDEB9D;border-radius:999px;animation:bounce3 .8s infinite"></div>
+            <div style="width:12px;height:12px;background:#DDEB9D;border-radius:999px;animation:bounce3 .8s .2s infinite"></div>
+            <div style="width:12px;height:12px;background:#DDEB9D;border-radius:999px;animation:bounce3 .8s .4s infinite"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <div ref="{{ threeRef }}" style="position:fixed;inset:0;z-index:0;pointer-events:none"></div>
+  <nav style="position:fixed;top:0;left:0;right:0;z-index:40;transition:all .3s;padding:{{ navPad }} 0;background:{{ navBg }};backdrop-filter:{{ navBlur }};border-bottom:{{ navBorder }};box-shadow:{{ navShadow }}">
+    <div style="max-width:1400px;margin:0 auto;padding:0 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <a href="#home" style="font-size:24px;font-family:'Pacifico',cursive;background:linear-gradient(90deg,#DDEB9D,#CFEE53);-webkit-background-clip:text;background-clip:text;color:transparent">MA</a>
+        <div style="display:{{ desktopNavDisplay }};align-items:center;gap:32px">
+          <sc-for list="{{ navItems }}" as="it" hint-placeholder-count="6">
+            <a href="{{ it.href }}" style="position:relative;font-size:14px;font-weight:500;color:{{ it.color }};transition:color .2s" style-hover="color:#DDEB9D">{{ it.name }}<div style="position:absolute;bottom:-4px;left:0;right:0;height:2px;background:#DDEB9D;display:{{ it.barDisplay }}"></div></a>
+          </sc-for>
+        </div>
+        <button onClick="{{ toggleMenu }}" style="display:{{ mobileBtnDisplay }};background:none;border:0;color:#FAF6E9;cursor:pointer;padding:0"><i data-lucide="{{ menuIcon }}" style="width:24px;height:24px;display:block"></i></button>
+      </div>
+    </div>
+    <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:16px;background:rgba(34,51,59,.8);backdrop-filter:blur(24px);border-top:1px solid rgba(60,94,103,.5);border-bottom:1px solid rgba(60,94,103,.5)">
+        <div style="max-width:1400px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;gap:16px">
+          <sc-for list="{{ navItems }}" as="it" hint-placeholder-count="6">
+            <a href="{{ it.href }}" onClick="{{ closeMenu }}" style="font-size:18px;font-weight:500;color:{{ it.color }}">{{ it.name }}</a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+  </nav>
+  <main style="position:relative;z-index:1">
+    <section id="home" data-screen-label="Hero" style="min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding-top:80px">
+      <div style="position:absolute;inset:0;background:linear-gradient(135deg,#22333B,#2D4B53,#22333B)"></div>
+      <div style="position:absolute;inset:0;overflow:hidden">
+        <div style="position:absolute;left:12%;top:20%;width:128px;height:128px;border:2px solid rgba(221,235,157,.2);border-radius:999px;animation:spinfloat 10s linear infinite"></div>
+        <div style="position:absolute;left:70%;top:15%;width:128px;height:128px;border:2px solid rgba(221,235,157,.2);border-radius:999px;animation:spinfloat 12s linear infinite"></div>
+        <div style="position:absolute;left:85%;top:60%;width:128px;height:128px;border:2px solid rgba(221,235,157,.2);border-radius:999px;animation:spinfloat 14s linear infinite"></div>
+        <div style="position:absolute;left:30%;top:75%;width:128px;height:128px;border:2px solid rgba(221,235,157,.2);border-radius:999px;animation:spinfloat 16s linear infinite"></div>
+        <div style="position:absolute;left:50%;top:40%;width:128px;height:128px;border:2px solid rgba(221,235,157,.2);border-radius:999px;animation:spinfloat 18s linear infinite"></div>
+      </div>
+      <div style="max-width:1400px;margin:0 auto;padding:0 32px;position:relative;z-index:10;width:100%">
+        <div style="max-width:896px;margin:0 auto;text-align:center;display:flex;flex-direction:column;gap:32px">
+          <h1 style="margin:0 0 16px;font-size:clamp(36px,7vw,96px);font-weight:700;line-height:1"><span style="background:linear-gradient(90deg,#DDEB9D,#CFEE53);-webkit-background-clip:text;background-clip:text;color:transparent">Mattathias</span><br><span style="background:linear-gradient(90deg,#DDEB9D,#CFEE53);-webkit-background-clip:text;background-clip:text;color:transparent">Abraham</span></h1>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <h2 style="margin:0;font-size:clamp(20px,3vw,36px);font-weight:600;color:rgba(250,246,233,.9)">Software Engineer</h2>
+            <p style="margin:0 auto;font-size:clamp(16px,1.5vw,20px);color:#C9BE9C;max-width:672px;padding:0 16px">Recent software engineering graduate passionate about building innovative applications and creating engaging football content. Combining technical expertise with creative storytelling.</p>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;align-items:center;padding-top:24px">
+            <a href="#projects" style="display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 32px;border-radius:6px;background:#DDEB9D;color:#22333B;font-size:14px;font-weight:500;box-shadow:0 10px 40px -10px rgba(221,235,157,.3)" style-hover="background:rgba(221,235,157,.9);color:#22333B">View My Work <i data-lucide="arrow-right" style="width:20px;height:20px"></i></a>
+            <a href="#contact" style="display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 32px;border-radius:6px;border:1px solid #DDEB9D;color:#DDEB9D;font-size:14px;font-weight:500;background:#22333B" style-hover="background:#DDEB9D;color:#22333B"><i data-lucide="mail" style="width:20px;height:20px"></i> Get In Touch</a>
+          </div>
+        </div>
+      </div>
+      <div style="position:absolute;bottom:32px;left:50%;margin-left:-12px;animation:bob 2s infinite">
+        <div style="width:24px;height:40px;border:2px solid #DDEB9D;border-radius:999px;display:flex;align-items:flex-start;justify-content:center;padding:8px"><div style="width:6px;height:6px;background:#DDEB9D;border-radius:999px;animation:dot 2s infinite"></div></div>
+      </div>
+    </section>
+
+    <section id="about" data-screen-label="About" style="min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;padding:96px 0">
+      <div style="max-width:1400px;margin:0 auto;padding:0 32px;width:100%">
+        <div style="text-align:center;margin-bottom:64px">
+          <h2 style="margin:0 0 16px;font-size:clamp(30px,4vw,60px);font-weight:700;background:linear-gradient(90deg,#DDEB9D,#CFEE53);-webkit-background-clip:text;background-clip:text;color:transparent">About Me</h2>
+          <p style="margin:0 auto;font-size:20px;color:#C9BE9C;max-width:672px;padding:0 16px">Passionate about technology and creative storytelling</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:48px;align-items:center;margin-bottom:64px">
+          <div style="position:relative;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px -20px rgba(15,25,29,.5),0 10px 40px -10px rgba(221,235,157,.3)">
+            <img src="src/assets/workspace.jpg" alt="Mattathias Abraham's workspace" style="width:100%;height:auto;display:block">
+            <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(34,51,59,.8),transparent)"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:24px">
+            <h3 style="margin:0;font-size:clamp(24px,2.5vw,30px);font-weight:700">Recent Graduate with a Passion for Innovation</h3>
+            <p style="margin:0;font-size:18px;color:#C9BE9C;line-height:1.625">I'm a recent Software Engineering graduate from Addis Ababa, with a strong passion for building innovative applications that solve real-world problems. My journey in tech is complemented by my creative side - I love making football videos, combining my technical skills with storytelling and video editing.</p>
+            <p style="margin:0;font-size:18px;color:#C9BE9C;line-height:1.625">Whether it's developing full-stack applications, creating mobile experiences, or producing engaging football content, I bring dedication and creativity to everything I do. I'm always excited to learn new technologies and take on challenging projects.</p>
+            <a href="#contact" style="align-self:flex-start;display:inline-flex;align-items:center;height:44px;padding:0 32px;border-radius:6px;background:#DDEB9D;color:#22333B;font-size:14px;font-weight:500">Let's Work Together</a>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:24px;margin-bottom:64px">
+          <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+            <div style="background:rgba(42,65,71,.5);backdrop-filter:blur(12px);border:1px solid rgba(60,94,103,.3);padding:24px;border-radius:12px;text-align:center;transition:all .4s" style-hover="transform:scale(1.05)">
+              <div style="font-size:36px;font-weight:700;background:linear-gradient(90deg,#DDEB9D,#CFEE53);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:8px">{{ s.number }}</div>
+              <div style="font-size:14px;color:#C9BE9C">{{ s.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:24px">
+          <sc-for list="{{ highlights }}" as="h" hint-placeholder-count="4">
+            <div style="background:rgba(42,65,71,.5);backdrop-filter:blur(12px);border:1px solid rgba(60,94,103,.3);padding:24px;border-radius:12px;transition:all .4s" style-hover="transform:scale(1.05);box-shadow:0 10px 40px -10px rgba(221,235,157,.3)">
+              <i data-lucide="{{ h.icon }}" style="width:48px;height:48px;color:#DDEB9D;display:block;margin-bottom:16px"></i>
+              <h4 style="margin:0 0 8px;font-size:18px;font-weight:600">{{ h.title }}</h4>
+              <p style="margin:0;font-size:14px;color:#C9BE9C">{{ h.description }}</p>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section id="skills" data-screen-label="Skills" style="min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;padding:96px 0;background:linear-gradient(to bottom,#22333B,#2D4B53)">
+      <div style="max-width:1400px;margin:0 auto;padding:0 32px;width:100%">
+        <div style="text-align:center;margin-bottom:64px">
+          <h2 style="margin:0 0 16px;font-size:clamp(30px,4vw,60px);font-weight:700;background:linear-gradient(90deg,#DDEB9D,#CFEE53);-webkit-background-clip:text;background-clip:text;color:transparent">Skills &amp; Expertise</h2>
+          <p style="margin:0 auto;font-size:20px;color:#C9BE9C;max-width:672px">Technologies and tools I work with</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:48px;margin-bottom:64px">
+          <div style="display:flex;flex-direction:column;gap:24px">
+            <h3 style="margin:0;font-size:24px;font-weight:700">Technical Skills</h3>
+            <sc-for list="{{ skills }}" as="sk" hint-placeholder-count="8">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:500">{{ sk.name }}</span><span style="font-size:14px;font-weight:700;color:#DDEB9D">{{ sk.pct }}</span></div>
+                <div style="height:8px;background:#35535A;border-radius:999px;overflow:hidden"><div style="height:100%;width:{{ sk.pct }};background:linear-gradient(90deg,#DDEB9D,#CFEE53);border-radius:999px"></div></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:24px">
+            <h3 style="margin:0;font-size:24px;font-weight:700">Tools &amp; Technologies</h3>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+              <sc-for list="{{ tools }}" as="t" hint-placeholder-count="12">
+                <div style="background:rgba(42,65,71,.5);backdrop-filter:blur(12px);border:1px solid rgba(60,94,103,.3);padding:16px;border-radius:8px;text-align:center;font-size:14px;font-weight:500;transition:all .4s" style-hover="transform:scale(1.05);box-shadow:0 10px 40px -10px rgba(221,235,157,.3)">{{ t }}</div>
+              </sc-for>
+            </div>
+            <div style="padding-top:32px;display:flex;flex-direction:column;gap:24px">
+              <h3 style="margin:0;font-size:24px;font-weight:700">Achievements</h3>
+              <div style="display:flex;flex-direction:column;gap:16px">
+                <sc-for list="{{ achievements }}" as="a" hint-placeholder-count="3">
+                  <div style="background:rgba(42,65,71,.5);backdrop-filter:blur(12px);border:1px solid rgba(60,94,103,.3);padding:16px;border-radius:8px;display:flex;align-items:center;gap:16px">
+                    <i data-lucide="{{ a.icon }}" style="width:40px;height:40px;color:#DDEB9D;flex-shrink:0;display:block"></i>
+                    <div><h4 style="margin:0;font-size:16px;font-weight:600">{{ a.title }}</h4><p style="margin:0;font-size:14px;color:#C9BE9C">{{ a.description }}</p></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="projects" data-screen-label="Projects" style="min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;padding:96px 0">
+      <div style="max-width:1400px;margin:0 auto;padding:0 32px;width:100%">
+        <div style="text-align:center;margin-bottom:64px">
+          <h2 style="margin:0 0 16px;font-size:clamp(30px,4vw,60px);font-weight:700;background:linear-gradient(90deg,#DDEB9D,#CFEE53);-webkit-background-clip:text;background-clip:text;color:transparent">Featured Projects</h2>
+          <p style="margin:0 auto;font-size:20px;color:#C9BE9C;max-width:672px">A showcase of my recent work and side projects</p>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-bottom:48px">
+          <sc-for list="{{ categories }}" as="c" hint-placeholder-count="5">
+            <button onClick="{{ c.onClick }}" style="height:40px;padding:0 16px;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;background:{{ c.bg }};color:{{ c.color }};border:1px solid #DDEB9D">{{ c.name }}</button>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:32px;margin-bottom:48px">
+          <sc-for list="{{ projects }}" as="p" hint-placeholder-count="3">
+            <div style="background:rgba(42,65,71,.5);backdrop-filter:blur(12px);border:1px solid rgba(60,94,103,.3);border-radius:12px;overflow:hidden;transition:all .4s" style-hover="transform:scale(1.05);box-shadow:0 10px 40px -10px rgba(221,235,157,.3)">
+              <div style="position:relative;overflow:hidden;aspect-ratio:16/9">
+                <img src="{{ p.image }}" alt="{{ p.title }}" style="width:100%;height:100%;object-fit:cover;display:block">
+                <div style="position:absolute;inset:0;background:linear-gradient(to top,#22333B,transparent);opacity:.6"></div>
+                <div style="position:absolute;bottom:16px;left:16px;right:16px;display:flex;gap:8px">
+                  <a href="{{ p.github }}" style="display:inline-flex;align-items:center;gap:4px;height:36px;padding:0 12px;border-radius:6px;background:#DDEB9D;color:#22333B;font-size:14px;font-weight:500"><i data-lucide="github" style="width:16px;height:16px"></i>Code</a>
+                  <a href="{{ p.demo }}" style="display:inline-flex;align-items:center;gap:4px;height:36px;padding:0 12px;border-radius:6px;border:1px solid #DDEB9D;background:#22333B;color:#DDEB9D;font-size:14px;font-weight:500"><i data-lucide="external-link" style="width:16px;height:16px"></i>Demo</a>
+                </div>
+              </div>
+              <div style="padding:24px">
+                <h3 style="margin:0 0 8px;font-size:20px;font-weight:700">{{ p.title }}</h3>
+                <p style="margin:0 0 16px;font-size:14px;color:#C9BE9C">{{ p.description }}</p>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ p.tags }}" as="tag" hint-placeholder-count="4"><span style="font-size:12px;padding:4px 12px;background:rgba(221,235,157,.1);color:#DDEB9D;border-radius:999px;border:1px solid rgba(221,235,157,.2)">{{ tag }}</span></sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="text-align:center"><a href="https://github.com/Mattathiasa" style="display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 32px;border-radius:6px;border:1px solid #DDEB9D;background:#22333B;color:#DDEB9D;font-size:14px;font-weight:500"><i data-lucide="github" style="width:20px;height:20px"></i>View All Projects on GitHub</a></div>
+      </div>
+    </section>
+
+    <section id="blog" data-screen-label="Blog" style="min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;padding:96px 0;background:linear-gradient(to bottom,#2D4B53,#22333B)">
+      <div style="max-width:1400px;margin:0 auto;padding:0 32px;width:100%">
+        <div style="text-align:center;margin-bottom:64px">
+          <h2 style="margin:0 0 16px;font-size:clamp(30px,4vw,60px);font-weight:700;background:linear-gradient(90deg,#DDEB9D,#CFEE53);-webkit-background-clip:text;background-clip:text;color:transparent">Latest Insights</h2>
+          <p style="margin:0 auto;font-size:20px;color:#C9BE9C;max-width:672px">Thoughts on development, football, and technology</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:32px;margin-bottom:48px">
+          <sc-for list="{{ posts }}" as="b" hint-placeholder-count="3">
+            <article style="background:rgba(42,65,71,.5);backdrop-filter:blur(12px);border:1px solid rgba(60,94,103,.3);border-radius:12px;overflow:hidden;transition:all .4s" style-hover="transform:scale(1.05);box-shadow:0 10px 40px -10px rgba(221,235,157,.3)">
+              <div style="position:relative;overflow:hidden;aspect-ratio:16/9">
+                <img src="{{ b.image }}" alt="{{ b.title }}" style="width:100%;height:100%;object-fit:cover;display:block">
+                <span style="position:absolute;top:16px;left:16px;padding:4px 12px;background:#DDEB9D;color:#22333B;font-size:12px;font-weight:600;border-radius:999px">{{ b.category }}</span>
+              </div>
+              <div style="padding:24px">
+                <div style="display:flex;align-items:center;gap:16px;font-size:12px;color:#C9BE9C;margin-bottom:12px">
+                  <span style="display:inline-flex;align-items:center;gap:4px"><i data-lucide="calendar" style="width:16px;height:16px"></i>{{ b.date }}</span>
+                  <span style="display:inline-flex;align-items:center;gap:4px"><i data-lucide="clock" style="width:16px;height:16px"></i>{{ b.readTime }}</span>
+                </div>
+                <h3 style="margin:0 0 12px;font-size:20px;font-weight:700">{{ b.title }}</h3>
+                <p style="margin:0 0 16px;font-size:14px;color:#C9BE9C">{{ b.excerpt }}</p>
+                <a href="#" style="display:inline-flex;align-items:center;gap:8px;color:#DDEB9D;font-size:14px;font-weight:500">Read More <i data-lucide="arrow-right" style="width:16px;height:16px"></i></a>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+        <div style="text-align:center"><a href="#" style="display:inline-flex;align-items:center;height:44px;padding:0 32px;border-radius:6px;border:1px solid #DDEB9D;background:#22333B;color:#DDEB9D;font-size:14px;font-weight:500">View All Posts</a></div>
+      </div>
+    </section>
+
+    <section id="contact" data-screen-label="Contact" style="min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;padding:96px 0">
+      <div style="max-width:1400px;margin:0 auto;padding:0 32px;width:100%">
+        <div style="text-align:center;margin-bottom:64px">
+          <h2 style="margin:0 0 16px;font-size:clamp(30px,4vw,60px);font-weight:700;background:linear-gradient(90deg,#DDEB9D,#CFEE53);-webkit-background-clip:text;background-clip:text;color:transparent">Get In Touch</h2>
+          <p style="margin:0 auto;font-size:20px;color:#C9BE9C;max-width:672px">Available for new projects and collaborations</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:48px">
+          <form style="display:flex;flex-direction:column;gap:24px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px">
+              <label style="display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500">Name<input placeholder="Your name" style="height:40px;border-radius:6px;border:1px solid #3C5E67;background:#35535A;color:#FAF6E9;padding:0 12px;font-size:14px;font-family:inherit"></label>
+              <label style="display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500">Email<input placeholder="your.email@example.com" style="height:40px;border-radius:6px;border:1px solid #3C5E67;background:#35535A;color:#FAF6E9;padding:0 12px;font-size:14px;font-family:inherit"></label>
+            </div>
+            <label style="display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500">Subject<input placeholder="What's this about?" style="height:40px;border-radius:6px;border:1px solid #3C5E67;background:#35535A;color:#FAF6E9;padding:0 12px;font-size:14px;font-family:inherit"></label>
+            <label style="display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500"><span style="display:flex;justify-content:space-between">Message<span style="font-size:12px;color:#C9BE9C;font-weight:400">0/500</span></span><textarea rows="6" placeholder="Tell me about your project..." style="border-radius:6px;border:1px solid #3C5E67;background:#35535A;color:#FAF6E9;padding:8px 12px;font-size:14px;font-family:inherit;resize:none"></textarea></label>
+            <button type="button" style="width:100%;height:44px;border-radius:6px;background:#DDEB9D;color:#22333B;border:0;font-size:14px;font-weight:500;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 40px -10px rgba(221,235,157,.3);cursor:pointer"><i data-lucide="send" style="width:20px;height:20px"></i>Send Message</button>
+          </form>
+          <div style="display:flex;flex-direction:column;gap:32px">
+            <div style="background:rgba(42,65,71,.5);backdrop-filter:blur(12px);border:1px solid rgba(60,94,103,.3);padding:32px;border-radius:12px">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px"><div style="width:12px;height:12px;background:#DDEB9D;border-radius:999px;animation:pulse 2s infinite"></div><span style="font-size:14px;font-weight:500;color:#DDEB9D">Available for new projects</span></div>
+              <div style="display:flex;flex-direction:column;gap:24px">
+                <sc-for list="{{ contactInfo }}" as="ci" hint-placeholder-count="3">
+                  <a href="{{ ci.link }}" style="display:flex;align-items:flex-start;gap:16px;color:#FAF6E9;transition:transform .4s" style-hover="transform:translateX(8px)">
+                    <div style="width:48px;height:48px;border-radius:8px;background:rgba(221,235,157,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="{{ ci.icon }}" style="width:24px;height:24px;color:#DDEB9D"></i></div>
+                    <div><p style="margin:0;font-size:14px;color:#C9BE9C">{{ ci.label }}</p><p style="margin:0;font-weight:500">{{ ci.value }}</p></div>
+                  </a>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:rgba(42,65,71,.5);backdrop-filter:blur(12px);border:1px solid rgba(60,94,103,.3);padding:32px;border-radius:12px">
+              <h3 style="margin:0 0 24px;font-size:20px;font-weight:700">Connect With Me</h3>
+              <div style="display:flex;gap:16px">
+                <a href="https://github.com/Mattathiasa" aria-label="GitHub" style="width:48px;height:48px;border-radius:8px;background:rgba(221,235,157,.1);display:flex;align-items:center;justify-content:center;transition:all .4s" style-hover="background:#DDEB9D;transform:scale(1.1)"><i data-lucide="github" style="width:24px;height:24px"></i></a>
+                <a href="https://linkedin.com" aria-label="LinkedIn" style="width:48px;height:48px;border-radius:8px;background:rgba(221,235,157,.1);display:flex;align-items:center;justify-content:center;transition:all .4s" style-hover="background:#DDEB9D;transform:scale(1.1)"><i data-lucide="linkedin" style="width:24px;height:24px"></i></a>
+                <a href="https://www.instagram.com/mattathiasa/" aria-label="Instagram" style="width:48px;height:48px;border-radius:8px;background:rgba(221,235,157,.1);display:flex;align-items:center;justify-content:center;transition:all .4s" style-hover="background:#DDEB9D;transform:scale(1.1)"><i data-lucide="instagram" style="width:24px;height:24px"></i></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer data-screen-label="Footer" style="position:relative;z-index:1;background:linear-gradient(to bottom,#22333B,#1C2C30);border-top:1px solid #3C5E67">
+    <div style="max-width:1400px;margin:0 auto;padding:48px 16px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:32px;margin-bottom:32px">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <h3 style="margin:0;font-size:24px;font-family:'Pacifico',cursive;font-weight:700;background:linear-gradient(90deg,#DDEB9D,#CFEE53);-webkit-background-clip:text;background-clip:text;color:transparent">MA</h3>
+          <p style="margin:0;font-size:14px;color:#C9BE9C">Software Engineer &amp; Football Content Creator passionate about building innovative solutions and creating engaging content.</p>
+          <div style="display:flex;gap:12px">
+            <a href="https://github.com" aria-label="GitHub" style="width:40px;height:40px;border-radius:8px;background:rgba(221,235,157,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="github" style="width:20px;height:20px"></i></a>
+            <a href="https://linkedin.com" aria-label="LinkedIn" style="width:40px;height:40px;border-radius:8px;background:rgba(221,235,157,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="linkedin" style="width:20px;height:20px"></i></a>
+            <a href="https://instagram.com" aria-label="Instagram" style="width:40px;height:40px;border-radius:8px;background:rgba(221,235,157,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="instagram" style="width:20px;height:20px"></i></a>
+          </div>
+        </div>
+        <div>
+          <h4 style="margin:0 0 16px;font-size:18px;font-weight:600">Quick Links</h4>
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ navItems }}" as="it" hint-placeholder-count="6"><li><a href="{{ it.href }}" style="font-size:14px;color:#C9BE9C" style-hover="color:#DDEB9D">{{ it.name }}</a></li></sc-for>
+          </ul>
+        </div>
+        <div>
+          <h4 style="margin:0 0 16px;font-size:18px;font-weight:600">Contact Info</h4>
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;font-size:14px;color:#C9BE9C">
+            <li style="display:flex;gap:8px;align-items:flex-start"><i data-lucide="mail" style="width:16px;height:16px;color:#DDEB9D;flex-shrink:0;margin-top:2px"></i>mattathias.abraham@email.com</li>
+            <li style="display:flex;gap:8px;align-items:flex-start"><i data-lucide="phone" style="width:16px;height:16px;color:#DDEB9D;flex-shrink:0;margin-top:2px"></i>+1 (555) 123-4567</li>
+            <li style="display:flex;gap:8px;align-items:flex-start"><i data-lucide="map-pin" style="width:16px;height:16px;color:#DDEB9D;flex-shrink:0;margin-top:2px"></i>Toronto, Canada</li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="margin:0 0 16px;font-size:18px;font-weight:600">Stay Updated</h4>
+          <p style="margin:0 0 16px;font-size:14px;color:#C9BE9C">Subscribe to get updates on my latest projects and blog posts.</p>
+          <form style="display:flex;flex-direction:column;gap:8px">
+            <input type="email" placeholder="Your email" style="height:40px;border-radius:6px;border:1px solid #3C5E67;background:#35535A;color:#FAF6E9;padding:0 12px;font-size:14px;font-family:inherit">
+            <button type="button" style="width:100%;height:40px;border-radius:6px;background:#DDEB9D;color:#22333B;border:0;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer">Subscribe</button>
+          </form>
+        </div>
+      </div>
+      <div style="padding-top:32px;border-top:1px solid #3C5E67"><p style="margin:0;font-size:14px;color:#C9BE9C;text-align:center">© 2026 Mattathias Abraham. All rights reserved.</p></div>
+    </div>
+  </footer>
+  <div style="position:fixed;bottom:24px;right:24px;z-index:50;cursor:pointer">
+    <div style="position:relative">
+      <div style="position:absolute;inset:0;background:rgba(221,235,157,.2);border-radius:999px;filter:blur(24px)"></div>
+      <div style="position:relative;width:64px;height:64px;background:linear-gradient(135deg,rgba(221,235,157,.9),#DDEB9D);border-radius:999px;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 15px -3px rgba(0,0,0,.1);border:2px solid rgba(221,235,157,.5);color:#22333B"><i data-lucide="volleyball" style="width:30px;height:30px"></i></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { loading: true, progress: 0, menuOpen: false, active: 'home', scrolled: false, cat: 'All', narrow: false };
+  rootRef = React.createRef(); threeRef = React.createRef();
+  nav = [['Home','#home'],['About','#about'],['Skills','#skills'],['Projects','#projects'],['Blog','#blog'],['Contact','#contact']];
+  componentDidMount() {
+    this.timer = setInterval(() => this.setState(s => {
+      if (s.progress >= 100) { clearInterval(this.timer); setTimeout(() => { this.setState({ loading: false }); setTimeout(() => this.initThree(), 50); }, 500); return {}; }
+      return { progress: s.progress + 2 };
+    }), 30);
+    this.onScroll = () => {
+      const y = window.scrollY; let active = this.state.active;
+      for (const [, h] of this.nav) { const el = document.getElementById(h.slice(1)); if (el && y + 100 >= el.offsetTop && y + 100 < el.offsetTop + el.offsetHeight) { active = h.slice(1); break; } }
+      this.setState({ scrolled: y > 50, active });
+    };
+    this.onResize = () => this.setState({ narrow: window.innerWidth < 768 });
+    window.addEventListener('scroll', this.onScroll); window.addEventListener('resize', this.onResize); this.onResize();
+    this.icons();
+  }
+  componentDidUpdate() { this.icons(); }
+  icons() { if (window.lucide && this.rootRef.current) window.lucide.createIcons({ root: this.rootRef.current }); }
+  componentWillUnmount() { clearInterval(this.timer); window.removeEventListener('scroll', this.onScroll); window.removeEventListener('resize', this.onResize); if (this.raf) cancelAnimationFrame(this.raf); }
+  initThree() {
+    const T = window.THREE, el = this.threeRef.current; if (!T || !el) return;
+    const scene = new T.Scene(), cam = new T.PerspectiveCamera(75, innerWidth / innerHeight, .1, 1000);
+    const r = new T.WebGLRenderer({ alpha: true, antialias: true }); r.setSize(innerWidth, innerHeight); r.setPixelRatio(Math.min(devicePixelRatio, 2)); el.appendChild(r.domElement); cam.position.z = 30;
+    const n = 2000, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), cs = [new T.Color('#DDEB9D'), new T.Color('#22333B'), new T.Color('#FAF6E9')];
+    for (let i = 0; i < n; i++) { for (let k = 0; k < 3; k++) pos[i*3+k] = (Math.random() - .5) * 100; const c = cs[Math.floor(Math.random() * 3)]; col[i*3] = c.r; col[i*3+1] = c.g; col[i*3+2] = c.b; }
+    const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('color', new T.BufferAttribute(col, 3));
+    const pts = new T.Points(g, new T.PointsMaterial({ size: .15, vertexColors: true, transparent: true, opacity: .8, blending: T.AdditiveBlending })); scene.add(pts);
+    const geos = [new T.TetrahedronGeometry(1), new T.OctahedronGeometry(1), new T.IcosahedronGeometry(1)], shapes = [];
+    for (let i = 0; i < 20; i++) { const m = new T.Mesh(geos[i % 3], new T.MeshPhongMaterial({ color: Math.random() < .5 ? '#DDEB9D' : '#FAF6E9', transparent: true, opacity: .3, wireframe: true })); m.position.set((Math.random()-.5)*60,(Math.random()-.5)*60,(Math.random()-.5)*60); const s = () => Math.random()*2+1; m.scale.set(s(), s(), s()); scene.add(m); shapes.push(m); }
+    scene.add(new T.AmbientLight(0xffffff, .5)); const pl = new T.PointLight('#DDEB9D', 1); pl.position.set(10, 10, 10); scene.add(pl);
+    const mouse = { x: 0, y: 0 }; window.addEventListener('mousemove', e => { mouse.x = e.clientX / innerWidth * 2 - 1; mouse.y = -(e.clientY / innerHeight) * 2 + 1; });
+    window.addEventListener('resize', () => { cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); r.setSize(innerWidth, innerHeight); });
+    const tick = () => { this.raf = requestAnimationFrame(tick); pts.rotation.y += .0005; pts.rotation.x += .0002; shapes.forEach((s, i) => { s.rotation.x += .001 * (i % 2 ? -1 : 1); s.rotation.y += .002 * (i % 2 ? -1 : 1); s.position.y += Math.sin(Date.now() * .001 + i) * .002; }); cam.position.x += (mouse.x * 5 - cam.position.x) * .02; cam.position.y += (mouse.y * 5 - cam.position.y) * .02; cam.lookAt(scene.position); r.render(scene, cam); };
+    tick();
+  }
+  renderVals() {
+    const s = this.state, sc = s.scrolled;
+    const A = 'src/assets/';
+    return {
+      rootRef: this.rootRef, threeRef: this.threeRef, loading: s.loading, progress: s.progress, progressPct: s.progress + '%',
+      navPad: sc ? '16px' : '24px', navBg: sc ? 'rgba(34,51,59,.8)' : 'transparent', navBlur: sc ? 'blur(24px)' : 'none', navBorder: sc ? '1px solid rgba(60,94,103,.5)' : '1px solid transparent', navShadow: sc ? '0 20px 60px -20px rgba(15,25,29,.5)' : 'none',
+      desktopNavDisplay: s.narrow ? 'none' : 'flex', mobileBtnDisplay: s.narrow ? 'block' : 'none', menuOpen: s.menuOpen && s.narrow, menuIcon: s.menuOpen ? 'x' : 'menu',
+      toggleMenu: () => this.setState(t => ({ menuOpen: !t.menuOpen })), closeMenu: () => this.setState({ menuOpen: false }),
+      navItems: this.nav.map(([name, href]) => ({ name, href, color: s.active === href.slice(1) ? '#DDEB9D' : 'rgba(250,246,233,.8)', barDisplay: s.active === href.slice(1) ? 'block' : 'none' })),
+      stats: [{ number: '2+', label: 'Years Experience' }, { number: '15+', label: 'Projects' }, { number: '10+', label: 'Technologies' }, { number: '100%', label: 'Dedication' }],
+      highlights: [{ icon: 'code', title: 'Full-Stack Development', description: 'Building scalable web applications with modern technologies' }, { icon: 'smartphone', title: 'Mobile Development', description: 'Creating responsive and intuitive mobile experiences' }, { icon: 'video', title: 'Football Content', description: 'Producing engaging football analysis and highlights videos' }, { icon: 'users', title: 'Team Collaboration', description: 'Working effectively in agile development teams' }],
+      skills: [['JavaScript/TypeScript', 90], ['React & Next.js', 85], ['Node.js & Express', 80], ['Python & Django', 75], ['Database Design', 85], ['Cloud Services', 70], ['Mobile Development', 75], ['UI/UX Design', 80]].map(([name, l]) => ({ name, pct: l + '%' })),
+      tools: ['Git', 'Docker', 'VS Code', 'Figma', 'Postman', 'AWS', 'MongoDB', 'PostgreSQL', 'Firebase', 'Vercel', 'Jira', 'Slack'],
+      achievements: [{ icon: 'award', title: "Dean's List", description: 'Academic Excellence Recognition' }, { icon: 'trophy', title: 'Hackathon Winner', description: 'Best Innovation Award 2024' }, { icon: 'circle-check', title: 'AWS Certified', description: 'Cloud Practitioner' }],
+      categories: ['All', 'Web Apps', 'Mobile', 'Games', 'Content'].map(name => ({ name, onClick: () => this.setState({ cat: name }), bg: s.cat === name ? '#DDEB9D' : '#22333B', color: s.cat === name ? '#22333B' : '#DDEB9D' })),
+      projects: [
+        { title: 'Football Analytics Dashboard', description: 'Interactive dashboard for analyzing football matches, player statistics, and team performance with real-time data visualization.', image: A + 'project-football-analytics.jpg', tags: ['React', 'TypeScript', 'D3.js', 'Node.js', 'MongoDB'], github: '#', demo: '#' },
+        { title: 'Football Mini-Games Collection', description: 'Collection of fun football-themed mobile games including penalty shootouts, skills challenges, and tactical quizzes.', image: A + 'project-games.jpg', tags: ['React Native', 'TypeScript', 'Firebase', 'Redux'], github: '#', demo: '#' },
+        { title: 'Content Creator Portfolio', description: 'Modern portfolio website for showcasing video content, with integrated video player and content management system.', image: A + 'project-portfolio.jpg', tags: ['Next.js', 'Tailwind', 'Framer Motion', 'Supabase'], github: '#', demo: '#' }],
+      posts: [
+        { title: 'Building Scalable React Applications', excerpt: 'Learn best practices for structuring large-scale React applications with TypeScript, state management, and performance optimization.', image: A + 'blog-react.jpg', category: 'Development', date: 'Nov 5, 2024', readTime: '8 min read' },
+        { title: 'Football Analytics: Data-Driven Insights', excerpt: 'How data analytics is revolutionizing football strategy, player performance tracking, and match prediction using modern technologies.', image: A + 'blog-analytics.jpg', category: 'Analytics', date: 'Oct 28, 2024', readTime: '6 min read' },
+        { title: 'My Journey into Software Engineering', excerpt: 'From choosing computer science to graduating as a software engineer - lessons learned, challenges faced, and advice for aspiring developers.', image: A + 'blog-career.jpg', category: 'Career', date: 'Oct 15, 2024', readTime: '10 min read' }],
+      contactInfo: [{ icon: 'mail', label: 'Email', value: 'mattathiasabraham@gmail.com', link: 'mailto:mattathiasabraham@gmail.com' }, { icon: 'phone', label: 'Phone', value: '+251 902 212 622', link: 'tel:+251902212622' }, { icon: 'map-pin', label: 'Location', value: 'Addis Ababa, Ethiopia', link: '#' }]
+    };
+  }
+}
+</script>
+</body>
+</html>

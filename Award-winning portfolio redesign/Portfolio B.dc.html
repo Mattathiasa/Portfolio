@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
+<style>
+html{scroll-behavior:smooth}
+body{margin:0;background:#101716;color:#EDEDE4;font-family:'Space Grotesk',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#EDEDE4;text-decoration:none}a:hover{color:#DDEB9D}
+*{box-sizing:border-box}
+::selection{background:#DDEB9D;color:#101716}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" data-screen-label="Portfolio B" style="position:relative;min-height:100vh;background:#101716;color:#EDEDE4;font-family:'Space Grotesk',sans-serif;overflow-x:clip">
+  <div ref="{{ threeRef }}" style="position:fixed;inset:0;z-index:0;pointer-events:none;opacity:{{ ambientOpacity }}"></div>
+  <div style="position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(237,237,228,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(237,237,228,.045) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse 80% 70% at 50% 30%,#000 30%,transparent 100%)"></div>
+
+  <nav style="position:fixed;top:0;left:0;right:0;z-index:40;background:{{ navBg }};backdrop-filter:{{ navBlur }};border-bottom:1px solid {{ navLine }};transition:background .3s,border-color .3s">
+    <div style="max-width:1360px;margin:0 auto;padding:0 clamp(16px,3vw,40px);height:60px;display:flex;align-items:center;justify-content:space-between;gap:24px">
+      <a href="#top" style="display:flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;letter-spacing:.02em;color:#EDEDE4"><span style="width:28px;height:28px;border:1px solid #DDEB9D;color:#DDEB9D;display:inline-flex;align-items:center;justify-content:center;font-size:11px;border-radius:4px">MA</span>Mattathias Abraham</a>
+      <div style="display:{{ desktopNavDisplay }};align-items:center;gap:4px">
+        <sc-for list="{{ navItems }}" as="it" hint-placeholder-count="5"><a href="{{ it.href }}" style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.02em;color:rgba(237,237,228,.7);padding:8px 12px;border-radius:4px;transition:all .2s" style-hover="color:#DDEB9D;background:rgba(221,235,157,.08)"><span style="color:rgba(237,237,228,.35);margin-right:6px">{{ it.idx }}</span>{{ it.name }}</a></sc-for>
+        <a href="mailto:mattathiasabraham@gmail.com" style="margin-left:12px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#101716;background:#DDEB9D;padding:9px 14px;border-radius:4px;transition:background .2s" style-hover="background:#EAF5B5;color:#101716">Contact →</a>
+      </div>
+      <button onClick="{{ toggleMenu }}" aria-label="Menu" style="display:{{ mobileBtnDisplay }};background:none;border:1px solid rgba(237,237,228,.2);border-radius:4px;color:#EDEDE4;cursor:pointer;height:44px;padding:0 14px;font-family:'JetBrains Mono',monospace;font-size:12px">{{ menuLabel }}</button>
+    </div>
+    <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#101716;border-bottom:1px solid rgba(237,237,228,.12);padding:8px clamp(16px,3vw,40px) 24px;display:flex;flex-direction:column">
+        <sc-for list="{{ navItems }}" as="it" hint-placeholder-count="5"><a href="{{ it.href }}" onClick="{{ closeMenu }}" style="font-size:26px;font-weight:500;padding:14px 0;border-bottom:1px solid rgba(237,237,228,.08);display:flex;gap:16px;align-items:baseline;color:#EDEDE4"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#DDEB9D">{{ it.idx }}</span>{{ it.name }}</a></sc-for>
+        <a href="mailto:mattathiasabraham@gmail.com" onClick="{{ closeMenu }}" style="margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#101716;background:#DDEB9D;padding:14px;border-radius:4px;text-align:center;font-weight:600">mattathiasabraham@gmail.com</a>
+      </div>
+    </sc-if>
+  </nav>
+
+  <main id="top" style="position:relative;z-index:1">
+    <section id="home" data-screen-label="Hero" style="min-height:100svh;max-width:1360px;margin:0 auto;padding:100px clamp(16px,3vw,40px) 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:clamp(32px,4vw,64px);align-items:center">
+      <div style="display:flex;flex-direction:column;gap:28px">
+        <div data-hero style="display:inline-flex;align-items:center;gap:10px;align-self:flex-start;font-family:'JetBrains Mono',monospace;font-size:12px;color:#DDEB9D;border:1px solid rgba(221,235,157,.35);padding:8px 12px;border-radius:4px;background:rgba(221,235,157,.06)"><span style="width:7px;height:7px;border-radius:50%;background:#DDEB9D;animation:blink 1.6s infinite;display:inline-block"></span>{{ availabilityLabel }}</div>
+        <h1 style="margin:0;font-size:clamp(40px,6.4vw,88px);line-height:1;font-weight:600;letter-spacing:-.035em;text-wrap:balance">
+          <span data-hero style="display:block">Software engineer.</span>
+          <span data-hero style="display:block;color:rgba(237,237,228,.45)">Full-stack by</span>
+          <span data-hero style="display:block;color:#DDEB9D">practice.</span>
+        </h1>
+        <p data-hero style="margin:0;font-size:clamp(16px,1.3vw,19px);line-height:1.55;color:rgba(237,237,228,.75);max-width:50ch;text-wrap:pretty">I'm Mattathias — I design data models, build APIs, and ship the interfaces on top of them. Recent graduate, three shipped products, looking for a team that reviews carefully and deploys often.</p>
+        <div data-hero style="display:flex;flex-wrap:wrap;gap:12px">
+          <a href="#work" style="display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 20px;border-radius:4px;background:#DDEB9D;color:#101716;font-weight:600;font-size:15px;transition:transform .2s,background .2s" style-hover="background:#EAF5B5;color:#101716;transform:translateY(-2px)">See the work</a>
+          <a href="#" style="display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 20px;border-radius:4px;border:1px solid rgba(237,237,228,.25);color:#EDEDE4;font-size:15px;font-weight:500;transition:border-color .2s,transform .2s" style-hover="border-color:#DDEB9D;color:#DDEB9D;transform:translateY(-2px)">Download résumé</a>
+          <a href="https://github.com/Mattathiasa" style="display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 20px;border-radius:4px;color:rgba(237,237,228,.7);font-size:15px;font-family:'JetBrains Mono',monospace" style-hover="color:#DDEB9D">github ↗</a>
+        </div>
+      </div>
+      <div data-hero style="position:relative;border:1px solid rgba(237,237,228,.14);border-radius:8px;background:rgba(16,23,22,.7);backdrop-filter:blur(8px);overflow:hidden;font-family:'JetBrains Mono',monospace;font-size:13px;box-shadow:0 30px 80px -30px rgba(0,0,0,.6)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(237,237,228,.1);color:rgba(237,237,228,.5);font-size:11px"><span>profile.json</span><span style="display:flex;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:rgba(237,237,228,.2)"></span><span style="width:8px;height:8px;border-radius:50%;background:rgba(237,237,228,.2)"></span><span style="width:8px;height:8px;border-radius:50%;background:#DDEB9D"></span></span></div>
+        <div style="padding:20px 20px 24px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 20px;line-height:1.5">
+          <sc-for list="{{ facts }}" as="f" hint-placeholder-count="7">
+            <span style="color:rgba(237,237,228,.45)">{{ f.k }}</span><span style="color:{{ f.color }};overflow-wrap:anywhere">{{ f.v }}</span>
+          </sc-for>
+        </div>
+        <div style="position:absolute;left:0;right:0;height:40%;top:0;background:linear-gradient(180deg,transparent,rgba(221,235,157,.05),transparent);animation:scan 6s linear infinite;pointer-events:none"></div>
+      </div>
+    </section>
+
+    <section id="work" data-screen-label="Work" style="max-width:1360px;margin:0 auto;padding:clamp(64px,9vh,120px) clamp(16px,3vw,40px)">
+      <div data-reveal style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid rgba(237,237,228,.14)">
+        <div><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#DDEB9D">01 / WORK</span><h2 style="margin:8px 0 0;font-size:clamp(30px,4vw,52px);font-weight:600;letter-spacing:-.03em;line-height:1">Shipped products</h2></div>
+        <p style="margin:0;font-size:15px;color:rgba(237,237,228,.6);max-width:40ch">Three end-to-end builds. Each one covers the schema, the API, and the interface.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px">
+        <sc-for list="{{ projects }}" as="p" hint-placeholder-count="3">
+          <a href="{{ p.link }}" data-reveal style="display:flex;flex-direction:column;border:1px solid rgba(237,237,228,.14);border-radius:8px;overflow:hidden;background:#151E1D;color:#EDEDE4;transition:border-color .25s,transform .25s;grid-column:{{ p.span }}" style-hover="border-color:rgba(221,235,157,.6);transform:translateY(-4px)">
+            <div style="position:relative;aspect-ratio:16/9;overflow:hidden;border-bottom:1px solid rgba(237,237,228,.1)">
+              <img src="{{ p.image }}" alt="{{ p.title }}" style="width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.8) contrast(1.05)">
+              <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(21,30,29,.9))"></div>
+              <div style="position:absolute;left:16px;bottom:14px;right:16px;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(237,237,228,.8)"><span>{{ p.idx }} · {{ p.kind }}</span><span>{{ p.year }}</span></div>
+            </div>
+            <div style="padding:20px 20px 22px;display:flex;flex-direction:column;gap:14px;flex:1">
+              <h3 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-.02em;line-height:1.15">{{ p.title }}</h3>
+              <p style="margin:0;font-size:14.5px;line-height:1.55;color:rgba(237,237,228,.7);text-wrap:pretty">{{ p.description }}</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px 0;border-top:1px solid rgba(237,237,228,.1);border-bottom:1px solid rgba(237,237,228,.1);font-size:13px">
+                <div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:rgba(237,237,228,.45);margin-bottom:4px">ROLE</div>{{ p.role }}</div>
+                <div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:rgba(237,237,228,.45);margin-bottom:4px">HIGHLIGHT</div>{{ p.highlight }}</div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:auto">
+                <sc-for list="{{ p.tags }}" as="t" hint-placeholder-count="4"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 8px;border-radius:3px;background:rgba(237,237,228,.07);color:rgba(237,237,228,.85)">{{ t }}</span></sc-for>
+              </div>
+              <span style="display:inline-flex;gap:8px;font-size:14px;font-weight:500;color:#DDEB9D">Case study <span aria-hidden="true">→</span></span>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+    </section>
+
+    <section id="about" data-screen-label="About" style="border-top:1px solid rgba(237,237,228,.1);border-bottom:1px solid rgba(237,237,228,.1);background:#131B1A">
+      <div style="max-width:1360px;margin:0 auto;padding:clamp(64px,9vh,120px) clamp(16px,3vw,40px);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:clamp(32px,5vw,80px)">
+        <div data-reveal><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#DDEB9D">02 / ABOUT</span><h2 style="margin:8px 0 0;font-size:clamp(30px,4vw,52px);font-weight:600;letter-spacing:-.03em;line-height:1.05;text-wrap:balance">Own the feature, not just the ticket.</h2></div>
+        <div data-reveal style="display:flex;flex-direction:column;gap:22px;font-size:16.5px;line-height:1.6;color:rgba(237,237,228,.75)">
+          <p style="margin:0;text-wrap:pretty">I'm a Software Engineering graduate from Addis Ababa. I like being responsible for a slice of a product end to end — the schema, the endpoint, the screen, the deploy — and being able to explain every decision in review.</p>
+          <p style="margin:0;text-wrap:pretty">I'm targeting frontend, full-stack, backend, or mobile roles, remote or on-site. I learn fast, write tests, and leave codebases clearer than I found them.</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:rgba(237,237,228,.12);border:1px solid rgba(237,237,228,.12);border-radius:6px;overflow:hidden;margin-top:8px">
+            <sc-for list="{{ counters }}" as="c" hint-placeholder-count="3">
+              <div style="background:#131B1A;padding:18px 16px"><div style="font-size:32px;font-weight:600;letter-spacing:-.03em;color:#EDEDE4"><span data-count="{{ c.n }}">{{ c.n }}</span>{{ c.suffix }}</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:rgba(237,237,228,.5);margin-top:4px">{{ c.label }}</div></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="experience" data-screen-label="Experience" style="max-width:1360px;margin:0 auto;padding:clamp(64px,9vh,120px) clamp(16px,3vw,40px)">
+      <div data-reveal style="margin-bottom:32px"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#DDEB9D">03 / EXPERIENCE</span><h2 style="margin:8px 0 0;font-size:clamp(30px,4vw,52px);font-weight:600;letter-spacing:-.03em;line-height:1">Timeline</h2></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:24px;position:relative;padding-top:24px">
+        <div data-timeline-line style="position:absolute;left:0;right:0;top:0;height:1px;background:rgba(221,235,157,.5);transform-origin:left"></div>
+        <sc-for list="{{ timeline }}" as="e" hint-placeholder-count="4">
+          <div data-reveal style="display:flex;flex-direction:column;gap:12px;position:relative">
+            <span style="position:absolute;top:-28px;left:0;width:9px;height:9px;border-radius:50%;background:{{ e.dot }};border:1px solid #DDEB9D"></span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#DDEB9D">{{ e.when }}</span>
+            <h3 style="margin:0;font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.3">{{ e.title }}</h3>
+            <div style="font-size:14px;color:rgba(237,237,228,.55)">{{ e.org }}</div>
+            <p style="margin:0;font-size:14.5px;line-height:1.55;color:rgba(237,237,228,.72);text-wrap:pretty">{{ e.body }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section id="skills" data-screen-label="Stack" style="border-top:1px solid rgba(237,237,228,.1);background:#131B1A">
+      <div style="max-width:1360px;margin:0 auto;padding:clamp(64px,9vh,120px) clamp(16px,3vw,40px)">
+        <div data-reveal style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:32px"><div><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#DDEB9D">04 / STACK</span><h2 style="margin:8px 0 0;font-size:clamp(30px,4vw,52px);font-weight:600;letter-spacing:-.03em;line-height:1">Tools I reach for</h2></div><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(237,237,228,.5)">● daily &nbsp; ○ working knowledge</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:20px">
+          <sc-for list="{{ stack }}" as="g" hint-placeholder-count="6">
+            <div data-reveal style="border:1px solid rgba(237,237,228,.14);border-radius:8px;padding:20px;background:#101716;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:rgba(237,237,228,.5)"><span>{{ g.idx }}</span><span>{{ g.name }}</span></div>
+              <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:15px">
+                <sc-for list="{{ g.items }}" as="t" hint-placeholder-count="4"><li style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:1px solid rgba(237,237,228,.07)"><span>{{ t.name }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#DDEB9D">{{ t.lvl }}</span></li></sc-for>
+              </ul>
+            </div>
+          </sc-for>
+        </div>
+        <div data-reveal style="display:flex;flex-wrap:wrap;gap:12px;margin-top:28px">
+          <sc-for list="{{ credentials }}" as="c" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid rgba(221,235,157,.35);border-radius:4px;font-size:14px;background:rgba(221,235,157,.05)"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#DDEB9D">{{ c.tag }}</span>{{ c.title }}</span></sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" data-screen-label="Contact" style="max-width:1360px;margin:0 auto;padding:clamp(80px,12vh,160px) clamp(16px,3vw,40px) 40px">
+      <div data-reveal style="border:1px solid rgba(237,237,228,.14);border-radius:8px;padding:clamp(28px,5vw,64px);background:linear-gradient(135deg,#151E1D,#101716);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:32px;align-items:end;position:relative;overflow:hidden">
+        <div style="position:absolute;right:-80px;top:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(221,235,157,.16),transparent 70%);pointer-events:none"></div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#DDEB9D">05 / CONTACT</span>
+          <h2 style="margin:0;font-size:clamp(32px,5vw,72px);font-weight:600;letter-spacing:-.035em;line-height:1;text-wrap:balance">Hiring? Let's build something that lasts.</h2>
+          <p style="margin:0;font-size:16px;color:rgba(237,237,228,.7);max-width:44ch">Reply within a day. Open to interviews, take-home tasks, and pair-programming sessions.</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <a href="mailto:mattathiasabraham@gmail.com" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px;border-radius:4px;background:#DDEB9D;color:#101716;font-weight:600;font-size:15px;transition:background .2s" style-hover="background:#EAF5B5;color:#101716"><span style="overflow-wrap:anywhere">mattathiasabraham@gmail.com</span><span>→</span></a>
+          <a href="tel:+251902212622" style="display:flex;justify-content:space-between;padding:14px 18px;border-radius:4px;border:1px solid rgba(237,237,228,.2);font-family:'JetBrains Mono',monospace;font-size:13px" style-hover="border-color:#DDEB9D;color:#DDEB9D"><span>+251 902 212 622</span><span style="color:rgba(237,237,228,.5)">Addis Ababa · GMT+3</span></a>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+            <a href="https://github.com/Mattathiasa" style="padding:12px;border-radius:4px;border:1px solid rgba(237,237,228,.2);text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px" style-hover="border-color:#DDEB9D;color:#DDEB9D">GitHub</a>
+            <a href="https://linkedin.com" style="padding:12px;border-radius:4px;border:1px solid rgba(237,237,228,.2);text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px" style-hover="border-color:#DDEB9D;color:#DDEB9D">LinkedIn</a>
+            <a href="https://www.instagram.com/mattathiasa/" style="padding:12px;border-radius:4px;border:1px solid rgba(237,237,228,.2);text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px" style-hover="border-color:#DDEB9D;color:#DDEB9D">Instagram</a>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:24px;font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(237,237,228,.45)"><span>© 2026 Mattathias Abraham</span><span>React · GSAP · Three.js</span></div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;availability&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;open&quot;,&quot;freelance&quot;,&quot;none&quot;],&quot;default&quot;:&quot;open&quot;,&quot;tsType&quot;:&quot;'open'|'freelance'|'none'&quot;,&quot;section&quot;:&quot;Content&quot;},&quot;ambientBackground&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;}}">
+class Component extends DCLogic {
+  state = { menuOpen: false, scrolled: false, narrow: false };
+  rootRef = React.createRef(); threeRef = React.createRef();
+  nav = [['Work', '#work'], ['About', '#about'], ['Experience', '#experience'], ['Stack', '#skills'], ['Contact', '#contact']];
+  componentDidMount() {
+    this.onScroll = () => { const sc = window.scrollY > 24; if (sc !== this.state.scrolled) this.setState({ scrolled: sc }); };
+    this.onResize = () => { const n = window.innerWidth < 900; if (n !== this.state.narrow) this.setState({ narrow: n }); };
+    window.addEventListener('scroll', this.onScroll, { passive: true }); window.addEventListener('resize', this.onResize); this.onResize();
+    setTimeout(() => { this.initGsap(); if (this.props.ambientBackground ?? true) this.initThree(); }, 60);
+  }
+  componentWillUnmount() { window.removeEventListener('scroll', this.onScroll); window.removeEventListener('resize', this.onResize); if (this.raf) cancelAnimationFrame(this.raf); if (window.ScrollTrigger) ScrollTrigger.getAll().forEach(t => t.kill()); }
+  initGsap() {
+    const g = window.gsap, root = this.rootRef.current; if (!g || !root) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    g.registerPlugin(window.ScrollTrigger);
+    g.from(root.querySelectorAll('[data-hero]'), { y: 24, opacity: 0, duration: .8, ease: 'power3.out', stagger: .07, delay: .1 });
+    root.querySelectorAll('[data-reveal]').forEach(el => g.from(el, { y: 20, opacity: 0, duration: .7, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 88%', once: true } }));
+    const line = root.querySelector('[data-timeline-line]'); if (line) g.from(line, { scaleX: 0, duration: 1.2, ease: 'power2.inOut', scrollTrigger: { trigger: line.parentElement, start: 'top 80%', once: true } });
+    root.querySelectorAll('[data-count]').forEach(el => { const n = +el.getAttribute('data-count'); const o = { v: 0 }; g.to(o, { v: n, duration: 1.2, ease: 'power2.out', onUpdate: () => { el.textContent = Math.round(o.v); }, scrollTrigger: { trigger: el, start: 'top 90%', once: true } }); });
+  }
+  initThree() {
+    const T = window.THREE, el = this.threeRef.current; if (!T || !el) return;
+    const scene = new T.Scene(); scene.fog = new T.Fog(0x101716, 20, 90);
+    const cam = new T.PerspectiveCamera(55, innerWidth / innerHeight, .1, 200); cam.position.set(0, 9, 34); cam.lookAt(0, -2, 0);
+    const r = new T.WebGLRenderer({ alpha: true, antialias: false, powerPreference: 'low-power' }); r.setPixelRatio(Math.min(devicePixelRatio, 1.5)); r.setSize(innerWidth, innerHeight); el.appendChild(r.domElement);
+    const seg = innerWidth < 900 ? 40 : 80, geo = new T.PlaneGeometry(160, 100, seg, Math.round(seg * .6)); geo.rotateX(-Math.PI / 2);
+    const base = geo.attributes.position.array.slice();
+    const pts = new T.Points(geo, new T.PointsMaterial({ color: 0xDDEB9D, size: .14, transparent: true, opacity: .45, depthWrite: false })); pts.position.y = -6; scene.add(pts);
+    const mouse = { x: 0, y: 0 }; let scrollY = 0;
+    window.addEventListener('mousemove', e => { mouse.x = e.clientX / innerWidth * 2 - 1; mouse.y = -(e.clientY / innerHeight) * 2 + 1; }, { passive: true });
+    window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
+    window.addEventListener('resize', () => { cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); r.setSize(innerWidth, innerHeight); });
+    let last = 0; const p = geo.attributes.position;
+    const tick = (t) => { this.raf = requestAnimationFrame(tick); if (t - last < 33) return; last = t; const time = t * .0004;
+      for (let i = 0; i < p.count; i++) { const x = base[i*3], z = base[i*3+2]; p.array[i*3+1] = Math.sin(x * .12 + time) * 1.4 + Math.cos(z * .15 + time * .8) * 1.2; }
+      p.needsUpdate = true; pts.position.z = (scrollY * .01) % 4; cam.position.x += (mouse.x * 3 - cam.position.x) * .03; cam.position.y += (9 + mouse.y * 1.5 - cam.position.y) * .03; cam.lookAt(0, -2, 0); r.render(scene, cam); };
+    this.raf = requestAnimationFrame(tick);
+  }
+  renderVals() {
+    const s = this.state, A = 'src/assets/';
+    const avail = { open: 'Open to roles', freelance: 'Open to freelance', none: 'Currently employed' }[this.props.availability ?? 'open'];
+    return {
+      rootRef: this.rootRef, threeRef: this.threeRef, ambientOpacity: (this.props.ambientBackground ?? true) ? 1 : 0, availabilityLabel: avail,
+      navBg: s.scrolled ? 'rgba(16,23,22,.85)' : 'transparent', navBlur: s.scrolled ? 'blur(14px)' : 'none', navLine: s.scrolled ? 'rgba(237,237,228,.1)' : 'transparent',
+      desktopNavDisplay: s.narrow ? 'none' : 'flex', mobileBtnDisplay: s.narrow ? 'inline-flex' : 'none', menuOpen: s.menuOpen && s.narrow, menuLabel: s.menuOpen ? 'close' : 'menu',
+      toggleMenu: () => this.setState(t => ({ menuOpen: !t.menuOpen })), closeMenu: () => this.setState({ menuOpen: false }),
+      navItems: this.nav.map(([name, href], i) => ({ name, href, idx: '0' + (i + 1) })),
+      facts: [
+        { k: 'name', v: '"Mattathias Abraham"', color: '#EDEDE4' }, { k: 'role', v: '"Software Engineer"', color: '#EDEDE4' }, { k: 'location', v: '"Addis Ababa, ET · GMT+3"', color: '#EDEDE4' },
+        { k: 'focus', v: '["frontend", "full-stack", "backend", "mobile"]', color: '#DDEB9D' }, { k: 'stack', v: '["TypeScript", "React", "Node", "Python", "SQL"]', color: '#DDEB9D' },
+        { k: 'certs', v: '["AWS Cloud Practitioner"]', color: '#EDEDE4' }, { k: 'status', v: '"' + avail.toLowerCase() + '"', color: '#DDEB9D' }],
+      projects: [
+        { idx: '01', year: '2025', kind: 'WEB · DATA', span: 'auto', title: 'Football Analytics Dashboard', description: 'Real-time match, player and team statistics rendered with D3 over a Node/MongoDB API.', role: 'Full-stack, solo', highlight: 'Live data pipeline', image: A + 'project-football-analytics.jpg', tags: ['React', 'TypeScript', 'D3.js', 'Node.js', 'MongoDB'], link: '#' },
+        { idx: '02', year: '2024', kind: 'MOBILE', span: 'auto', title: 'Mini-Games Collection', description: 'React Native skill and quiz games with Firebase auth, leaderboards and Redux-managed state.', role: 'Mobile lead', highlight: 'Offline-first state', image: A + 'project-games.jpg', tags: ['React Native', 'TypeScript', 'Firebase', 'Redux'], link: '#' },
+        { idx: '03', year: '2024', kind: 'WEB · CMS', span: 'auto', title: 'Creator Portfolio & CMS', description: 'Next.js publishing site with embedded video and a Supabase-backed editing flow for non-technical users.', role: 'Frontend', highlight: 'Editor-friendly CMS', image: A + 'project-portfolio.jpg', tags: ['Next.js', 'Tailwind', 'Framer Motion', 'Supabase'], link: '#' }],
+      counters: [{ n: 3, suffix: '', label: 'PRODUCTS SHIPPED' }, { n: 2, suffix: '+', label: 'YEARS BUILDING' }, { n: 1, suffix: '', label: 'AWS CERTIFICATION' }],
+      timeline: [
+        { when: '2020 — 2024', title: 'B.Sc. Software Engineering', org: 'Addis Ababa · Dean\u2019s List', dot: '#101716', body: 'Distributed systems, databases and HCI. Recognised for academic excellence.' },
+        { when: '2024', title: 'AWS Certified Cloud Practitioner', org: 'Amazon Web Services', dot: '#101716', body: 'Core services, shared-responsibility security, and cost modelling.' },
+        { when: '2024', title: 'Hackathon Winner', org: 'Best Innovation Award', dot: '#DDEB9D', body: 'Led frontend and API design in a 48-hour build that took the innovation prize.' },
+        { when: '2025 — NOW', title: '[Role placeholder]', org: '[Company / internship — add here]', dot: '#DDEB9D', body: 'Your most recent role: what you owned, the stack, and one measurable outcome.' }],
+      stack: [
+        { idx: '01', name: 'LANGUAGES', items: [{ name: 'TypeScript', lvl: '●' }, { name: 'JavaScript', lvl: '●' }, { name: 'Python', lvl: '●' }, { name: 'SQL', lvl: '●' }] },
+        { idx: '02', name: 'FRONTEND', items: [{ name: 'React', lvl: '●' }, { name: 'Next.js', lvl: '●' }, { name: 'Tailwind', lvl: '●' }, { name: 'D3.js', lvl: '○' }] },
+        { idx: '03', name: 'BACKEND', items: [{ name: 'Node.js / Express', lvl: '●' }, { name: 'Django', lvl: '○' }, { name: 'REST design', lvl: '●' }] },
+        { idx: '04', name: 'DATA & CLOUD', items: [{ name: 'PostgreSQL', lvl: '●' }, { name: 'MongoDB', lvl: '●' }, { name: 'Firebase / Supabase', lvl: '●' }, { name: 'AWS', lvl: '○' }] },
+        { idx: '05', name: 'MOBILE', items: [{ name: 'React Native', lvl: '●' }, { name: 'Redux', lvl: '●' }] },
+        { idx: '06', name: 'TOOLING', items: [{ name: 'Git', lvl: '●' }, { name: 'Docker', lvl: '○' }, { name: 'Postman', lvl: '●' }, { name: 'Figma', lvl: '●' }] }],
+      credentials: [{ tag: 'CERT', title: 'AWS Certified Cloud Practitioner' }, { tag: 'AWARD', title: 'Hackathon Winner — Best Innovation 2024' }, { tag: 'HONOR', title: 'Dean\u2019s List' }]
+    };
+  }
+}
+</script>
+</body>
+</html>
