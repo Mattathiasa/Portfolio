@@ -27,10 +27,9 @@ export default {
         xs: "375px",
       },
       fontFamily: {
-        title: ["Anton", "Futura", "Century Gothic", "sans-serif"],
-        heading: ["Neuton", "serif"],
-        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
-        display: ["Pacifico", "cursive"],
+        serif: ["Instrument Serif", "serif"],
+        sans: ["DM Sans", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -50,6 +49,9 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
+        "accent-hover": "hsl(var(--accent-hover))",
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
