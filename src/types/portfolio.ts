@@ -90,6 +90,56 @@ export interface PortfolioContent {
   contactSubtitle?: string;
   footerBio?: string;
   cvUrl?: string;
+
+  // ── Site copy (redesign) — all additive keys on content/main ──────────────
+  // Navigation / brand
+  brandLabel?: string;
+  navWork?: string;
+  navAbout?: string;
+  navExperience?: string;
+  navStack?: string;
+  navContact?: string;
+  navResume?: string;
+  navHire?: string;
+  // Hero
+  heroHeadline?: string;
+  heroCtaPrimary?: string;
+  heroCtaSecondary?: string;
+  heroTimezone?: string;
+  // Selected work
+  workHeading?: string;
+  workHardPartLabel?: string;
+  workLiveLabel?: string;
+  workSourceLabel?: string;
+  workMoreText?: string;
+  // Section indices / experience
+  aboutIndexLabel?: string;
+  experienceHeading?: string;
+  experienceIndexLabel?: string;
+  educationBadge?: string;
+  skillsIndexLabel?: string;
+  // Contact & form
+  contactIndexLabel?: string;
+  formHeading?: string;
+  formIntro?: string;
+  formName?: string;
+  formEmail?: string;
+  formSubject?: string;
+  formMessage?: string;
+  formSubmit?: string;
+  formSuccess?: string;
+  formError?: string;
+  elsewhereLabel?: string;
+  directLabel?: string;
+  footerCredit?: string;
+  // AI chat
+  chatTitle?: string;
+  chatSubtitle?: string;
+  chatWelcome?: string;
+  chatPlaceholder?: string;
+  chatCta?: string;
+  chatSuggestions?: string[];
+  chatSystemPrompt?: string;
 }
 
 // ── About highlights ──────────────────────────────────────────────────────────
