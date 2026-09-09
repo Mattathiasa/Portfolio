@@ -62,8 +62,11 @@ const ALIASES = {
   'lyricloom': 'LyricLoom',
   'lyricloomssongmeaninganalyzer': 'LyricLoom',
   'skzshowcase': 'skz-showcase',
-  'skzpymusicplayer': 'skz-showcase',
-  'skzpy': 'skz-showcase',
+  'skzpymusicplayer': 'skz-player',
+  'skzpy': 'skz-player',
+  'personaldiscography': 'skz-showcase', // same deployment as skz-showcase (skz-showcase.vercel.app)
+  'redcrossmobileapp': 'red-cross-app',
+  'redcross': 'red-cross-app',
   'musicscout': 'AudioScout',
   'audioscout': 'AudioScout',
   'portfolio': 'Portfolio',
@@ -182,7 +185,7 @@ function renderBlock(project, dev) {
     L.push(`- **Admin notes:**`);
     L.push(`  > ${oneLine(dev.notes)}`);
   }
-  L.push(`- *Synced: ${new Date().toISOString().slice(0, 16).replace('T', ' ')}*`);
+  // no per-block timestamp: keeps diffs meaningful (sync time lives in the sync note + meta)
   L.push(SYNC_END);
   return L.join('\n');
 }
