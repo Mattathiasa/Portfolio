@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync:vault": "node scripts/sync-to-vault.mjs"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
