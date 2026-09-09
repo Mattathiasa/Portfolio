@@ -229,7 +229,9 @@ export async function getVaultComments(): Promise<VaultCommentsMeta> {
 }
 
 export async function saveVaultComments(items: Record<string, VaultCommentsFile>): Promise<void> {
-  await setDoc(doc(db, 'content', 'vault-comments.meta'), { items, syncedAt: new Date().toISOString() }, { merge: true });
+  // Do NOT touch syncedAt here — only scripts/sync-to-vault.mjs owns it.
+  // Pending-edit detection compares a folder's updatedAt against syncedAt.
+  await setDoc(doc(db, 'content', 'vault-comments.meta'), { items }, { merge: true });
 }
 
 // ── Scheduler ─────────────────────────────────────────────────────────────────
