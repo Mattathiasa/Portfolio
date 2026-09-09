@@ -31,6 +31,8 @@ const ATLAS_DIR = join(VAULT_ROOT, 'Atlas');
 const DRY_RUN = process.argv.includes('--dry-run');
 const SYNC_START = '<!-- PORTFOLIO-SYNC:START (auto-generated from Portfolio admin - do not edit inside these markers) -->';
 const SYNC_END = '<!-- PORTFOLIO-SYNC:END -->';
+const VC_START = '<!-- VAULT-COMMENTS:START (written from Portfolio admin > Vault comments tab) -->';
+const VC_END = '<!-- VAULT-COMMENTS:END -->';
 
 // ── Portfolio title → workspace folder aliases ─────────────────────────────
 // Normalized (lowercase, alphanumeric-only) portfolio title → folder name.
@@ -185,14 +187,25 @@ function renderBlock(project, dev) {
   return L.join('\n');
 }
 
-function upsertBlock(existing, block) {
+function upsertBlock(existing, block, startMark = SYNC_START, endMark = SYNC_END) {
   if (!existing) return block + '\n';
-  const start = existing.indexOf(SYNC_START);
-  const end = existing.indexOf(SYNC_END);
+  const start = existing.indexOf(startMark);
+  const end = existing.indexOf(endMark);
   if (start !== -1 && end !== -1 && end > start) {
-    return existing.slice(0, start) + block + existing.slice(end + SYNC_END.length);
+    return existing.slice(0, start) + block + existing.slice(end + endMark.length);
   }
   return existing.replace(/\s*$/, '\n') + '\n---\n\n' + block + '\n';
+}
+
+function stripMarkerBlocks(text) {
+  let out = text ?? '';
+  for (const [s, e] of [[SYNC_START, SYNC_END], [VC_START, VC_END]]) {
+    let a, b;
+    while ((a = out.indexOf(s)) !== -1 && (b = out.indexOf(e, a)) !== -1) {
+      out = (out.slice(0, a) + out.slice(b + e.length)).trim();
+    }
+  }
+  return out.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function freshComments(folder, title, block) {
@@ -294,16 +307,20 @@ async function main() {
   const base = `https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents`;
   const key = `key=${cfg.apiKey}`;
 
-  console.log('→ Pulling projects + content/develop from Firestore…');
-  const [projectsRes, developRes] = await Promise.all([
+  console.log('→ Pulling projects + content/develop + content/vault-comments from Firestore…');
+  const [projectsRes, developRes, vcRes] = await Promise.all([
     restGet(`${base}/projects?pageSize=200&${key}`).catch(e => { throw new Error(`projects: ${e.message}`); }),
     restGet(`${base}/content/develop?${key}`).catch(e => { throw new Error(`content/develop: ${e.message} (if rules deny public reads, allow read for content/* )`); }),
+    restGet(`${base}/content/vault-comments.meta?${key}`).catch(() => null), // optional — created on first sync/admin save
   ]);
 
   const projects = (projectsRes.documents ?? [])
     .map(d => ({ ...fv(d.fields), id: d.name.split('/').pop() }))
     .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
   const develop = fv(developRes.fields).items ?? {};
+  const vcFields = vcRes ? fv(vcRes.fields) : {};
+  const vaultComments = vcFields.items ?? {};
+  const lastSyncedAt = vcFields.syncedAt ?? null;
 
   console.log(`  ✓ ${projects.length} project(s), ${Object.keys(develop).length} dev-note doc(s)`);
 
@@ -336,23 +353,66 @@ async function main() {
   writeFileSync(join(ATLAS_DIR, 'Portfolio Sync.md'), renderSyncNote(rows, unmatched, projects.length));
   console.log('✓ wrote Vault/Atlas/Portfolio Sync.md');
 
-  // 2. comments.md blocks
-  let injected = 0, created = 0, skipped = 0;
+  // 2. comments.md rebuild: hand-written part (admin mirror vs local, newest wins)
+  //    + portfolio sync block (always regenerated from Firestore)
+  let injected = 0, created = 0, skipped = 0, adminWon = 0, localWon = 0;
+  const newMirror = {};
   for (const r of rows) {
     if (!r.folder) { skipped++; continue; }
-    const dir = join(PROJECTS_ROOT, r.folder);
-    const cmPath = join(dir, 'comments.md');
+    const cmPath = join(PROJECTS_ROOT, r.folder, 'comments.md');
     const block = renderBlock(r.project, r.dev);
-    if (existsSync(cmPath)) {
-      const before = readFileSync(cmPath, 'utf8');
-      const after = upsertBlock(before, block);
-      if (after !== before) { writeFileSync(cmPath, after); injected++; }
+    const localRaw = existsSync(cmPath) ? readFileSync(cmPath, 'utf8') : null;
+    const localHand = localRaw ? stripMarkerBlocks(localRaw) : '';
+    const metaEntry = vaultComments[r.folder];
+    const adminEdited = !!(metaEntry?.updatedAt && (!lastSyncedAt || metaEntry.updatedAt > lastSyncedAt));
+    let hand;
+    if (adminEdited && (metaEntry.mirror ?? '').trim()) {
+      hand = metaEntry.mirror.trim();          // admin edited since last sync → admin wins
+      adminWon++;
+    } else {
+      hand = localHand;                        // local file is the truth → mirrored up
+      localWon++;
+    }
+    newMirror[r.folder] = hand;
+    if (localRaw) {
+      // Always rebuild from the stripped hand-part: kills any stale marker blocks.
+      const after = (hand ? hand + '\n\n---\n\n' : '') + block + '\n';
+      if (after !== localRaw) { writeFileSync(cmPath, after); injected++; }
     } else {
       writeFileSync(cmPath, freshComments(r.folder, r.title, block));
       created++;
     }
   }
-  console.log(`✓ comments.md blocks: ${injected} updated, ${created} created, ${skipped} skipped (unmatched)`);
+  console.log(`✓ comments.md: ${injected} updated, ${created} created, ${skipped} skipped (unmatched)`);
+  console.log(`  hand-written part: admin-won ${adminWon}, local-won ${localWon}`);
+
+  // 3. Mirror back to Firestore for the admin "Vault comments" tab:
+  //    per-folder hand-written comments (markers stripped) + folder catalog.
+  const now = new Date().toISOString();
+  const itemsMap = {};
+  const catalog = [];
+  for (const r of rows) {
+    if (!r.folder) continue;
+    itemsMap[r.folder] = { mirror: newMirror[r.folder] ?? '', updatedAt: now };
+    catalog.push({ folder: r.folder, doc: docFor(r.folder) ?? '' });
+  }
+  const fields = {
+    items: { mapValue: { fields: Object.fromEntries(Object.entries(itemsMap).map(([k, v]) => [
+      k, { mapValue: { fields: { mirror: { stringValue: v.mirror }, updatedAt: { stringValue: v.updatedAt } } } },
+    ])) } },
+    catalog: { arrayValue: { values: catalog.map(c => ({ mapValue: { fields: { folder: { stringValue: c.folder }, doc: { stringValue: c.doc } } } })) } },
+    syncedAt: { stringValue: now },
+  };
+  const patchRes = await fetch(`${base}/content/vault-comments.meta?${key}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+  if (!patchRes.ok) {
+    console.warn(`⚠ could not write vault-comments.meta (${patchRes.status}) — admin tab will show stale mirrors`);
+  } else {
+    console.log(`✓ vault-comments.meta updated for ${Object.keys(itemsMap).length} folder(s)`);
+  }
   if (unmatched.length) {
     console.log(`⚠ ${unmatched.length} unmatched: ${unmatched.map(u => `"${u.title}"`).join(', ')}`);
     console.log('  → add aliases in scripts/sync-to-vault.mjs ALIASES and re-run');

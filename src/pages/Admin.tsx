@@ -31,12 +31,13 @@ import {
   Plus, Pencil, Trash2, Upload, X, Lock, LogOut,
   Image as ImageIcon, Github, ExternalLink, Eye, EyeOff,
   FolderOpen, Layers, Wrench, FileText, ChevronRight, ChevronLeft, Loader2,
-  Download, BookOpen, Users, Mail, Sparkles, ListChecks, MessageSquarePlus, KanbanSquare,
+  Download, BookOpen, Users, Mail, Sparkles, ListChecks, MessageSquarePlus, KanbanSquare, BookOpenText,
   ImagePlus, Star, Check, Monitor, Smartphone, AppWindow, Crop,
   GripVertical, ArrowUp, ArrowDown, LayoutGrid, List, CalendarDays,
 } from 'lucide-react';
 import * as fb from '@/lib/firestore';
 import type { Project, Skill, PortfolioContent, AboutStat, CVData, CVExperience, CVProject, CVEducation, CVLanguage, BlogPost, ProjectDev, DevItem, ProjectImage, ImageDevice, Testimonial, Certification } from '@/types/portfolio';
+import VaultCommentsTab from '@/components/admin/VaultCommentsTab';
 import { LIFECYCLE_STAGES, emptyProjectDev, DEVICE_DEFAULTS, ASPECT_PRESETS, toProjectMedia } from '@/types/portfolio';
 import { DEFAULT_PROJECTS, DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT, DEFAULT_CV, DEFAULT_HIGHLIGHTS, DEFAULT_CONTACT, DEFAULT_BLOG_POSTS, DEFAULT_TESTIMONIALS, DEFAULT_CERTIFICATIONS } from '@/data/defaults';
 import { SchedulerTab } from '@/components/admin/SchedulerTab';
@@ -2500,6 +2501,7 @@ const TAB_GROUPS: { label: string; tabs: { value: string; icon: React.ComponentT
     tabs: [
       { value: 'develop',   icon: KanbanSquare, label: 'Develop' },
       { value: 'scheduler', icon: CalendarDays, label: 'Scheduler' },
+      { value: 'vault',     icon: BookOpenText, label: 'Vault comments' },
     ],
   },
 ];
@@ -2591,6 +2593,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               <TabsContent value="content"><ContentTab /></TabsContent>
               <TabsContent value="cv"><CVTab /></TabsContent>
               <TabsContent value="scheduler"><SchedulerTab /></TabsContent>
+              <TabsContent value="vault"><VaultCommentsTab /></TabsContent>
               <TabsContent value="testimonials"><TestimonialsTab /></TabsContent>
               <TabsContent value="certifications"><CertificationsTab /></TabsContent>
               <TabsContent value="copy"><SiteCopyTab /></TabsContent>

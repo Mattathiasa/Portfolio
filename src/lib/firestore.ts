@@ -208,6 +208,30 @@ export async function updateProjectsOrder(ordered: { id: string; order: number }
   await batch.commit();
 }
 
+// ── Vault comments mirror (written by scripts/sync-to-vault.mjs) ────────────
+// content/vault-comments.meta = { items: { folder: { mirror, updatedAt } }, catalog: [{folder, doc}], syncedAt }
+
+export interface VaultCommentsFile {
+  mirror?: string;
+  updatedAt?: string;
+}
+export interface VaultCommentsMeta {
+  items: Record<string, VaultCommentsFile>;
+  catalog: { folder: string; doc: string }[];
+  syncedAt?: string;
+}
+
+export async function getVaultComments(): Promise<VaultCommentsMeta> {
+  const snap = await getDoc(doc(db, 'content', 'vault-comments.meta'));
+  if (!snap.exists()) return { items: {}, catalog: [] };
+  const d = snap.data() as VaultCommentsMeta;
+  return { items: d.items ?? {}, catalog: d.catalog ?? [], syncedAt: d.syncedAt };
+}
+
+export async function saveVaultComments(items: Record<string, VaultCommentsFile>): Promise<void> {
+  await setDoc(doc(db, 'content', 'vault-comments.meta'), { items, syncedAt: new Date().toISOString() }, { merge: true });
+}
+
 // ── Scheduler ─────────────────────────────────────────────────────────────────
 
 export async function getSchedulerItems(): Promise<SchedulerItem[]> {
