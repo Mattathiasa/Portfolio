@@ -205,6 +205,8 @@ function stripMarkerBlocks(text) {
       out = (out.slice(0, a) + out.slice(b + e.length)).trim();
     }
   }
+  // drop trailing `---` separators the rebuild adds (keeps re-runs idempotent)
+  while (/(?:^|\n)---\s*$/.test(out)) out = out.replace(/(?:\n+---\s*)+$/, '').trimEnd();
   return out.replace(/\n{3,}/g, '\n\n').trim();
 }
 
@@ -292,6 +294,54 @@ function renderSyncNote(rows, unmatched, projectsCount) {
   return L.join('\n');
 }
 
+// ── Line diff (LCS-based, small files only) ──────────────────────────────────
+function diffLines(aText, bText) {
+  const a = (aText ?? '').split('\n');
+  const b = (bText ?? '').split('\n');
+  const n = a.length, m = b.length;
+  // LCS table
+  const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const out = [];
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) { out.push({ t: ' ', s: a[i] }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push({ t: '-', s: a[i++] }); }
+    else { out.push({ t: '+', s: b[j++] }); }
+  }
+  while (i < n) out.push({ t: '-', s: a[i++] });
+  while (j < m) out.push({ t: '+', s: b[j++] });
+  return out;
+}
+
+function unifiedDiff(path, before, after, context = 2) {
+  const d = diffLines(before, after);
+  if (!d.some(x => x.t !== ' ')) return null;
+  const L = [`--- a/${path}`, `+++ b/${path}`];
+  // group into hunks with `context` lines of surrounding context
+  let idx = 0;
+  while (idx < d.length) {
+    if (d[idx].t === ' ') { idx++; continue; }
+    const start = Math.max(0, idx - context);
+    let end = idx;
+    let gap = 0;
+    for (let k = idx; k < d.length; k++) {
+      if (d[k].t === ' ') { gap++; if (gap > context * 2) { end = k - gap + context; break; } }
+      else { gap = 0; end = Math.min(d.length - 1, k + context); }
+    }
+    const slice = d.slice(start, end + 1);
+    const a0 = start + 1, b0 = start + 1;
+    const aN = slice.filter(x => x.t !== '+').length;
+    const bN = slice.filter(x => x.t !== '-').length;
+    L.push(`@@ -${a0},${aN} +${b0},${bN} @@`);
+    for (const x of slice) L.push(x.t + x.s);
+    idx = end + 1;
+  }
+  return L.join('\n');
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
   const env = loadEnv();
@@ -344,61 +394,70 @@ async function main() {
     else console.log(`  • "${r.title}" → UNMATCHED`);
   }
 
-  if (DRY_RUN) {
-    console.log('\n(dry-run: no files written)');
-    return;
-  }
-
-  // 1. Sync note
-  writeFileSync(join(ATLAS_DIR, 'Portfolio Sync.md'), renderSyncNote(rows, unmatched, projects.length));
-  console.log('✓ wrote Vault/Atlas/Portfolio Sync.md');
-
-  // 2. comments.md rebuild: hand-written part (admin mirror vs local, newest wins)
-  //    + portfolio sync block (always regenerated from Firestore)
-  let injected = 0, created = 0, skipped = 0, adminWon = 0, localWon = 0;
-  const newMirror = {};
+  // ── PLAN: compute every target comments.md without writing ────────────────
+  const plan = [];
   for (const r of rows) {
-    if (!r.folder) { skipped++; continue; }
+    if (!r.folder) continue;
     const cmPath = join(PROJECTS_ROOT, r.folder, 'comments.md');
     const block = renderBlock(r.project, r.dev);
     const localRaw = existsSync(cmPath) ? readFileSync(cmPath, 'utf8') : null;
     const localHand = localRaw ? stripMarkerBlocks(localRaw) : '';
     const metaEntry = vaultComments[r.folder];
     const adminEdited = !!(metaEntry?.updatedAt && (!lastSyncedAt || metaEntry.updatedAt > lastSyncedAt));
-    let hand;
+    let hand, source;
     if (adminEdited && (metaEntry.mirror ?? '').trim()) {
-      hand = metaEntry.mirror.trim();          // admin edited since last sync → admin wins
-      adminWon++;
+      hand = metaEntry.mirror.trim(); source = 'admin';
     } else {
-      hand = localHand;                        // local file is the truth → mirrored up
-      localWon++;
+      hand = localHand; source = 'local';
     }
-    newMirror[r.folder] = hand;
-    if (localRaw) {
-      // Always rebuild from the stripped hand-part: kills any stale marker blocks.
-      const after = (hand ? hand + '\n\n---\n\n' : '') + block + '\n';
-      if (after !== localRaw) { writeFileSync(cmPath, after); injected++; }
-    } else {
-      writeFileSync(cmPath, freshComments(r.folder, r.title, block));
-      created++;
-    }
+    const next = localRaw
+      ? (hand ? hand + '\n\n---\n\n' : '') + block + '\n'
+      : freshComments(r.folder, r.title, block);
+    const change = !localRaw ? 'create' : (next !== localRaw ? 'update' : 'unchanged');
+    plan.push({ folder: r.folder, cmPath, source, hand, next, change });
   }
-  console.log(`✓ comments.md: ${injected} updated, ${created} created, ${skipped} skipped (unmatched)`);
-  console.log(`  hand-written part: admin-won ${adminWon}, local-won ${localWon}`);
+
+  // ── PREVIEW (dry-run): unified diffs of every file that would change ─────
+  if (DRY_RUN) {
+    const changed = plan.filter(p => p.change !== 'unchanged');
+    console.log(`\n≡ DRY-RUN PREVIEW — ${changed.length} file(s) would change, ${plan.length - changed.length} untouched:`);
+    for (const p of changed) {
+      const rel = p.cmPath.slice(PROJECTS_ROOT.length + 1);
+      const diff = unifiedDiff(rel, p.change === 'create' ? '' : (readFileSync(p.cmPath, 'utf8')), p.next);
+      console.log('\n' + (diff ?? `(no textual diff for ${rel})`));
+    }
+    if (!changed.length) console.log('  (nothing to do — every comments.md already matches)');
+    console.log('\n(dry-run: no files written. Run without --dry-run to apply.)');
+    return;
+  }
+
+  // ── APPLY ──────────────────────────────────────────────────────────────────
+  // 1. Sync note
+  writeFileSync(join(ATLAS_DIR, 'Portfolio Sync.md'), renderSyncNote(rows, unmatched, projects.length));
+  console.log('✓ wrote Vault/Atlas/Portfolio Sync.md');
+
+  // 2. comments.md files from the plan
+  let updated = 0, created = 0, unchanged = 0;
+  for (const p of plan) {
+    if (p.change === 'update') { writeFileSync(p.cmPath, p.next); updated++; }
+    else if (p.change === 'create') { writeFileSync(p.cmPath, p.next); created++; }
+    else unchanged++;
+  }
+  console.log(`✓ comments.md: ${updated} updated, ${created} created, ${unchanged} unchanged`);
+  console.log(`  hand-written part: admin-won ${plan.filter(p => p.source === 'admin').length}, local-won ${plan.filter(p => p.source === 'local').length}`);
 
   // 3. Mirror back to Firestore for the admin "Vault comments" tab:
   //    per-folder hand-written comments (markers stripped) + folder catalog.
   const now = new Date().toISOString();
   const itemsMap = {};
   const catalog = [];
-  for (const r of rows) {
-    if (!r.folder) continue;
-    itemsMap[r.folder] = { mirror: newMirror[r.folder] ?? '', updatedAt: now };
-    catalog.push({ folder: r.folder, doc: docFor(r.folder) ?? '' });
+  for (const p of plan) {
+    itemsMap[p.folder] = { mirror: p.hand, disk: p.hand, updatedAt: now };
+    catalog.push({ folder: p.folder, doc: docFor(p.folder) ?? '' });
   }
   const fields = {
     items: { mapValue: { fields: Object.fromEntries(Object.entries(itemsMap).map(([k, v]) => [
-      k, { mapValue: { fields: { mirror: { stringValue: v.mirror }, updatedAt: { stringValue: v.updatedAt } } } },
+      k, { mapValue: { fields: { mirror: { stringValue: v.mirror }, disk: { stringValue: v.disk }, updatedAt: { stringValue: v.updatedAt } } } },
     ])) } },
     catalog: { arrayValue: { values: catalog.map(c => ({ mapValue: { fields: { folder: { stringValue: c.folder }, doc: { stringValue: c.doc } } } })) } },
     syncedAt: { stringValue: now },

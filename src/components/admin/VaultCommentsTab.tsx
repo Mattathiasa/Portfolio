@@ -84,6 +84,58 @@ function SyncStatusCard({ data, onJump }: { data: VaultCommentsMeta; onJump: (fo
   );
 }
 
+/** Minimal LCS line diff for the live preview panel. */
+function diffLines(a: string, b: string): { t: ' ' | '-' | '+'; s: string }[] {
+  const A = (a ?? '').split('\n'), B = (b ?? '').split('\n');
+  const n = A.length, m = B.length;
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const out: { t: ' ' | '-' | '+'; s: string }[] = [];
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (A[i] === B[j]) { out.push({ t: ' ', s: A[i++] }); j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) out.push({ t: '-', s: A[i++] });
+    else out.push({ t: '+', s: B[j++] });
+  }
+  while (i < n) out.push({ t: '-', s: A[i++] });
+  while (j < m) out.push({ t: '+', s: B[j++] });
+  return out;
+}
+
+/** Collapsed diff view: changed lines with a little context, +/− gutter. */
+function DiffPreview({ before, after }: { before: string; after: string }) {
+  const lines = useMemo(() => {
+    const d = diffLines(before ?? '', after ?? '');
+    const rows: { t: ' ' | '-' | '+'; s: string }[] = [];
+    let gap = 0;
+    for (const x of d) {
+      if (x.t === ' ') { gap++; if (gap <= 2) rows.push(x); else if (gap === 3) rows.push({ t: ' ', s: '⋯' }); }
+      else { gap = 0; rows.push(x); }
+    }
+    return rows;
+  }, [before, after]);
+  const changed = lines.filter(l => l.t !== ' ' && l.s !== '⋯').length;
+  if (!changed) return <p className="text-xs text-emerald-500">No changes vs the current file on disk.</p>;
+  return (
+    <div className="rounded-md border border-border overflow-hidden">
+      <div className="max-h-64 overflow-y-auto font-mono text-[11.5px] leading-[1.5]">
+        {lines.map((l, k) => (
+          <div key={k} className={
+            l.t === '+' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+            : l.t === '-' ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+            : 'text-muted-foreground/50'
+          }>
+            <span className="inline-block w-5 text-center opacity-50 select-none">{l.t.trim() || ' '}</span>
+            <span className="whitespace-pre-wrap break-all">{l.s}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * VaultCommentsTab — view & edit the hand-written comments.md of every
  * workspace project (mirrored into Firestore by scripts/sync-to-vault.mjs),
@@ -190,12 +242,20 @@ export default function VaultCommentsTab() {
                 </Button>
               </div>
               <Textarea
-                rows={22}
+                rows={16}
                 value={entry?.mirror ?? ''}
                 onChange={e => patch(e.target.value)}
                 placeholder="No mirrored content yet — run npm run sync:vault in the Portfolio folder."
                 className="font-mono text-[12.5px] leading-relaxed"
               />
+              {isDirty && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Diff vs the file currently on disk (what the next sync would write):
+                  </p>
+                  <DiffPreview before={entry?.disk ?? ''} after={entry?.mirror ?? ''} />
+                </div>
+              )}
               <Separator className="bg-border/50" />
               <p className="text-xs text-muted-foreground">
                 Portfolio-sync & vault-comments marker blocks are stripped from this view —

@@ -212,7 +212,8 @@ export async function updateProjectsOrder(ordered: { id: string; order: number }
 // content/vault-comments.meta = { items: { folder: { mirror, updatedAt } }, catalog: [{folder, doc}], syncedAt }
 
 export interface VaultCommentsFile {
-  mirror?: string;
+  mirror?: string;   // current text (may contain unsynced admin edits)
+  disk?: string;     // text as last written to the real comments.md
   updatedAt?: string;
 }
 export interface VaultCommentsMeta {
