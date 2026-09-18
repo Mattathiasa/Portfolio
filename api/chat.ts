@@ -22,7 +22,7 @@ export default async function handler(request: Request): Promise<Response> {
     });
   }
 
-  const apiKey = process.env.GROK_API_KEY;
+  const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) {
     return new Response(JSON.stringify({ error: 'API key not configured' }), {
       status: 500,
@@ -33,7 +33,7 @@ export default async function handler(request: Request): Promise<Response> {
   try {
     const body = await request.json();
 
-    const upstream = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const upstream = await fetch('https://api.x.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

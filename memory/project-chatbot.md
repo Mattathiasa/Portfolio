@@ -8,10 +8,11 @@ metadata:
 A floating chatbot widget lives at `src/components/PortfolioChat.tsx`, rendered inside `src/pages/Index.tsx` after the loading screen completes.
 
 **Implementation details:**
-- Calls `https://api.x.ai/v1/chat/completions` directly from the client using `VITE_GROK_API_KEY` (OpenAI-compatible API)
+- Dual-mode API key flow:
+  - Local dev: `VITE_XAI_API_KEY` in `.env.local` → calls `https://api.x.ai/v1/chat/completions` directly from the browser
+  - Production: falls back to `POST /api/chat` → Vercel Edge function (`api/chat.ts`) which reads `XAI_API_KEY` server-side and proxies the SSE stream
 - Model: `grok-3-mini`
-- System prompt is hardcoded in the component with all portfolio data from `defaults.ts`
-- API key lives in `.env` (gitignored) as `VITE_GROK_API_KEY`
+- System prompt defaults to `DEFAULT_CHAT_SYSTEM_PROMPT` in `src/data/defaults.ts`, editable at runtime via Admin → AI chat tab (stored in Firestore `content/main`)
 - Three suggested question chips shown before user sends their first message
 
 **Why:** User wanted visitors to be able to ask questions about Mattathias's portfolio and background without having to read through the whole site.

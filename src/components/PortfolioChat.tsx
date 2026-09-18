@@ -211,7 +211,7 @@ export function PortfolioChat() {
     const context = messages.slice(-MAX_CONTEXT).map(m => ({ role: m.role, content: m.content }));
 
     const payload = {
-      model: 'llama-3.3-70b-versatile',
+      model: 'grok-3-mini',
       messages: [
         { role: 'system', content: c('chatSystemPrompt') },
         ...context,
@@ -225,9 +225,9 @@ export function PortfolioChat() {
     abortRef.current = new AbortController();
 
     try {
-      const devKey = import.meta.env.VITE_GROK_API_KEY;
+      const devKey = import.meta.env.VITE_XAI_API_KEY;
       const res = await fetch(
-        devKey ? 'https://api.groq.com/openai/v1/chat/completions' : '/api/chat',
+        devKey ? 'https://api.x.ai/v1/chat/completions' : '/api/chat',
         {
           method: 'POST',
           headers: {
