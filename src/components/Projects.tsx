@@ -16,6 +16,11 @@ const cover = (p: Project) => toProjectMedia(p)[0];
 // The homepage shows a curated few; the full catalogue lives at /projects.
 const HOMEPAGE_PROJECT_LIMIT = 4;
 
+// Recruiters hit auth walls on gated demos and bounce. Any note on the card
+// (guest creds, or "on request") keeps them engaged instead of confused.
+const DEMO_ON_REQUEST_NOTE =
+  'Demo access on request — email mattathiasabraham@gmail.com for a read-only guest login.';
+
 export const Projects = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const { c } = useContent();
@@ -184,6 +189,16 @@ export const Projects = () => {
                   </a>
                 )}
               </div>
+
+              {(() => {
+                const note = project.demoNote ?? (/ahaw/i.test(project.title) ? DEMO_ON_REQUEST_NOTE : '');
+                if (!note) return null;
+                return (
+                  <p className="border-l-2 border-foreground/20 pl-3 font-mono text-xs text-foreground/50">
+                    {note}
+                  </p>
+                );
+              })()}
             </div>
           </article>
           );

@@ -121,8 +121,8 @@ export const Blog = () => {
 
         {posts.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-lg text-muted-foreground mb-2">Blog coming soon</p>
-            <p className="text-sm text-muted-foreground/60">I will be sharing insights on mobile development, Flutter, React Native, and building scalable systems.</p>
+            <p className="text-lg text-muted-foreground mb-2">Writing in progress</p>
+            <p className="text-sm text-muted-foreground/60">I'll soon be sharing insights on mobile development, Flutter, React Native, and building scalable systems.</p>
           </div>
         ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">

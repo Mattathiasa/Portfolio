@@ -51,6 +51,7 @@ export interface Project {
   category: string[];
   github: string;
   demo: string;
+  demoNote?: string;      // e.g. "Guest demo: demo@example.com / demo123" or "demo on request"
   order: number;
   createdAt?: unknown;
   updatedAt?: unknown;

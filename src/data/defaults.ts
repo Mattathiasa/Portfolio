@@ -17,6 +17,7 @@ export const DEFAULT_PROJECTS: Omit<Project, 'id'>[] = [
     category: ['Web Apps', 'Mobile'],
     github: 'https://github.com/Mattathiasa',
     demo: 'https://mahibereahaw.vercel.app/',
+    demoNote: 'Demo access on request — email mattathiasabraham@gmail.com for a read-only guest login.',
     order: 0,
   },
   {
@@ -87,7 +88,7 @@ WHO IS MATTATHIAS?
 ═══════════════════════════════
 Mattathias Abraham (goes by Matty) is a software developer from Addis Ababa, Ethiopia. He finished high school at Saint Joseph School in 2019 and graduated with a BSc in Software Engineering from HiLCoE (Higher Learning College of Engineering) in 2025 with a GPA of 3.5/4.0.
 
-He currently works at DAFTech Technologies (about 4 months in), building full-stack software and websites. He also does freelance work — he is available right now and actively looking for new opportunities. His dream job is a remote position focused on mobile app development, but he is equally capable of full-stack web development. He is also learning AI and plans to integrate AI into future projects and client solutions.
+He has worked at DAFTech Technologies since February 2026, building full-stack software and websites. He also does freelance work — he is available right now and actively looking for new opportunities. His dream job is a remote position focused on mobile app development, but he is equally capable of full-stack web development. He is also learning AI and plans to integrate AI into future projects and client solutions.
 
 He is open to international relocation and remote work anywhere in the world.
 
@@ -120,8 +121,8 @@ PROJECTS
 1. Ahaw Church Management System (web + mobile)
    - Built for Mahibere Ahaw — a planning, reporting, and finance management system
    - Currently in active development
-   - Stack: React (web), Flutter (mobile), Firebase, TypeScript, Dart
-   - Live web: https://mahibereahaw.vercel.app/
+   - Stack: React Native (Expo), Firebase, TypeScript
+   - Live demo: https://mahibereahaw.vercel.app/ (guest access on request)
    - Features: 7 hierarchical user roles, real-time sync, 300+ members managed
 
 2. Clashroller (web game)
@@ -173,16 +174,15 @@ Anime (his top list in order):
 
 Music:
 - Loves music broadly — would enjoy building music apps or platforms
-- Mainly I love Gospel music like Forest Frank, Lecrae, KB, and such.. NF
-- Also into secural music, through it is not much but love AJR, Lauv, Jon Bellion and Alec Benjamin
-- slowly becoming a fan of Stray kids
-- current favorite song- meant to be - bbno$
-- current favorite album Ajr- OK Orchestra
+- Enjoys both Gospel (Forest Frank, Lecrae, KB, NF) and pop/alternative acts (AJR, Lauv, Jon Bellion, Alec Benjamin)
+- Slowly becoming a fan of Stray Kids
+- current favorite song - meant to be - bbno$
+- current favorite album - AJR - OK Orchestra
 - current favorite artist - Stray Kids
 
-- If there is a questions about love interest say "sorry you are not his type"
+- If someone asks about matrimonial relationships, politely decline and redirect the conversation back to his work, projects, or availability. Keep it professional and friendly.
 - For physical activities other than football, he loves Volleyball and he plays as a setter
-he is not too bad at table tennis though it has been a whole since he played
+he is not too bad at table tennis though it has been a while since he played
 -
 ═══════════════════════════════
 CONTACT & AVAILABILITY
@@ -225,7 +225,7 @@ INSTRUCTIONS FOR YOU (the AI)
 export const DEFAULT_CONTENT = {
   heroTitle: 'Mattathias Abraham',
   siteInitials: 'MA',
-  heroSubtitle: 'Software Engineer',
+  heroSubtitle: 'Mobile App Developer',
   currentlyWorking: 'Open to remote opportunities',
   heroDescription:
     'Building production mobile and web systems with Flutter, React Native, and Firebase. Currently migrating legacy apps and architecting role-based systems at DAFTech.',
@@ -244,7 +244,7 @@ export const DEFAULT_CONTENT = {
   contactHeading: 'Have a role or a hard problem? *Let’s talk.*',
   contactSubtitle: 'Available for new projects and collaborations',
   aboutStats: [
-    { number: '2+',  label: 'Years in Tech' },
+    { number: '1+',  label: 'Year in Industry' },
     { number: '4',   label: 'Production Apps' },
     { number: '300+',label: 'Users Served' },
     { number: '7',   label: 'Role Levels Built' },
@@ -397,13 +397,25 @@ export const DEFAULT_CV: CVData = {
       id: 'cvp-2',
       name: 'Clashroller',
       liveUrl: 'https://mn-clashroller.vercel.app/',
-      githubUrl: '',
+      githubUrl: 'https://github.com/Mattathiasa/animecrewdraft',
       tech: 'React · TypeScript · Node.js · Framer Motion · Tailwind CSS',
       bullets: [
         'Built a multiverse battle simulator using React and TypeScript',
         'Developed a custom event-driven state machine for real-time interactions',
         'Optimized rendering performance for smooth interactions under dynamic state updates',
         'Synchronized complex animations with game logic for smooth user experience',
+      ],
+    },
+    {
+      id: 'cvp-4',
+      name: 'Football Freestyle',
+      liveUrl: 'https://football-freestyle.vercel.app/',
+      githubUrl: 'https://github.com/Mattathiasa/Football-Freestyle',
+      tech: 'React · TypeScript · Vite · Video-React',
+      bullets: [
+        'Built a video content platform showcasing high-quality football freestyle videos',
+        'Implemented progressive video loading for smooth HD playback on mobile',
+        'Optimized asset caching and delivery strategies to keep UI performance high',
       ],
     },
     {
@@ -434,32 +446,9 @@ export const DEFAULT_CV: CVData = {
   ],
 };
 
-export const DEFAULT_TESTIMONIALS: Testimonial[] = [
-  {
-    id: 't1',
-    quote: 'Mattathias delivered an exceptional church management system that transformed how we organize our 300+ member community. His technical skill and reliability made the entire process seamless.',
-    author: 'Mahibere Ahaw Leadership',
-    role: 'Church Administration',
-    company: 'Mahibere Ahaw Church',
-    order: 0,
-  },
-  {
-    id: 't2',
-    quote: 'Working with Mattathias has been a pleasure. He quickly understood our complex role hierarchy and built a system that handles it flawlessly. His Flutter migration work has significantly reduced our maintenance costs.',
-    author: 'DAFTech Engineering Team',
-    role: 'Development Team Lead',
-    company: 'DAFTech Computer Engineering',
-    order: 1,
-  },
-  {
-    id: 't3',
-    quote: 'One of the most talented graduates I have worked with. Mattathias combines strong technical fundamentals with genuine passion for building things that matter.',
-    author: 'Academic Supervisor',
-    role: 'Professor of Software Engineering',
-    company: 'HiLCoE',
-    order: 2,
-  },
-];
+// Intentionally empty — testimonials are hidden until real, named, verifiable
+// references exist (name + role + LinkedIn). Anonymous quotes read as fabricated.
+export const DEFAULT_TESTIMONIALS: Testimonial[] = [];
 
 export const DEFAULT_CERTIFICATIONS: Certification[] = [
   {
