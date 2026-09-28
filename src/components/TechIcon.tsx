@@ -2,16 +2,11 @@ import {
   siReact, siTypescript, siJavascript, siFlutter, siFirebase, siNodedotjs,
   siTailwindcss, siElectron, siFigma, siVercel, siDocker, siPostgresql,
   siMongodb, siSupabase, siGithub, siExpo, siVite, siPython, siGsap,
-  siCloudflare, siNetlify, siGooglecloud, siRender,
+  siCloudflare, siNetlify, siGooglecloud, siRender, siDart, siAngular,
+  siNextdotjs, siGit, siAndroid,
   type SimpleIcon,
 } from 'simple-icons';
 
-/**
- * Tech-icon lookup: maps freeform admin-entered tech names to simple-icons.
- * Keys must be in normalized form (lowercase, spaces/dots/dashes/slashes
- * stripped) because lookup normalizes the input the same way. Anything not
- * listed falls back to a plain text pill — handled in the component.
- */
 const ICONS: Record<string, SimpleIcon> = {
   react: siReact,
   reactjs: siReact,
@@ -21,8 +16,12 @@ const ICONS: Record<string, SimpleIcon> = {
   javascript: siJavascript,
   js: siJavascript,
   flutter: siFlutter,
-  dart: siFlutter,
+  dart: siDart,
   firebase: siFirebase,
+  firebaserealtimeddb: siFirebase,
+  firebaserealtimedatabase: siFirebase,
+  firestore: siFirebase,
+  firebaseauth: siFirebase,
   node: siNodedotjs,
   nodejs: siNodedotjs,
   nodotjs: siNodedotjs,
@@ -49,6 +48,11 @@ const ICONS: Record<string, SimpleIcon> = {
   gcp: siGooglecloud,
   googlecloud: siGooglecloud,
   render: siRender,
+  angular: siAngular,
+  nextjs: siNextdotjs,
+  nextdotjs: siNextdotjs,
+  git: siGit,
+  android: siAndroid,
 };
 
 /** Normalize a tech string for lookup: lowercase, punctuation stripped. */
@@ -62,33 +66,47 @@ export function getTechIcon(tech: string): { path: string; hex: string; title: s
 }
 
 /**
- * Small 24×24 brand icon for a known tech; plain text pill fallback for
- * anything unrecognized (same styling as the legacy pills).
+ * Vertical icon card: large brand logo on top, tech name below.
+ * Falls back to a plain text pill for unrecognized techs.
+ *
+ * Use inside a grid/flex container — does not set its own width.
  */
 export default function TechIcon({ tech }: { tech: string }) {
   const icon = getTechIcon(tech);
+
   if (!icon) {
+    // Fallback: plain pill for unrecognized / legacy freeform entries
     return (
-      <span className="rounded border border-foreground/15 bg-card px-2.5 py-1 font-mono text-[11px] text-foreground/70">
-        {tech}
-      </span>
+      <div className="flex flex-col items-center gap-1.5 rounded-lg border border-foreground/10 bg-card px-3 py-3 text-center">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground/8">
+          <span className="font-mono text-[10px] font-bold uppercase text-foreground/50">
+            {tech.slice(0, 2)}
+          </span>
+        </div>
+        <span className="font-mono text-[10px] leading-tight text-foreground/60 max-w-[56px] truncate">
+          {tech}
+        </span>
+      </div>
     );
   }
+
   return (
-    <span
-      className="flex items-center gap-1.5 rounded border border-foreground/15 bg-card px-2.5 py-1 font-mono text-[11px] text-foreground/70"
+    <div
+      className="group flex flex-col items-center gap-1.5 rounded-lg border border-foreground/10 bg-card px-3 py-3 text-center transition-colors hover:border-foreground/25 hover:bg-card/80"
       title={icon.title}
     >
       <svg
         role="img"
         aria-label={icon.title}
         viewBox="0 0 24 24"
-        className="h-4 w-4 shrink-0"
+        className="h-8 w-8 shrink-0 transition-opacity group-hover:opacity-90"
         fill={`#${icon.hex}`}
       >
         <path d={icon.path} />
       </svg>
-      {tech}
-    </span>
+      <span className="font-mono text-[10px] leading-tight text-foreground/60 max-w-[64px] truncate">
+        {tech}
+      </span>
+    </div>
   );
 }

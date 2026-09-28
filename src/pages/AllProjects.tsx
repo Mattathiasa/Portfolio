@@ -219,14 +219,14 @@ function ProjectCard({
 
               {project.techStack?.length > 0 && (
                 <div>
-                  <p className="mono-label mb-2.5">Tech stack</p>
-                  <div className="flex flex-col gap-3">
+                  <p className="mono-label mb-3">Tech stack</p>
+                  <div className="flex flex-col gap-4">
                     {groupedTechStack.map((group) => (
-                      <div key={group.category} className="flex flex-col gap-1.5">
-                        <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-foreground/40">
+                      <div key={group.category}>
+                        <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.08em] text-foreground/35">
                           {group.category}
                         </p>
-                        <ul className="flex flex-wrap gap-2">
+                        <ul className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-2">
                           {group.items.map((tech) => (
                             <li key={tech}>
                               <TechIcon tech={tech} />
