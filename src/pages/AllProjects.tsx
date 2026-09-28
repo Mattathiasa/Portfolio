@@ -166,6 +166,7 @@ const AllProjects = () => {
   const mainRef = useRef<HTMLElement>(null);
   const { c } = useContent();
   const [activeCategory, setActiveCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const prev = document.title;
@@ -205,13 +206,27 @@ const AllProjects = () => {
     return seen;
   }, [projects]);
 
-  const filtered = useMemo(
+  // Base filter: active category (on primary category, category[0]).
+  const categoryFiltered = useMemo(
     () =>
       activeCategory === 'All'
         ? projects
         : projects.filter((p) => (p.category?.[0] ?? 'Uncategorized') === activeCategory),
     [projects, activeCategory]
   );
+
+  // Then real-time search over title, tags and tech stack (case-insensitive,
+  // whitespace-trimmed). Empty query matches everything.
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return categoryFiltered;
+    return categoryFiltered.filter(
+      (p) =>
+        p.title?.toLowerCase().includes(q) ||
+        (p.tags ?? []).some((t) => t.toLowerCase().includes(q)) ||
+        (p.techStack ?? []).some((t) => t.toLowerCase().includes(q))
+    );
+  }, [categoryFiltered, searchQuery]);
 
   // Total projects per primary category across ALL projects (for filter button counts).
   const categoryCounts = useMemo(() => {
@@ -312,6 +327,30 @@ const AllProjects = () => {
                 })}
               </div>
             )}
+
+            {/* Real-time search */}
+            <div data-reveal className="mt-4">
+              <div className="relative flex items-center">
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search projects…"
+                  aria-label="Search projects"
+                  className="w-full rounded-md border hairline bg-card/60 py-2.5 pl-4 pr-10 font-mono text-sm text-foreground placeholder:text-foreground/35 outline-none transition-colors focus:border-accent/50"
+                />
+                {searchQuery.trim() !== '' && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                    className="absolute right-3 flex h-5 w-5 items-center justify-center rounded-full border border-foreground/20 text-foreground/50 transition-colors hover:border-foreground/50 hover:text-foreground"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
           </section>
 
           {/* Full project list */}
@@ -319,7 +358,11 @@ const AllProjects = () => {
             {filtered.length === 0 && (
               <div data-reveal className="border-t hairline py-20 text-center">
                 <p className="mono-label text-foreground/40">
-                  {projects.length === 0 ? 'No projects to display yet' : 'No projects in this category'}
+                  {projects.length === 0
+                    ? 'No projects to display yet'
+                    : searchQuery.trim() !== ''
+                      ? `No results for '${searchQuery.trim()}'`
+                      : 'No projects in this category'}
                 </p>
               </div>
             )}
