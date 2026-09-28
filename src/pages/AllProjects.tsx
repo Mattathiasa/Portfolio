@@ -209,6 +209,28 @@ const AllProjects = () => {
     [projects, activeCategory]
   );
 
+  // Total projects per category across ALL projects (for filter button counts).
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of projects)
+      for (const cat of p.category ?? []) counts.set(cat, (counts.get(cat) ?? 0) + 1);
+    return counts;
+  }, [projects]);
+
+  // Filtered projects grouped by primary category (category[0]), in first-seen
+  // order — same ordering logic as the categories memo above. When a category
+  // filter is active this naturally collapses to just the matching group(s).
+  const grouped = useMemo(() => {
+    const map = new Map<string, Project[]>();
+    for (const p of filtered) {
+      const key = p.category?.[0] ?? 'Uncategorized';
+      const bucket = map.get(key);
+      if (bucket) bucket.push(p);
+      else map.set(key, [p]);
+    }
+    return [...map].map(([category, groupProjects]) => ({ category, projects: groupProjects }));
+  }, [filtered]);
+
   useGSAP(
     () => {
       const scope = mainRef.current;
@@ -264,21 +286,24 @@ const AllProjects = () => {
             {/* Category filter */}
             {categories.length > 1 && (
               <div data-reveal className="mt-8 flex flex-wrap gap-2">
-                {['All', ...categories].map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setActiveCategory(cat)}
-                    aria-pressed={activeCategory === cat}
-                    className={`rounded-full border px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.06em] transition-colors ${
-                      activeCategory === cat
-                        ? 'border-accent bg-accent/10 text-accent'
-                        : 'border-foreground/15 text-foreground/55 hover:border-foreground/40 hover:text-foreground'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                {['All', ...categories].map((cat) => {
+                  const count = cat === 'All' ? projects.length : (categoryCounts.get(cat) ?? 0);
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setActiveCategory(cat)}
+                      aria-pressed={activeCategory === cat}
+                      className={`rounded-full border px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.06em] transition-colors ${
+                        activeCategory === cat
+                          ? 'border-accent bg-accent/10 text-accent'
+                          : 'border-foreground/15 text-foreground/55 hover:border-foreground/40 hover:text-foreground'
+                      }`}
+                    >
+                      {cat} · {count}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </section>
@@ -292,9 +317,34 @@ const AllProjects = () => {
                 </p>
               </div>
             )}
-            {filtered.map((project, index) => (
-              <ProjectCard key={project.id ?? project.title} project={project} index={index} c={c} />
-            ))}
+            <div className="flex flex-col gap-[clamp(56px,10vh,96px)]">
+              {grouped.map((group) => (
+                <div key={group.category} className="flex flex-col">
+                  {/* Group heading: category name + zero-padded count, hairline rule */}
+                  <div
+                    data-reveal
+                    className="flex items-end justify-between gap-6 border-b hairline pb-4"
+                  >
+                    <h2 className="!text-[clamp(24px,2.6vw,36px)]">{group.category}</h2>
+                    <span className="mono-label shrink-0 pb-1">
+                      {String(group.projects.length).padStart(2, '0')} projects
+                    </span>
+                  </div>
+
+                  {/* The heading's rule replaces the first card's top border */}
+                  <div className="flex flex-col [&>article:first-child]:border-t-0">
+                    {group.projects.map((project, index) => (
+                      <ProjectCard
+                        key={project.id ?? project.title}
+                        project={project}
+                        index={index}
+                        c={c}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </section>
         </main>
         <Footer />
