@@ -3,96 +3,61 @@ import {
   siTailwindcss, siElectron, siFigma, siVercel, siDocker, siPostgresql,
   siMongodb, siSupabase, siGithub, siExpo, siVite, siPython, siGsap,
   siCloudflare, siNetlify, siGooglecloud, siRender,
+  type SimpleIcon,
 } from 'simple-icons';
 
-import * as simpleIcons from 'simple-icons';
-
 /**
- * Tech-icon lookup: aliases map freeform admin-entered tech names to
- * simple-icons slugs. Keys are matched case-insensitively, with
- * punctuation (spaces, dots, dashes, slashes) stripped. Anything not
+ * Tech-icon lookup: maps freeform admin-entered tech names to simple-icons.
+ * Keys must be in normalized form (lowercase, spaces/dots/dashes/slashes
+ * stripped) because lookup normalizes the input the same way. Anything not
  * listed falls back to a plain text pill — handled in the component.
  */
-const ICON_ALIASES: Record<string, string> = {
-  react: 'react',
-  reactjs: 'react',
-  reactnative: 'react',
-  typescript: 'typescript',
-  ts: 'typescript',
-  javascript: 'javascript',
-  js: 'javascript',
-  flutter: 'flutter',
-  dart: 'flutter',
-  firebase: 'firebase',
-  node: 'nodedotjs',
-  nodejs: 'nodedotjs',
-  'node.js': 'nodedotjs',
-  nodotjs: 'nodedotjs',
-  express: 'nodedotjs',
-  tailwind: 'tailwindcss',
-  tailwindcss: 'tailwindcss',
-  'tailwind css': 'tailwindcss',
-  electron: 'electron',
-  figma: 'figma',
-  vercel: 'vercel',
-  docker: 'docker',
-  postgres: 'postgresql',
-  postgresql: 'postgresql',
-  mongodb: 'mongodb',
-  mongo: 'mongodb',
-  supabase: 'supabase',
-  github: 'github',
-  expo: 'expo',
-  vite: 'vite',
-  python: 'python',
-  gsap: 'gsap',
-  'greensock': 'gsap',
-  cloudflare: 'cloudflare',
-  netlify: 'netlify',
-  gcp: 'googlecloud',
-  'google cloud': 'googlecloud',
-  googlecloud: 'googlecloud',
-  render: 'render',
+const ICONS: Record<string, SimpleIcon> = {
+  react: siReact,
+  reactjs: siReact,
+  reactnative: siReact,
+  typescript: siTypescript,
+  ts: siTypescript,
+  javascript: siJavascript,
+  js: siJavascript,
+  flutter: siFlutter,
+  dart: siFlutter,
+  firebase: siFirebase,
+  node: siNodedotjs,
+  nodejs: siNodedotjs,
+  nodotjs: siNodedotjs,
+  express: siNodedotjs,
+  tailwind: siTailwindcss,
+  tailwindcss: siTailwindcss,
+  electron: siElectron,
+  figma: siFigma,
+  vercel: siVercel,
+  docker: siDocker,
+  postgres: siPostgresql,
+  postgresql: siPostgresql,
+  mongodb: siMongodb,
+  mongo: siMongodb,
+  supabase: siSupabase,
+  github: siGithub,
+  expo: siExpo,
+  vite: siVite,
+  python: siPython,
+  gsap: siGsap,
+  greensock: siGsap,
+  cloudflare: siCloudflare,
+  netlify: siNetlify,
+  gcp: siGooglecloud,
+  googlecloud: siGooglecloud,
+  render: siRender,
 };
 
 /** Normalize a tech string for lookup: lowercase, punctuation stripped. */
 const normalize = (tech: string) =>
   tech.toLowerCase().replace(/[.\s\-/]/g, '');
 
-const slugByIconTitle: Record<string, string> = {
-  react: siReact.title,
-  typescript: siTypescript.title,
-  javascript: siJavascript.title,
-  flutter: siFlutter.title,
-  firebase: siFirebase.title,
-  nodedotjs: siNodedotjs.title,
-  tailwindcss: siTailwindcss.title,
-  electron: siElectron.title,
-  figma: siFigma.title,
-  vercel: siVercel.title,
-  docker: siDocker.title,
-  postgresql: siPostgresql.title,
-  mongodb: siMongodb.title,
-  supabase: siSupabase.title,
-  github: siGithub.title,
-  expo: siExpo.title,
-  vite: siVite.title,
-  python: siPython.title,
-  gsap: siGsap.title,
-  cloudflare: siCloudflare.title,
-  netlify: siNetlify.title,
-  googlecloud: siGooglecloud.title,
-  render: siRender.title,
-};
-
 /** Path + brand color + title for a known tech, or null for unknowns. */
 export function getTechIcon(tech: string): { path: string; hex: string; title: string } | null {
-  const normalized = normalize(tech);
-  const alias = ICON_ALIASES[normalized];
-  if (!alias) return null;
-  const slug = slugByIconTitle[alias];
-  if (!slug) return null;
-  const icon = (simpleIcons as Record<string, { path: string; hex: string; title: string }>)[`si${slug}`];
+  const icon = ICONS[normalize(tech)];
   return icon ? { path: icon.path, hex: icon.hex, title: icon.title } : null;
 }
 

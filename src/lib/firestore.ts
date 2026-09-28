@@ -24,7 +24,10 @@ export async function addProject(project: Omit<Project, 'id'>): Promise<string> 
 }
 
 export async function updateProject(id: string, data: Partial<Project>): Promise<void> {
-  await updateDoc(doc(db, 'projects', id), { ...data, updatedAt: serverTimestamp() });
+  // Firestore rejects `undefined` values — strip them so optional fields
+  // (e.g. status/featured) can be cleared from the admin form.
+  const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+  await updateDoc(doc(db, 'projects', id), { ...clean, updatedAt: serverTimestamp() });
 }
 
 export async function deleteProject(id: string): Promise<void> {

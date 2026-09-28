@@ -21,6 +21,7 @@ const fitClass = (img?: ProjectImage) =>
 const STATUS_STYLES: Record<string, string> = {
   Live: 'border-green-500/40 bg-green-500/10 text-green-400',
   'In Development': 'border-amber-500/40 bg-amber-500/10 text-amber-400',
+  Development: 'border-amber-500/40 bg-amber-500/10 text-amber-400',
   'On Hold': 'border-foreground/25 bg-background/70 text-foreground/60',
 };
 const STATUS_FALLBACK = 'border-foreground/25 bg-background/70 text-foreground/60';
@@ -148,11 +149,13 @@ function ProjectCard({
           </ul>
         )}
 
-        {project.techStack?.length > 0 && (
+        {/* Collapsed: top-3 preview. Hidden when expanded — the full icon
+            list renders inside the detail panel below. */}
+        {project.techStack?.length > 0 && !expanded && (
           <div className="border-t hairline pt-4">
             <p className="mono-label mb-2.5">Tech stack</p>
             <ul className="flex flex-wrap gap-2">
-              {(expanded ? project.techStack : project.techStack.slice(0, 3)).map((tech) => (
+              {project.techStack.slice(0, 3).map((tech) => (
                 <li
                   key={tech}
                   className="rounded border border-foreground/15 bg-card px-2.5 py-1 font-mono text-[11px] text-foreground/70"
@@ -160,7 +163,7 @@ function ProjectCard({
                   {tech}
                 </li>
               ))}
-              {!expanded && project.techStack.length > 3 && (
+              {project.techStack.length > 3 && (
                 <li className="rounded border border-foreground/15 bg-card px-2.5 py-1 font-mono text-[11px] text-foreground/50">
                   +{project.techStack.length - 3} more
                 </li>
@@ -402,12 +405,34 @@ const AllProjects = () => {
     return seen;
   }, [projects]);
 
-  // At most one featured/pinned hero — the first featured project wins.
-  const featuredProject = useMemo(
-    () => projects.find((p) => p.featured === true) ?? null,
-    [projects]
-  );
+  // At most one featured/pinned hero — the first featured project wins. The
+  // hero only renders when it survives the active category/search filters.
+  const featuredProject = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch = (p: Project) =>
+      !q ||
+      p.title?.toLowerCase().includes(q) ||
+      (p.tags ?? []).some((t) => t.toLowerCase().includes(q)) ||
+      (p.techStack ?? []).some((t) => t.toLowerCase().includes(q));
+    return (
+      projects.find(
+        (p) =>
+          p.featured === true &&
+          (activeCategory === 'All' || (p.category?.[0] ?? 'Uncategorized') === activeCategory) &&
+          matchesSearch(p)
+      ) ?? null
+    );
+  }, [projects, activeCategory, searchQuery]);
   const featuredKey = featuredProject?.id ?? featuredProject?.title ?? null;
+
+  // Base filter: active category (on primary category, category[0]).
+  const categoryFiltered = useMemo(
+    () =>
+      activeCategory === 'All'
+        ? projects
+        : projects.filter((p) => (p.category?.[0] ?? 'Uncategorized') === activeCategory),
+    [projects, activeCategory]
+  );
 
   // Then real-time search over title, tags and tech stack (case-insensitive,
   // whitespace-trimmed). Empty query matches everything.
@@ -531,7 +556,7 @@ const AllProjects = () => {
             <div data-reveal className="mt-4">
               <div className="relative flex items-center">
                 <input
-                  type="search"
+                  type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search projects…"
