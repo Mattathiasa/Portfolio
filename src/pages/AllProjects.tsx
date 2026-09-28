@@ -194,10 +194,14 @@ const AllProjects = () => {
     [firestoreProjects]
   );
 
-  // Category filters, in first-seen order.
+  // Category filters keyed on primary category (category[0]), in first-seen order.
+  // Grouping and filtering both use the primary category so they stay in sync.
   const categories = useMemo(() => {
     const seen: string[] = [];
-    for (const p of projects) for (const cat of p.category ?? []) if (!seen.includes(cat)) seen.push(cat);
+    for (const p of projects) {
+      const primary = p.category?.[0] ?? 'Uncategorized';
+      if (!seen.includes(primary)) seen.push(primary);
+    }
     return seen;
   }, [projects]);
 
@@ -205,15 +209,17 @@ const AllProjects = () => {
     () =>
       activeCategory === 'All'
         ? projects
-        : projects.filter((p) => (p.category ?? []).includes(activeCategory)),
+        : projects.filter((p) => (p.category?.[0] ?? 'Uncategorized') === activeCategory),
     [projects, activeCategory]
   );
 
-  // Total projects per category across ALL projects (for filter button counts).
+  // Total projects per primary category across ALL projects (for filter button counts).
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const p of projects)
-      for (const cat of p.category ?? []) counts.set(cat, (counts.get(cat) ?? 0) + 1);
+    for (const p of projects) {
+      const primary = p.category?.[0] ?? 'Uncategorized';
+      counts.set(primary, (counts.get(primary) ?? 0) + 1);
+    }
     return counts;
   }, [projects]);
 
