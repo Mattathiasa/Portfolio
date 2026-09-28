@@ -6,6 +6,7 @@ import { isFirebaseConfigured } from '@/lib/firebase';
 import { toProjectMedia } from '@/types/portfolio';
 import type { Project, ProjectImage } from '@/types/portfolio';
 import { useContent } from '@/hooks/useContent';
+import { TECH_CATEGORIES, getTechCategory } from '@/data/tech';
 import { Navigation } from '@/components/Navigation';
 import TechIcon from '@/components/TechIcon';
 import { Footer } from '@/components/Footer';
@@ -45,6 +46,19 @@ function ProjectCard({
   const main = media[active] ?? media[0];
   const categories = project.category ?? [];
   const articleRef = useRef<HTMLElement>(null);
+
+  // Full tech stack grouped by canonical category (TECH_OPTIONS order).
+  // Unknown techs (not in TECH_OPTIONS) land in an 'Other' group at the end.
+  const groupedTechStack = useMemo(() => {
+    const techs = project.techStack ?? [];
+    if (techs.length === 0) return [];
+    const known = TECH_CATEGORIES.map((category) => ({
+      category,
+      items: techs.filter((t) => getTechCategory(t) === category),
+    })).filter((g) => g.items.length > 0);
+    const unknown = techs.filter((t) => !getTechCategory(t));
+    return unknown.length > 0 ? [...known, { category: 'Other', items: unknown }] : known;
+  }, [project.techStack]);
 
   // When expanding, keep the card comfortably in view.
   const handleToggleExpand = () => {
@@ -149,29 +163,6 @@ function ProjectCard({
           </ul>
         )}
 
-        {/* Collapsed: top-3 preview. Hidden when expanded — the full icon
-            list renders inside the detail panel below. */}
-        {project.techStack?.length > 0 && !expanded && (
-          <div className="border-t hairline pt-4">
-            <p className="mono-label mb-2.5">Tech stack</p>
-            <ul className="flex flex-wrap gap-2">
-              {project.techStack.slice(0, 3).map((tech) => (
-                <li
-                  key={tech}
-                  className="rounded border border-foreground/15 bg-card px-2.5 py-1 font-mono text-[11px] text-foreground/70"
-                >
-                  {tech}
-                </li>
-              ))}
-              {project.techStack.length > 3 && (
-                <li className="rounded border border-foreground/15 bg-card px-2.5 py-1 font-mono text-[11px] text-foreground/50">
-                  +{project.techStack.length - 3} more
-                </li>
-              )}
-            </ul>
-          </div>
-        )}
-
         {(project.demo || project.github) && (
           <div className="mt-1 flex items-center gap-6">
             {project.demo && (
@@ -229,13 +220,22 @@ function ProjectCard({
               {project.techStack?.length > 0 && (
                 <div>
                   <p className="mono-label mb-2.5">Tech stack</p>
-                  <ul className="flex flex-wrap gap-2">
-                    {project.techStack.map((tech) => (
-                      <li key={tech}>
-                        <TechIcon tech={tech} />
-                      </li>
+                  <div className="flex flex-col gap-3">
+                    {groupedTechStack.map((group) => (
+                      <div key={group.category} className="flex flex-col gap-1.5">
+                        <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-foreground/40">
+                          {group.category}
+                        </p>
+                        <ul className="flex flex-wrap gap-2">
+                          {group.items.map((tech) => (
+                            <li key={tech}>
+                              <TechIcon tech={tech} />
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
             </div>

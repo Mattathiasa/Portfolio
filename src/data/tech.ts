@@ -64,3 +64,7 @@ export const TECH_OPTIONS: TechOption[] = [
 export const TECH_CATEGORIES: string[] = [
   ...new Set(TECH_OPTIONS.map((t) => t.category)),
 ];
+
+/** Canonical category for a tech name ('' when unknown). */
+export const getTechCategory = (name: string): string =>
+  TECH_OPTIONS.find((t) => t.name === name)?.category ?? '';
