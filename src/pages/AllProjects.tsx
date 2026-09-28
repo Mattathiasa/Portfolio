@@ -267,6 +267,96 @@ function SkeletonCard() {
   );
 }
 
+// ── Featured/pinned hero card — full-width, prominent ───────────────────────
+function FeaturedHero({ project, c }: { project: Project; c: Content }) {
+  const media = useMemo(() => toProjectMedia(project), [project]);
+  const cover = media[0];
+  const categories = project.category ?? [];
+
+  return (
+    <article data-reveal className="border-t hairline pb-[clamp(56px,10vh,96px)]">
+      <a
+        href={project.demo || project.github || '#'}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group relative block overflow-hidden rounded-md border hairline"
+        aria-label={project.title}
+      >
+        <div className={`aspect-[21/9] w-full ${cover?.fit === 'contain' ? 'bg-secondary' : ''}`}>
+          <img
+            src={cover?.url ?? project.image}
+            alt={project.title}
+            loading="eager"
+            decoding="async"
+            className={`h-full w-full ${fitClass(cover)} transition-transform duration-700 ease-out group-hover:scale-[1.03]`}
+          />
+        </div>
+        {categories[0] && (
+          <span className="absolute left-3 top-3 rounded-full border border-accent/40 bg-background/70 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.06em] text-accent backdrop-blur-sm">
+            {categories[0]}
+          </span>
+        )}
+        {project.status && (
+          <span
+            className={`absolute right-3 top-3 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.06em] backdrop-blur-sm ${
+              STATUS_STYLES[project.status] ?? STATUS_FALLBACK
+            }`}
+          >
+            {project.status}
+          </span>
+        )}
+      </a>
+
+      <div className="flex flex-col gap-5 pt-6">
+        <p className="mono-label">Featured · {String(project.order + 1).padStart(2, '0')}</p>
+        <h2 className="!text-[clamp(36px,5vw,64px)]">{project.title}</h2>
+
+        {project.description && (
+          <p className="max-w-[62ch] text-[17px] text-foreground/80">{project.description}</p>
+        )}
+
+        {project.tags?.length > 0 && (
+          <ul className="flex flex-wrap gap-2">
+            {project.tags.map((tag) => (
+              <li
+                key={tag}
+                className="rounded-full border border-foreground/15 px-3 py-1 font-mono text-[11px] text-foreground/60"
+              >
+                {tag}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {(project.demo || project.github) && (
+          <div className="mt-1 flex items-center gap-6">
+            {project.demo && (
+              <a
+                href={project.demo}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-xs uppercase tracking-[0.06em] text-accent transition-colors hover:text-accent-hover"
+              >
+                {c('workLiveLabel')} ↗
+              </a>
+            )}
+            {project.github && (
+              <a
+                href={project.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-xs uppercase tracking-[0.06em] text-foreground/60 transition-colors hover:text-foreground"
+              >
+                {c('workSourceLabel')} ↗
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
 const AllProjects = () => {
   const mainRef = useRef<HTMLElement>(null);
   const { c } = useContent();
@@ -312,14 +402,12 @@ const AllProjects = () => {
     return seen;
   }, [projects]);
 
-  // Base filter: active category (on primary category, category[0]).
-  const categoryFiltered = useMemo(
-    () =>
-      activeCategory === 'All'
-        ? projects
-        : projects.filter((p) => (p.category?.[0] ?? 'Uncategorized') === activeCategory),
-    [projects, activeCategory]
+  // At most one featured/pinned hero — the first featured project wins.
+  const featuredProject = useMemo(
+    () => projects.find((p) => p.featured === true) ?? null,
+    [projects]
   );
+  const featuredKey = featuredProject?.id ?? featuredProject?.title ?? null;
 
   // Then real-time search over title, tags and tech stack (case-insensitive,
   // whitespace-trimmed). Empty query matches everything.
@@ -347,16 +435,21 @@ const AllProjects = () => {
   // Filtered projects grouped by primary category (category[0]), in first-seen
   // order — same ordering logic as the categories memo above. When a category
   // filter is active this naturally collapses to just the matching group(s).
+  // The featured/pinned project is excluded — it renders as the hero above.
   const grouped = useMemo(() => {
+    const visible = filtered.filter((p) => {
+      const key = p.id ?? p.title;
+      return featuredKey === null || key !== featuredKey;
+    });
     const map = new Map<string, Project[]>();
-    for (const p of filtered) {
+    for (const p of visible) {
       const key = p.category?.[0] ?? 'Uncategorized';
       const bucket = map.get(key);
       if (bucket) bucket.push(p);
       else map.set(key, [p]);
     }
     return [...map].map(([category, groupProjects]) => ({ category, projects: groupProjects }));
-  }, [filtered]);
+  }, [filtered, featuredKey]);
 
   useGSAP(
     () => {
@@ -466,6 +559,11 @@ const AllProjects = () => {
               [0, 1, 2].map((i) => <SkeletonCard key={i} />)
             ) : (
               <>
+                {/* Featured/pinned hero — excluded from the grouped sections below */}
+                {featuredProject && (
+                  <FeaturedHero project={featuredProject} c={c} />
+                )}
+
                 {filtered.length === 0 && (
                   <div data-reveal className="border-t hairline py-20 text-center">
                     <p className="mono-label text-foreground/40">

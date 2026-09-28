@@ -706,6 +706,23 @@ function ProjectFormDialog({
               </Select>
             </div>
 
+            {/* Featured / pinned */}
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-secondary/20 px-3 py-2.5 cursor-pointer">
+              <div className="flex items-center gap-2 min-w-0">
+                <Star className={`w-4 h-4 shrink-0 ${form.featured ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground'}`} />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Featured project</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    Pinned as the hero card at the top of the projects page
+                  </p>
+                </div>
+              </div>
+              <Checkbox
+                checked={form.featured ?? false}
+                onCheckedChange={v => set('featured', v === true)}
+              />
+            </label>
+
             {/* ── 2. Links ── */}
             <Separator className="bg-border/50" />
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Links</p>

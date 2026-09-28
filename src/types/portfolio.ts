@@ -50,6 +50,7 @@ export interface Project {
   challenges: string;
   category: string[];
   status?: string;        // lifecycle status shown as a badge on the card (e.g. 'Live', 'In Development')
+  featured?: boolean;     // pinned as the hero project at the top of the projects page
   github: string;
   demo: string;
   demoNote?: string;      // e.g. "Guest demo: demo@example.com / demo123" or "demo on request"
