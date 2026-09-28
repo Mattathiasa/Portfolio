@@ -25,14 +25,38 @@ const STATUS_STYLES: Record<string, string> = {
 const STATUS_FALLBACK = 'border-foreground/25 bg-background/70 text-foreground/60';
 
 // ── A single project entry, with its own image gallery ──────────────────────
-function ProjectCard({ project, index, c }: { project: Project; index: number; c: Content }) {
+function ProjectCard({
+  project,
+  index,
+  c,
+  expanded,
+  onToggleExpand,
+}: {
+  project: Project;
+  index: number;
+  c: Content;
+  expanded: boolean;
+  onToggleExpand: () => void;
+}) {
   const media = useMemo(() => toProjectMedia(project), [project]);
   const [active, setActive] = useState(0);
   const main = media[active] ?? media[0];
   const categories = project.category ?? [];
+  const articleRef = useRef<HTMLElement>(null);
+
+  // When expanding, keep the card comfortably in view.
+  const handleToggleExpand = () => {
+    onToggleExpand();
+    if (!expanded) {
+      requestAnimationFrame(() => {
+        articleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
+  };
 
   return (
     <article
+      ref={articleRef}
       data-reveal
       className="grid gap-8 border-t hairline py-[clamp(40px,7vh,72px)] lg:grid-cols-[minmax(min(100%,420px),1fr)_1fr] lg:gap-14"
     >
@@ -123,22 +147,11 @@ function ProjectCard({ project, index, c }: { project: Project; index: number; c
           </ul>
         )}
 
-        {project.longDescription && (
-          <p className="max-w-[62ch] text-foreground/70">{project.longDescription}</p>
-        )}
-
-        {project.challenges && (
-          <div className="border-l-2 border-accent bg-accent/5 py-3 pl-4 pr-3">
-            <p className="mono-label mb-1.5 !text-accent">{c('workHardPartLabel')}</p>
-            <p className="text-sm leading-relaxed text-foreground/70">{project.challenges}</p>
-          </div>
-        )}
-
         {project.techStack?.length > 0 && (
           <div className="border-t hairline pt-4">
             <p className="mono-label mb-2.5">Tech stack</p>
             <ul className="flex flex-wrap gap-2">
-              {project.techStack.map((tech) => (
+              {(expanded ? project.techStack : project.techStack.slice(0, 3)).map((tech) => (
                 <li
                   key={tech}
                   className="rounded border border-foreground/15 bg-card px-2.5 py-1 font-mono text-[11px] text-foreground/70"
@@ -146,6 +159,11 @@ function ProjectCard({ project, index, c }: { project: Project; index: number; c
                   {tech}
                 </li>
               ))}
+              {!expanded && project.techStack.length > 3 && (
+                <li className="rounded border border-foreground/15 bg-card px-2.5 py-1 font-mono text-[11px] text-foreground/50">
+                  +{project.techStack.length - 3} more
+                </li>
+              )}
             </ul>
           </div>
         )}
@@ -174,6 +192,54 @@ function ProjectCard({ project, index, c }: { project: Project; index: number; c
             )}
           </div>
         )}
+
+        {/* Expand toggle */}
+        <button
+          type="button"
+          onClick={handleToggleExpand}
+          aria-expanded={expanded}
+          className="mt-1 flex w-fit items-center gap-1.5 font-mono text-xs uppercase tracking-[0.06em] text-foreground/60 transition-colors hover:text-accent"
+        >
+          {expanded ? 'Collapse ↑' : 'View details ↓'}
+        </button>
+
+        {/* Expandable detail panel — full long description, challenges, full tech stack */}
+        <div
+          className={`grid transition-all duration-500 ease-in-out ${
+            expanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="flex flex-col gap-5 border-t hairline pt-5">
+              {project.longDescription && (
+                <p className="max-w-[62ch] text-foreground/70">{project.longDescription}</p>
+              )}
+
+              {project.challenges && (
+                <div className="border-l-2 border-accent bg-accent/5 py-3 pl-4 pr-3">
+                  <p className="mono-label mb-1.5 !text-accent">{c('workHardPartLabel')}</p>
+                  <p className="text-sm leading-relaxed text-foreground/70">{project.challenges}</p>
+                </div>
+              )}
+
+              {project.techStack?.length > 0 && (
+                <div>
+                  <p className="mono-label mb-2.5">Tech stack</p>
+                  <ul className="flex flex-wrap gap-2">
+                    {project.techStack.map((tech) => (
+                      <li
+                        key={tech}
+                        className="rounded border border-foreground/15 bg-card px-2.5 py-1 font-mono text-[11px] text-foreground/70"
+                      >
+                        {tech}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </article>
   );
@@ -208,6 +274,7 @@ const AllProjects = () => {
   const { c } = useContent();
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     const prev = document.title;
@@ -434,6 +501,11 @@ const AllProjects = () => {
                             project={project}
                             index={index}
                             c={c}
+                            expanded={expandedId === (project.id ?? project.title)}
+                            onToggleExpand={() => {
+                              const key = project.id ?? project.title;
+                              setExpandedId((prev) => (prev === key ? null : key));
+                            }}
                           />
                         ))}
                       </div>
