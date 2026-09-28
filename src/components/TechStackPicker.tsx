@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { TECH_OPTIONS, TECH_CATEGORIES } from '@/data/tech';
+import TechIcon from '@/components/TechIcon';
 
 /**
  * Structured tech-stack picker for the admin project form.
  * Controlled component: selected techs live in the parent (form.techStack).
  * Search filters pills by name (case-insensitive); pills toggle in/out of
- * `selected`; the current selection renders below as dismissible pills.
+ * `selected`; the current selection renders below as TechIcon cards so the
+ * admin sees the same visual as the public projects page.
  */
 export default function TechStackPicker({
   selected,
@@ -73,7 +75,7 @@ export default function TechStackPicker({
         )}
       </div>
 
-      {/* Grouped pills */}
+      {/* Grouped toggle pills */}
       <div className="max-h-64 space-y-3 overflow-y-auto rounded-md border border-border/50 bg-secondary/20 p-3">
         {grouped.length === 0 && (
           <p className="py-2 text-center font-mono text-[11px] text-muted-foreground">
@@ -109,24 +111,27 @@ export default function TechStackPicker({
         ))}
       </div>
 
-      {/* Current selection */}
+      {/* Current selection — shown as TechIcon cards (same as public page) */}
       {hasSelection && (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
-            Selected ({selected.length})
+            Selected ({selected.length}) — click to remove
           </p>
-          <ul className="flex flex-wrap gap-1.5">
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-2">
             {selected.map((tech) => (
-              <li key={tech}>
+              <li key={tech} className="relative group">
+                <TechIcon tech={tech} />
+                {/* Remove overlay on hover */}
                 <button
                   type="button"
                   onClick={() => toggle(tech)}
                   aria-label={`Remove ${tech}`}
-                  className="flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 font-mono text-[11px] text-accent transition-colors hover:border-red-400/60 hover:bg-red-400/10 hover:text-red-400"
+                  className="absolute inset-0 flex items-center justify-center rounded-lg bg-red-500/0 opacity-0 transition-all group-hover:bg-red-500/15 group-hover:opacity-100"
                 >
-                  {tech}
-                  <span aria-hidden="true" className="text-[13px] leading-none opacity-70">
-                    ×
+                  <span className="rounded-full bg-red-500/80 p-0.5 text-white">
+                    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3">
+                      <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
+                    </svg>
                   </span>
                 </button>
               </li>
