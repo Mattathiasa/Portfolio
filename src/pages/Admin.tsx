@@ -687,6 +687,25 @@ function ProjectFormDialog({
               <Switch checked={form.visible !== false} onCheckedChange={v => set('visible', v)} />
             </div>
 
+            {/* Status */}
+            <div className="space-y-1.5">
+              <Label>Status <span className="text-muted-foreground font-normal">(badge shown on the card cover)</span></Label>
+              <Select
+                value={form.status ?? 'None'}
+                onValueChange={v => set('status', v === 'None' ? undefined : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="No status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="None">None</SelectItem>
+                  {LIFECYCLE_STAGES.map(stage => (
+                    <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* ── 2. Links ── */}
             <Separator className="bg-border/50" />
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Links</p>

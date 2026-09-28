@@ -16,6 +16,14 @@ type Content = ReturnType<typeof useContent>['c'];
 const fitClass = (img?: ProjectImage) =>
   img?.fit === 'contain' ? 'object-contain' : 'object-cover';
 
+// Status badge colors: Live → green, In Development → amber, On Hold → gray, rest → gray.
+const STATUS_STYLES: Record<string, string> = {
+  Live: 'border-green-500/40 bg-green-500/10 text-green-400',
+  'In Development': 'border-amber-500/40 bg-amber-500/10 text-amber-400',
+  'On Hold': 'border-foreground/25 bg-background/70 text-foreground/60',
+};
+const STATUS_FALLBACK = 'border-foreground/25 bg-background/70 text-foreground/60';
+
 // ── A single project entry, with its own image gallery ──────────────────────
 function ProjectCard({ project, index, c }: { project: Project; index: number; c: Content }) {
   const media = useMemo(() => toProjectMedia(project), [project]);
@@ -49,6 +57,15 @@ function ProjectCard({ project, index, c }: { project: Project; index: number; c
           {categories[0] && (
             <span className="absolute left-3 top-3 rounded-full border border-accent/40 bg-background/70 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.06em] text-accent backdrop-blur-sm">
               {categories[0]}
+            </span>
+          )}
+          {project.status && (
+            <span
+              className={`absolute right-3 top-3 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.06em] backdrop-blur-sm ${
+                STATUS_STYLES[project.status] ?? STATUS_FALLBACK
+              }`}
+            >
+              {project.status}
             </span>
           )}
         </a>

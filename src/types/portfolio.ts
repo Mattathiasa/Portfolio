@@ -49,6 +49,7 @@ export interface Project {
   techStack: string[];
   challenges: string;
   category: string[];
+  status?: string;        // lifecycle status shown as a badge on the card (e.g. 'Live', 'In Development')
   github: string;
   demo: string;
   demoNote?: string;      // e.g. "Guest demo: demo@example.com / demo123" or "demo on request"
