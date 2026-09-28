@@ -162,6 +162,30 @@ function ProjectCard({ project, index, c }: { project: Project; index: number; c
   );
 }
 
+// ── Loading placeholder matching the ProjectCard layout ──────────────────────
+function SkeletonCard() {
+  return (
+    <div className="grid gap-8 border-t hairline py-[clamp(40px,7vh,72px)] lg:grid-cols-[minmax(min(100%,420px),1fr)_1fr] lg:gap-14">
+      {/* Image placeholder */}
+      <div className="self-start">
+        <div className="aspect-[16/10] w-full animate-pulse rounded-md bg-foreground/8" />
+      </div>
+      {/* Stacked text placeholders */}
+      <div className="flex flex-col gap-5">
+        <div className="h-3 w-24 animate-pulse rounded bg-foreground/8" />
+        <div className="h-8 w-3/4 animate-pulse rounded bg-foreground/8" />
+        <div className="h-4 w-full max-w-[62ch] animate-pulse rounded bg-foreground/8" />
+        <div className="h-4 w-full max-w-[48ch] animate-pulse rounded bg-foreground/8" />
+        <div className="flex flex-wrap gap-2">
+          <div className="h-6 w-20 animate-pulse rounded bg-foreground/8" />
+          <div className="h-6 w-24 animate-pulse rounded bg-foreground/8" />
+          <div className="h-6 w-16 animate-pulse rounded bg-foreground/8" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const AllProjects = () => {
   const mainRef = useRef<HTMLElement>(null);
   const { c } = useContent();
@@ -177,7 +201,7 @@ const AllProjects = () => {
     };
   }, []);
 
-  const { data: firestoreProjects } = useQuery({
+  const { data: firestoreProjects, isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: getProjects,
     enabled: isFirebaseConfigured,
@@ -355,45 +379,52 @@ const AllProjects = () => {
 
           {/* Full project list */}
           <section className="section-shell !pt-0">
-            {filtered.length === 0 && (
-              <div data-reveal className="border-t hairline py-20 text-center">
-                <p className="mono-label text-foreground/40">
-                  {projects.length === 0
-                    ? 'No projects to display yet'
-                    : searchQuery.trim() !== ''
-                      ? `No results for '${searchQuery.trim()}'`
-                      : 'No projects in this category'}
-                </p>
-              </div>
-            )}
-            <div className="flex flex-col gap-[clamp(56px,10vh,96px)]">
-              {grouped.map((group) => (
-                <div key={group.category} className="flex flex-col">
-                  {/* Group heading: category name + zero-padded count, hairline rule */}
-                  <div
-                    data-reveal
-                    className="flex items-end justify-between gap-6 border-b hairline pb-4"
-                  >
-                    <h2 className="!text-[clamp(24px,2.6vw,36px)]">{group.category}</h2>
-                    <span className="mono-label shrink-0 pb-1">
-                      {String(group.projects.length).padStart(2, '0')} projects
-                    </span>
+            {isLoading ? (
+              // Skeleton placeholders while Firestore loads
+              [0, 1, 2].map((i) => <SkeletonCard key={i} />)
+            ) : (
+              <>
+                {filtered.length === 0 && (
+                  <div data-reveal className="border-t hairline py-20 text-center">
+                    <p className="mono-label text-foreground/40">
+                      {projects.length === 0
+                        ? 'No projects to display yet'
+                        : searchQuery.trim() !== ''
+                          ? `No results for '${searchQuery.trim()}'`
+                          : 'No projects in this category'}
+                    </p>
                   </div>
+                )}
+                <div className="flex flex-col gap-[clamp(56px,10vh,96px)]">
+                  {grouped.map((group) => (
+                    <div key={group.category} className="flex flex-col">
+                      {/* Group heading: category name + zero-padded count, hairline rule */}
+                      <div
+                        data-reveal
+                        className="flex items-end justify-between gap-6 border-b hairline pb-4"
+                      >
+                        <h2 className="!text-[clamp(24px,2.6vw,36px)]">{group.category}</h2>
+                        <span className="mono-label shrink-0 pb-1">
+                          {String(group.projects.length).padStart(2, '0')} projects
+                        </span>
+                      </div>
 
-                  {/* The heading's rule replaces the first card's top border */}
-                  <div className="flex flex-col [&>article:first-child]:border-t-0">
-                    {group.projects.map((project, index) => (
-                      <ProjectCard
-                        key={project.id ?? project.title}
-                        project={project}
-                        index={index}
-                        c={c}
-                      />
-                    ))}
-                  </div>
+                      {/* The heading's rule replaces the first card's top border */}
+                      <div className="flex flex-col [&>article:first-child]:border-t-0">
+                        {group.projects.map((project, index) => (
+                          <ProjectCard
+                            key={project.id ?? project.title}
+                            project={project}
+                            index={index}
+                            c={c}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </section>
         </main>
         <Footer />
