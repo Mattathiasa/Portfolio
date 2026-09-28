@@ -41,6 +41,7 @@ import VaultCommentsTab from '@/components/admin/VaultCommentsTab';
 import { LIFECYCLE_STAGES, emptyProjectDev, DEVICE_DEFAULTS, ASPECT_PRESETS, toProjectMedia } from '@/types/portfolio';
 import { DEFAULT_PROJECTS, DEFAULT_SKILLS, DEFAULT_TOOLS, DEFAULT_CONTENT, DEFAULT_CV, DEFAULT_HIGHLIGHTS, DEFAULT_CONTACT, DEFAULT_BLOG_POSTS, DEFAULT_TESTIMONIALS, DEFAULT_CERTIFICATIONS } from '@/data/defaults';
 import { SchedulerTab } from '@/components/admin/SchedulerTab';
+import TechStackPicker from '@/components/TechStackPicker';
 import { TestimonialsTab, CertificationsTab } from '@/components/admin/ContentSectionsTab';
 import { SiteCopyTab, AiChatTab } from '@/components/admin/SiteCopyTab';
 
@@ -749,8 +750,8 @@ function ProjectFormDialog({
               <TagInput tags={form.tags} onChange={v => set('tags', v)} placeholder="React, TypeScript, Firebase…" />
             </div>
             <div className="space-y-1.5">
-              <Label>Full Tech Stack <span className="text-muted-foreground font-normal">(shown in modal)</span></Label>
-              <TagInput tags={form.techStack} onChange={v => set('techStack', v)} placeholder="React, Firebase Realtime DB, Expo…" />
+              <Label>Full Tech Stack <span className="text-muted-foreground font-normal">(pick from normalized options)</span></Label>
+              <TechStackPicker selected={form.techStack} onChange={v => set('techStack', v)} />
             </div>
 
             {/* ── 4. Categories ── */}
