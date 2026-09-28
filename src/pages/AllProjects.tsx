@@ -7,6 +7,7 @@ import { toProjectMedia } from '@/types/portfolio';
 import type { Project, ProjectImage } from '@/types/portfolio';
 import { useContent } from '@/hooks/useContent';
 import { Navigation } from '@/components/Navigation';
+import TechIcon from '@/components/TechIcon';
 import { Footer } from '@/components/Footer';
 import { SmoothScrollProvider } from '@/providers/SmoothScrollProvider';
 import { gsap, useGSAP } from '@/lib/gsap';
@@ -227,11 +228,8 @@ function ProjectCard({
                   <p className="mono-label mb-2.5">Tech stack</p>
                   <ul className="flex flex-wrap gap-2">
                     {project.techStack.map((tech) => (
-                      <li
-                        key={tech}
-                        className="rounded border border-foreground/15 bg-card px-2.5 py-1 font-mono text-[11px] text-foreground/70"
-                      >
-                        {tech}
+                      <li key={tech}>
+                        <TechIcon tech={tech} />
                       </li>
                     ))}
                   </ul>
