@@ -6,6 +6,7 @@ import { isFirebaseConfigured } from '@/lib/firebase';
 import { toProjectMedia } from '@/types/portfolio';
 import type { Project, ProjectImage } from '@/types/portfolio';
 import { useContent } from '@/hooks/useContent';
+import { useWarmLinks } from '@/hooks/useWarmLinks';
 import { TECH_CATEGORIES, getTechCategory } from '@/data/tech';
 import { Navigation } from '@/components/Navigation';
 import TechIcon from '@/components/TechIcon';
@@ -168,6 +169,7 @@ function ProjectCard({
             {project.demo && (
               <a
                 href={project.demo}
+                data-warm
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-mono text-xs uppercase tracking-[0.06em] text-accent transition-colors hover:text-accent-hover"
@@ -336,6 +338,7 @@ function FeaturedHero({ project, c }: { project: Project; c: Content }) {
             {project.demo && (
               <a
                 href={project.demo}
+                data-warm
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-mono text-xs uppercase tracking-[0.06em] text-accent transition-colors hover:text-accent-hover"
@@ -475,6 +478,8 @@ const AllProjects = () => {
     }
     return [...map].map(([category, groupProjects]) => ({ category, projects: groupProjects }));
   }, [filtered, featuredKey]);
+
+  useWarmLinks(mainRef, filtered);
 
   useGSAP(
     () => {

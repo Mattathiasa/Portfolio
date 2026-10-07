@@ -7,6 +7,7 @@ import { DEFAULT_CONTACT } from '@/data/defaults';
 import { toProjectMedia } from '@/types/portfolio';
 import type { Project } from '@/types/portfolio';
 import { useContent } from '@/hooks/useContent';
+import { useWarmLinks } from '@/hooks/useWarmLinks';
 import { gsap, useGSAP } from '@/lib/gsap';
 
 // The admin marks the first media entry as the cover and sets its fit
@@ -51,6 +52,7 @@ export const Projects = () => {
   const projects = allVisible.slice(0, HOMEPAGE_PROJECT_LIMIT);
   const hasMore = allVisible.length > projects.length;
   const isEmpty = allVisible.length === 0;
+  useWarmLinks(sectionRef, projects.map((p) => p.demo).join('|'));
 
   useGSAP(
     () => {
@@ -171,6 +173,7 @@ export const Projects = () => {
                 {project.demo && (
                   <a
                     href={project.demo}
+                    data-warm
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-mono text-xs uppercase tracking-[0.06em] text-accent transition-colors hover:text-accent-hover"
