@@ -253,8 +253,8 @@ export function SchedulerTab() {
         break;
       case 'created':
         sorted.sort((a, b) => {
-          const ta = a.createdAt && typeof a.createdAt === 'object' && 'seconds' in a.createdAt ? (a.createdAt as any).seconds : 0;
-          const tb = b.createdAt && typeof b.createdAt === 'object' && 'seconds' in b.createdAt ? (b.createdAt as any).seconds : 0;
+          const ta = a.createdAt && typeof a.createdAt === 'object' && 'seconds' in a.createdAt ? (a.createdAt as { seconds: number }).seconds : 0;
+          const tb = b.createdAt && typeof b.createdAt === 'object' && 'seconds' in b.createdAt ? (b.createdAt as { seconds: number }).seconds : 0;
           return tb - ta;
         });
         break;
@@ -492,7 +492,7 @@ export function SchedulerTab() {
     const scheduled = items.filter(i => i.date);
     if (scheduled.length === 0) { toast.error('No scheduled tasks to export'); return; }
 
-    let ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Portfolio Developer Scheduler//EN'];
+    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Portfolio Developer Scheduler//EN'];
     scheduled.forEach(item => {
       const dtStart = item.date?.replace(/-/g, '') + (item.time ? 'T' + item.time.replace(':', '') + '00' : 'T090000');
       ics.push('BEGIN:VEVENT');
@@ -705,7 +705,7 @@ export function SchedulerTab() {
           ].map(v => (
             <button
               key={v.id}
-              onClick={() => setViewMode(v.id as any)}
+              onClick={() => setViewMode(v.id as typeof viewMode)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
                 viewMode === v.id
                   ? 'bg-accent text-accent-foreground shadow-sm font-semibold'
@@ -1045,7 +1045,7 @@ export function SchedulerTab() {
                     ))}
                     {slotItems.length === 0 && (
                       <button
-                        onClick={() => openForm(todayStr, { title: '', type: 'todo', priority: 'medium', time: timeSlot, completed: false } as any)}
+                        onClick={() => openForm(todayStr, { title: '', type: 'todo', priority: 'medium', time: timeSlot, completed: false } as SchedulerItem)}
                         className="text-xs text-muted-foreground/40 hover:text-accent pt-1"
                       >
                         + Click or drag to timeblock {timeSlot}
@@ -1105,7 +1105,7 @@ export function SchedulerTab() {
                   ))}
                 </div>
 
-                <Button size="sm" variant="ghost" className="w-full text-xs text-muted-foreground hover:text-accent mt-2 h-7" onClick={() => openForm(undefined, { status: statusKey } as any)}>
+                <Button size="sm" variant="ghost" className="w-full text-xs text-muted-foreground hover:text-accent mt-2 h-7" onClick={() => openForm(undefined, { status: statusKey } as SchedulerItem)}>
                   <Plus className="w-3.5 h-3.5 mr-1" /> Add
                 </Button>
               </div>

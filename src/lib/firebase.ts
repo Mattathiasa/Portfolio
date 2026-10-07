@@ -1,10 +1,9 @@
-import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 export const isFirebaseConfigured = !!import.meta.env.VITE_FIREBASE_API_KEY;
 
-let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
 
@@ -18,7 +17,7 @@ if (isFirebaseConfigured) {
     appId:             import.meta.env.VITE_FIREBASE_APP_ID,
   };
   // Avoid re-initializing on hot reload
-  app     = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   db      = getFirestore(app);
   storage = getStorage(app);
 }

@@ -29,7 +29,7 @@ function loadMessages(fallbackWelcome: string): Message[] {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length) return parsed;
     }
-  } catch { }
+  } catch { /* storage unavailable or corrupt */ }
   return [welcomeMessage(fallbackWelcome)];
 }
 
@@ -137,7 +137,7 @@ export function PortfolioChat() {
 
   // ── Persist messages ──────────────────────────────────────────────────────
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch { }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch { /* storage unavailable */ }
   }, [messages]);
 
   // ── Sync the untouched welcome message once Firestore copy loads ──────────
@@ -185,7 +185,7 @@ export function PortfolioChat() {
     setStreamText('');
     setWaiting(false);
     setStreaming(false);
-    try { localStorage.removeItem(STORAGE_KEY); } catch { }
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage unavailable */ }
   }, [chatWelcome]);
 
   // ── Copy message ──────────────────────────────────────────────────────────
@@ -262,7 +262,7 @@ export function PortfolioChat() {
           try {
             const delta = JSON.parse(data).choices?.[0]?.delta?.content ?? '';
             if (delta) { full += delta; setStreamText(full); }
-          } catch { }
+          } catch { /* partial SSE chunk */ }
         }
       }
 
