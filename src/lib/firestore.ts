@@ -121,7 +121,10 @@ export async function saveContactData(data: ContactData): Promise<void> {
 export async function getBlogPosts(): Promise<BlogPost[]> {
   const q = query(collection(db, 'blog'), orderBy('order'));
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as BlogPost));
+  return snap.docs.map(d => {
+    const post = { id: d.id, ...d.data() } as BlogPost;
+    return { ...post, link: toExternalUrl(post.link) };
+  });
 }
 
 export async function addBlogPost(post: Omit<BlogPost, 'id'>): Promise<string> {
@@ -194,7 +197,10 @@ export async function saveTestimonials(items: Testimonial[]): Promise<void> {
 
 export async function getCertifications(): Promise<Certification[]> {
   const snap = await getDoc(doc(db, 'content', 'certifications'));
-  if (snap.exists()) return (snap.data().items as Certification[]) ?? [];
+  if (snap.exists()) {
+    const items = (snap.data().items as Certification[]) ?? [];
+    return items.map(c => ({ ...c, url: toExternalUrl(c.url) }));
+  }
   return [];
 }
 

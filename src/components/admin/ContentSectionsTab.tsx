@@ -10,6 +10,8 @@ import { Plus, Trash2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import * as fb from '@/lib/firestore';
 import type { Testimonial, Certification } from '@/types/portfolio';
 import { DEFAULT_TESTIMONIALS, DEFAULT_CERTIFICATIONS } from '@/data/defaults';
+import { UrlInput } from '@/components/admin/UrlInput';
+import { isValidLink } from '@/lib/utils';
 
 // ── Testimonials Tab ──────────────────────────────────────────────────────────
 
@@ -147,7 +149,7 @@ export function CertificationsTab() {
     <div className="space-y-5 max-w-2xl">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-muted-foreground">Education &amp; certifications shown on the homepage.</p>
-        <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0" onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
+        <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0" onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !items.every(c => isValidLink(c.url))}>
           {saveMut.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Save
         </Button>
       </div>
@@ -200,7 +202,7 @@ export function CertificationsTab() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Credential URL <span className="font-normal">(optional)</span></Label>
-                <Input className="h-8 text-sm" value={c.url ?? ''} onChange={e => patch(c.id!, { url: e.target.value })} placeholder="https://..." />
+                <UrlInput className="h-8 text-sm" value={c.url} onChange={v => patch(c.id!, { url: v })} placeholder="https://..." />
               </div>
             </div>
           </CardContent>

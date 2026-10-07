@@ -16,3 +16,19 @@ export function toExternalUrl<T extends string | undefined>(url: T): T {
   }
   return `https://${trimmed}` as T;
 }
+
+// True for empty values (links are optional), in-site paths/anchors, and
+// http(s) URLs with a real-looking host. Scheme-less input is checked as it
+// will be stored, i.e. after toExternalUrl, so "gurshapodcast.vercel.app" passes
+// while "htps://x.com" or "my site" do not.
+export function isValidLink(url: string | undefined): boolean {
+  const trimmed = url?.trim();
+  if (!trimmed || /^[/#]/.test(trimmed)) return true;
+  if (/\s/.test(trimmed)) return false;
+  try {
+    const { protocol, hostname } = new URL(toExternalUrl(trimmed));
+    return (protocol === 'https:' || protocol === 'http:') && (hostname.includes('.') || hostname === 'localhost');
+  } catch {
+    return false;
+  }
+}

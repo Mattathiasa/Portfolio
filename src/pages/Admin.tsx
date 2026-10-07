@@ -44,6 +44,8 @@ import { SchedulerTab } from '@/components/admin/SchedulerTab';
 import TechStackPicker from '@/components/TechStackPicker';
 import { TestimonialsTab, CertificationsTab } from '@/components/admin/ContentSectionsTab';
 import { SiteCopyTab, AiChatTab } from '@/components/admin/SiteCopyTab';
+import { UrlInput } from '@/components/admin/UrlInput';
+import { isValidLink } from '@/lib/utils';
 
 const CATEGORIES = ['Web Apps', 'Mobile', 'Games', 'Content'];
 const SESSION_KEY = 'portfolio_admin_auth';
@@ -615,6 +617,8 @@ function ProjectFormDialog({
       : [...form.category, cat]);
   };
 
+  const linksValid = isValidLink(form.github) && isValidLink(form.demo);
+
   const save = useMutation({
     mutationFn: async () => {
       setSaving(true);
@@ -732,13 +736,13 @@ function ProjectFormDialog({
                 <Label className="flex items-center gap-1.5">
                   <Github className="w-3.5 h-3.5" /> GitHub URL
                 </Label>
-                <Input placeholder="https://github.com/..." value={form.github} onChange={e => set('github', e.target.value)} />
+                <UrlInput placeholder="https://github.com/..." value={form.github} onChange={v => set('github', v)} />
               </div>
               <div className="space-y-1.5">
                 <Label className="flex items-center gap-1.5">
                   <ExternalLink className="w-3.5 h-3.5" /> Live Demo URL
                 </Label>
-                <Input placeholder="https://..." value={form.demo} onChange={e => set('demo', e.target.value)} />
+                <UrlInput placeholder="https://..." value={form.demo} onChange={v => set('demo', v)} />
               </div>
             </div>
 
@@ -798,7 +802,7 @@ function ProjectFormDialog({
           <Button
             className="bg-accent text-accent-foreground hover:bg-accent/90 flex-1 sm:flex-none"
             onClick={() => save.mutate()}
-            disabled={saving || imgUploading || !form.title}
+            disabled={saving || imgUploading || !form.title || !linksValid}
           >
             {(saving || imgUploading) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {imgUploading ? 'Uploading…' : isEdit ? 'Save Changes' : 'Add Project'}
@@ -1435,6 +1439,7 @@ function ContactTab() {
   });
 
   const set = <K extends keyof typeof form>(k: K, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+  const linksValid = [form.locationUrl, form.github, form.linkedin, form.instagram].every(isValidLink);
 
   if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>;
 
@@ -1446,7 +1451,9 @@ function ContactTab() {
           {([['email','Email','mattathiasabraham@gmail.com'],['phone','Phone','+251 902 212 622'],['location','Location','Addis Ababa, Ethiopia'],['locationUrl','Location Map URL','https://maps.google.com/...'],['availabilityText','Availability Status','Available for new projects']] as [keyof typeof form, string, string][]).map(([k, label, ph]) => (
             <div key={k} className="space-y-1">
               <Label className="text-xs text-muted-foreground">{label}</Label>
-              <Input className="h-8 text-sm" placeholder={ph} value={form[k]} onChange={e => set(k, e.target.value)} />
+              {k === 'locationUrl'
+                ? <UrlInput className="h-8 text-sm" placeholder={ph} value={form[k]} onChange={v => set(k, v)} />
+                : <Input className="h-8 text-sm" placeholder={ph} value={form[k]} onChange={e => set(k, e.target.value)} />}
             </div>
           ))}
         </CardContent>
@@ -1458,13 +1465,13 @@ function ContactTab() {
           {([['github','GitHub URL'],['linkedin','LinkedIn URL'],['instagram','Instagram URL']] as [keyof typeof form, string][]).map(([k, label]) => (
             <div key={k} className="space-y-1">
               <Label className="text-xs text-muted-foreground">{label}</Label>
-              <Input className="h-8 text-sm" value={form[k]} onChange={e => set(k, e.target.value)} />
+              <UrlInput className="h-8 text-sm" value={form[k]} onChange={v => set(k, v)} />
             </div>
           ))}
         </CardContent>
       </Card>
 
-      <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
+      <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !linksValid}>
         {saveMut.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Save Contact Info
       </Button>
     </div>
@@ -1516,12 +1523,12 @@ function BlogFormDialog({ open, onClose, post }: { open: boolean; onClose: () =>
               <div className="space-y-1"><Label>Date</Label><Input type="date" value={form.date} onChange={e => set('date', e.target.value)} /></div>
               <div className="space-y-1"><Label>Order</Label><Input type="number" value={form.order} onChange={e => set('order', Number(e.target.value))} /></div>
             </div>
-            <div className="space-y-1"><Label>Post Link (URL)</Label><Input placeholder="https://your-blog.com/post" value={form.link} onChange={e => set('link', e.target.value)} /></div>
+            <div className="space-y-1"><Label>Post Link (URL)</Label><UrlInput placeholder="https://your-blog.com/post" value={form.link} onChange={v => set('link', v)} /></div>
           </div>
         </div>
         <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t border-border/50 shrink-0 flex-row gap-2">
           <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">Cancel</Button>
-          <Button className="bg-accent text-accent-foreground hover:bg-accent/90 flex-1 sm:flex-none" onClick={() => save.mutate()} disabled={save.isPending || !form.title}>
+          <Button className="bg-accent text-accent-foreground hover:bg-accent/90 flex-1 sm:flex-none" onClick={() => save.mutate()} disabled={save.isPending || !form.title || !isValidLink(form.link)}>
             {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}{isEdit ? 'Save Changes' : 'Add Post'}
           </Button>
         </DialogFooter>
@@ -1877,6 +1884,8 @@ function BulletList({ bullets, onChange }: { bullets: string[]; onChange: (b: st
   );
 }
 
+const CV_HEADER_LINKS: (keyof CVData['header'])[] = ['linkedin', 'portfolio', 'github'];
+
 function CVTab() {
   const qc = useQueryClient();
   const [cv, setCv] = useState<CVData>(DEFAULT_CV);
@@ -1887,6 +1896,10 @@ function CVTab() {
 
   const setH = (k: keyof CVData['header'], v: string) =>
     setCv(prev => ({ ...prev, header: { ...prev.header, [k]: v } }));
+
+  const linksValid =
+    CV_HEADER_LINKS.every(k => isValidLink(cv.header[k])) &&
+    cv.projects.every(p => isValidLink(p.liveUrl) && isValidLink(p.githubUrl));
 
   const saveMut = useMutation({
     mutationFn: () => fb.saveCV(cv),
@@ -1953,7 +1966,7 @@ function CVTab() {
           <Button variant="outline" size="sm" className="border-accent/30 text-accent flex-1 sm:flex-none" asChild>
             <a href="/resume" target="_blank" rel="noopener noreferrer"><ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Preview</a>
           </Button>
-          <Button className="bg-accent text-accent-foreground hover:bg-accent/90 flex-1 sm:flex-none" onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
+          <Button className="bg-accent text-accent-foreground hover:bg-accent/90 flex-1 sm:flex-none" onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !linksValid}>
             {saveMut.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Save All
           </Button>
@@ -1966,7 +1979,9 @@ function CVTab() {
           {([['name','Full Name'],['role','Role / Title'],['tagline1','Tagline 1'],['tagline2','Tagline 2'],['email','Email'],['phone','Phone'],['location','Location'],['linkedin','LinkedIn URL'],['portfolio','Portfolio URL'],['github','GitHub URL']] as [keyof CVData['header'], string][]).map(([k, label]) => (
             <div key={k} className="space-y-1">
               <Label className="text-xs text-muted-foreground">{label}</Label>
-              <Input value={cv.header[k]} onChange={e => setH(k, e.target.value)} className="h-8 text-sm" />
+              {CV_HEADER_LINKS.includes(k)
+                ? <UrlInput value={cv.header[k]} onChange={v => setH(k, v)} className="h-8 text-sm" />
+                : <Input value={cv.header[k]} onChange={e => setH(k, e.target.value)} className="h-8 text-sm" />}
             </div>
           ))}
         </div>
@@ -2040,8 +2055,8 @@ function CVTab() {
               <div className="grid sm:grid-cols-2 gap-2">
                 <div className="space-y-1"><Label className="text-xs text-muted-foreground">Project Name</Label><Input className="h-8 text-sm" value={proj.name} onChange={e => upProj(proj.id, { name: e.target.value })} /></div>
                 <div className="space-y-1"><Label className="text-xs text-muted-foreground">Tech Stack</Label><Input className="h-8 text-sm" value={proj.tech} onChange={e => upProj(proj.id, { tech: e.target.value })} placeholder="React · TypeScript" /></div>
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Live URL</Label><Input className="h-8 text-sm" value={proj.liveUrl} onChange={e => upProj(proj.id, { liveUrl: e.target.value })} /></div>
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">GitHub URL</Label><Input className="h-8 text-sm" value={proj.githubUrl} onChange={e => upProj(proj.id, { githubUrl: e.target.value })} /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Live URL</Label><UrlInput className="h-8 text-sm" value={proj.liveUrl} onChange={v => upProj(proj.id, { liveUrl: v })} /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">GitHub URL</Label><UrlInput className="h-8 text-sm" value={proj.githubUrl} onChange={v => upProj(proj.id, { githubUrl: v })} /></div>
               </div>
               <div className="space-y-1"><Label className="text-xs text-muted-foreground">Bullet Points</Label><BulletList bullets={proj.bullets} onChange={b => upProj(proj.id, { bullets: b })} /></div>
             </div>
