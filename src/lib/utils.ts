@@ -8,11 +8,13 @@ export function cn(...inputs: ClassValue[]) {
 // Links typed into the admin panel without a scheme ("gurshapodcast.vercel.app")
 // are resolved by the browser as paths on this site. Prefix https:// unless the
 // value already has a scheme (https:, mailto:, …) or is an in-site path/anchor.
+// A scheme pasted twice ("https://https://x.app") is collapsed to one.
 // Empty/undefined values pass through untouched so `??` fallbacks still apply.
 export function toExternalUrl<T extends string | undefined>(url: T): T {
-  const trimmed = url?.trim();
-  if (!trimmed || /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed) || /^(mailto|tel):/i.test(trimmed) || /^[/#?]/.test(trimmed)) {
-    return url;
+  const trimmed = url?.trim().replace(/^(?:https?:\/\/)+(?=https?:\/\/)/i, '');
+  if (!trimmed) return url;
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(trimmed) || /^(mailto|tel):/i.test(trimmed) || /^[/#?]/.test(trimmed)) {
+    return trimmed as T;
   }
   return `https://${trimmed}` as T;
 }
