@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebase';
+import { toExternalUrl } from './utils';
 import type { Project, Skill, PortfolioContent, CVData, AboutHighlight, ContactData, BlogPost, ProjectDev, SchedulerItem, Testimonial, Certification } from '@/types/portfolio';
 
 // ── Projects ────────────────────────────────────────────────────────────────
@@ -11,7 +12,10 @@ import type { Project, Skill, PortfolioContent, CVData, AboutHighlight, ContactD
 export async function getProjects(): Promise<Project[]> {
   const q = query(collection(db, 'projects'), orderBy('order'));
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Project));
+  return snap.docs.map(d => {
+    const p = { id: d.id, ...d.data() } as Project;
+    return { ...p, demo: toExternalUrl(p.demo), github: toExternalUrl(p.github) };
+  });
 }
 
 export async function addProject(project: Omit<Project, 'id'>): Promise<string> {
@@ -95,7 +99,16 @@ export async function saveHighlights(items: AboutHighlight[]): Promise<void> {
 
 export async function getContactData(): Promise<ContactData | null> {
   const snap = await getDoc(doc(db, 'content', 'contact'));
-  if (snap.exists()) return snap.data() as ContactData;
+  if (snap.exists()) {
+    const c = snap.data() as ContactData;
+    return {
+      ...c,
+      github: toExternalUrl(c.github),
+      linkedin: toExternalUrl(c.linkedin),
+      instagram: toExternalUrl(c.instagram),
+      locationUrl: toExternalUrl(c.locationUrl),
+    };
+  }
   return null;
 }
 
@@ -141,7 +154,23 @@ export async function saveDevelopData(items: Record<string, ProjectDev>): Promis
 
 export async function getCV(): Promise<CVData | null> {
   const snap = await getDoc(doc(db, 'content', 'cv'));
-  if (snap.exists()) return snap.data() as CVData;
+  if (snap.exists()) {
+    const cv = snap.data() as CVData;
+    return {
+      ...cv,
+      header: cv.header && {
+        ...cv.header,
+        linkedin: toExternalUrl(cv.header.linkedin),
+        portfolio: toExternalUrl(cv.header.portfolio),
+        github: toExternalUrl(cv.header.github),
+      },
+      projects: cv.projects?.map(p => ({
+        ...p,
+        liveUrl: toExternalUrl(p.liveUrl),
+        githubUrl: toExternalUrl(p.githubUrl),
+      })),
+    };
+  }
   return null;
 }
 
